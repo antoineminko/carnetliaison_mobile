@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 
 class ApiClient {
   static final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'https://sirh.alwaysdata.net/api', // Emulateur Android vers localhost
+    baseUrl: 'https://sirh.alwaysdata.net/api_carnet_liaison/api', // Emulateur Android vers localhost
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
     headers: {
@@ -13,3 +13,4 @@ class ApiClient {
 
   static Dio get instance => _dio;
 }
+

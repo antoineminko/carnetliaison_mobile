@@ -20,7 +20,7 @@ class ParentHomePage extends StatefulWidget {
 class _ParentHomePageState extends State<ParentHomePage> {
   int? _selectedChildIndex;
   Map<String, dynamic>? _selectedChild;
-  bool _isDemoEmptyState = false; // Toggle pour la démo
+  bool _isDemoEmptyState = true; // Toggle pour la démo
   int _currentIndex = 0; // Index de la BottomNavigationBar
   final PageController _pubPageController = PageController();
   int _currentPubIndex = 0;
@@ -32,15 +32,6 @@ class _ParentHomePageState extends State<ParentHomePage> {
   bool _notifEmail = true;
 
   final List<Map<String, dynamic>> _childrenData = [
-    {
-      'name': 'Yannick Nguema',
-      'grade': 'Terminale C',
-      'school': SchoolConfigs.notreDame,
-      'color': const Color(0xFF2596be),
-      'image': 'assets/images/profil/eleve1.jpg',
-      'notif': 2,
-      'feesOwed': '125 000 FCFA',
-    },
     {
       'name': 'Emmanuella Nguema',
       'grade': '3ème A',
@@ -1337,7 +1328,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
             'incidents': [],
           };
           break;
-        case 2: // JUNIOR — Collège Saint-Dominique, 5e Année
+        case 1: // JUNIOR — Collège Saint-Dominique, 5e Année
           _selectedChild = {
             'name': 'Junior Nguema',
             'grade': '5e Année',
@@ -1399,6 +1390,26 @@ class _ParentHomePageState extends State<ParentHomePage> {
             ],
           };
           break;
+        default:
+          final child = _childrenData[index];
+          _selectedChild = {
+            'name': child['name'],
+            'grade': child['grade'],
+            'id': child['id'] != null ? '#${child['id']}' : '#0000',
+            'image': child['image'] ?? 'assets/images/profil/eleve1.jpg',
+            'newsImage': 'assets/images/profil/actualité/actu1.png',
+            'school': child['school'],
+            'schoolIcon': 'assets/images/iconEcole/icon1.jpg',
+            'newsTitle': 'Nouvel enfant ajouté',
+            'newsContent': 'Aucune actualité récente pour le moment.',
+            'status': 'Présent',
+            'statusColor': Colors.green,
+            'arrivalTime': '08:00',
+            'feesOwed': '0 FCFA',
+            'homeworks': [],
+            'notifications': [],
+            'incidents': []
+          };
       }
     });
   }
@@ -1519,41 +1530,21 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   Widget _buildChildrenList() {
     return Column(
-      children: [
-        _ChildCard(
-          index: 0,
-          name: _childrenData[0]['name'],
-          grade: _childrenData[0]['grade'],
-          school: _childrenData[0]['school'],
-          image: _childrenData[0]['image'],
-          avatarColor: const Color(0xFF2596be),
-          notifCount: _childrenData[0]['notif'],
-          isSelected: _selectedChildIndex == 0,
-          onTap: () => _onChildSelected(0),
-        ),
-        _ChildCard(
-          index: 1,
-          name: _childrenData[1]['name'],
-          grade: _childrenData[1]['grade'],
-          school: _childrenData[1]['school'],
-          image: _childrenData[1]['image'],
-          avatarColor: const Color(0xFF2596be),
-          notifCount: _childrenData[1]['notif'],
-          isSelected: _selectedChildIndex == 1,
-          onTap: () => _onChildSelected(1),
-        ),
-        _ChildCard(
-          index: 2,
-          name: _childrenData[2]['name'],
-          grade: _childrenData[2]['grade'],
-          school: _childrenData[2]['school'],
-          image: _childrenData[2]['image'],
-          avatarColor: const Color(0xFF2596be),
-          notifCount: _childrenData[2]['notif'],
-          isSelected: _selectedChildIndex == 2,
-          onTap: () => _onChildSelected(2),
-        ),
-      ],
+      children: _childrenData.asMap().entries.map((entry) {
+        final int index = entry.key;
+        final Map<String, dynamic> child = entry.value;
+        return _ChildCard(
+          index: index,
+          name: child['name'],
+          grade: child['grade'],
+          school: child['school'],
+          image: child['image'] ?? 'assets/images/profil/eleve1.jpg',
+          avatarColor: child['color'] ?? const Color(0xFF2596be),
+          notifCount: child['notif'] ?? 0,
+          isSelected: _selectedChildIndex == index,
+          onTap: () => _onChildSelected(index),
+        );
+      }).toList(),
     );
   }
 
@@ -2063,10 +2054,18 @@ class _ParentHomePageState extends State<ParentHomePage> {
                           context,
                           MaterialPageRoute(builder: (_) => const QrScanPage()),
                         );
-                        if (result == true) {
-                          // Simuler le rafraîchissement
+                        if (result != null && result is Map) {
                           setState(() {
                             _isDemoEmptyState = false;
+                            _childrenData.add({
+                              'id': result['id'],
+                              'name': '${result['prenom']} ${result['nom']}',
+                              'grade': 'Nouveau',
+                              'school': 'Mon École',
+                              'color': const Color(0xFF2596be),
+                              'image': 'assets/images/profil/eleve1.jpg',
+                              'notif': 1,
+                            });
                           });
                         }
                       },
@@ -2086,10 +2085,18 @@ class _ParentHomePageState extends State<ParentHomePage> {
                           context,
                           MaterialPageRoute(builder: (_) => const LinkChildPage()),
                         );
-                        if (result == true) {
-                          // Simuler le rafraîchissement
+                        if (result != null && result is Map) {
                           setState(() {
                             _isDemoEmptyState = false;
+                            _childrenData.add({
+                              'id': result['id'],
+                              'name': '${result['prenom']} ${result['nom']}',
+                              'grade': 'Nouveau',
+                              'school': 'Mon École',
+                              'color': const Color(0xFF2596be),
+                              'image': 'assets/images/profil/eleve1.jpg',
+                              'notif': 1,
+                            });
                           });
                         }
                       },
@@ -3405,3 +3412,4 @@ class _ChildCard extends StatelessWidget {
     );
   }
 }
+

@@ -35,12 +35,15 @@ class _QrScanPageState extends State<QrScanPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Enfant lié : ${eleve['prenom']} ${eleve['nom']}')),
           );
-          Navigator.pop(context, true); // true = success
+          Navigator.pop(context, eleve);
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('QR Code invalide ou enfant déjà lié')),
+            const SnackBar(
+              content: Text("Merci pour votre demande de fusion à cet enfant, mais vous n'êtes pas identifié comme parent. Veuillez contacter l'administration."),
+              duration: Duration(seconds: 4),
+            ),
           );
           // Permet de rescanner
           setState(() => _isProcessing = false);

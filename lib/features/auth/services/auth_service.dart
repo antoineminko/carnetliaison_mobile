@@ -2,6 +2,7 @@ import 'package:app_mobile/shared/utils/user_role.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_mobile/features/notifications/services/notifications_service.dart';
 
 enum AuthResult { success, invalidCredentials, userNotFound }
 
@@ -27,18 +28,41 @@ class AuthService {
 
       if (response.statusCode == 200 && response.data['success']) {
         final parentId = response.data['parent']['id'];
-        
+
         // Sauvegarder l'ID du parent localement
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('parent_id', parentId);
+
+        // ✅ Enregistrer le token FCM maintenant que parent_id est disponible
+        await _registerFcmToken(parentId);
 
         return AuthResult.success;
       } else {
         return AuthResult.invalidCredentials;
       }
     } catch (e) {
-      
       return AuthResult.invalidCredentials;
+    }
+  }
+
+  /// Récupère et envoie le token FCM au serveur après le login
+  Future<void> _registerFcmToken(int parentId) async {
+    try {
+      final token = await NotificationsService().getToken();
+      if (token != null && token.isNotEmpty) {
+        await ApiClient.instance.post(
+          ApiEndpoints.registerFcmToken,
+          data: {
+            'parent_id': parentId,
+            'token': token,
+            'platform': 'android',
+          },
+        );
+        print('✅ [AuthService] FCM Token enregistré pour parent #$parentId');
+      }
+    } catch (e) {
+      // Non bloquant : le login réussit même si l'enregistrement du token échoue
+      print('⚠️ [AuthService] Impossible d\'enregistrer le FCM token : $e');
     }
   }
 
@@ -53,5 +77,10 @@ class AuthService {
   static Future<int?> getParentId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt('parent_id');
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('parent_id');
   }
 }

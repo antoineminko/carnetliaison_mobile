@@ -1,4 +1,9 @@
 import 'package:app_mobile/features/parent/pages/calendar_page.dart';
+import 'package:app_mobile/features/appointments/pages/appointments_list_page.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/material.dart';
 
 class ChildDetailsPage extends StatefulWidget {
@@ -16,6 +21,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
   @override
   void initState() {
     super.initState();
+    initializeDateFormatting('fr_FR', null);
     _tabController = TabController(length: 3, vsync: this);
   }
 
@@ -101,12 +107,43 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
   }
 
   Widget _buildOverviewTab() {
+    final now = DateTime.now();
+    final formattedDate = DateFormat('d MMMM yyyy', 'fr_FR').format(now);
+    
+    // Fallback dynamique ou mocké
+    final String status = widget.child['attendance_status'] ?? 'Présent';
+    final String arrivalTime = widget.child['arrival_time'] ?? '07:55 AM';
+    
+    Color statusColor;
+    Color statusBgColor;
+    IconData statusIcon;
+    
+    if (status.toLowerCase() == 'absent') {
+      statusColor = const Color(0xFFC62828); // Red
+      statusBgColor = const Color(0xFFFFEBEE);
+      statusIcon = Icons.cancel;
+    } else if (status.toLowerCase() == 'retard') {
+      statusColor = const Color(0xFFE65100); // Orange
+      statusBgColor = const Color(0xFFFFF3E0);
+      statusIcon = Icons.access_time_filled;
+    } else {
+      statusColor = const Color(0xFF1B5E20); // Green
+      statusBgColor = const Color(0xFFE8F5E9);
+      statusIcon = Icons.check_circle;
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Présence du jour', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Présence du jour', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(formattedDate, style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+            ],
+          ),
           const SizedBox(height: 15),
           Row(
             children: [
@@ -114,52 +151,107 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9), // Vert très clair
+                    color: statusBgColor,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.green.withOpacity(0.1)),
+                    border: Border.all(color: statusColor.withOpacity(0.1)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        children: const [
-                          Icon(Icons.check_circle, color: Colors.green, size: 16),
-                          SizedBox(width: 6),
-                          Text('Statut', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                        children: [
+                          Icon(statusIcon, color: statusColor, size: 16),
+                          const SizedBox(width: 6),
+                          Text('Statut', style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      const Text('Présent', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20))),
+                      Text(status, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: statusColor)),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE3F2FD), // Bleu très clair
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.blue.withOpacity(0.1)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.access_time_filled, color: Color(0xFF1565C0), size: 16),
-                          SizedBox(width: 6),
-                          Text('Arrivée', style: TextStyle(color: Color(0xFF1565C0), fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('07:55 AM', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1))),
-                    ],
+              if (status.toLowerCase() != 'absent') ...[
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F2FD),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.blue.withOpacity(0.1)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: const [
+                            Icon(Icons.access_time_filled, color: Color(0xFF1565C0), size: 16),
+                            SizedBox(width: 6),
+                            Text('Arrivée', style: TextStyle(color: Color(0xFF1565C0), fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(arrivalTime, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1))),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ]
             ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Bouton Rendez-vous
+          GestureDetector(
+            onTap: () async {
+              final parentId = await AuthService.getParentId();
+              if (!context.mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AppointmentsListPage(
+                    userId: parentId ?? 0,
+                    userRole: 'parent',
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2596be), Color(0xFF1a7a9e)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2596be).withOpacity(0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.event_available, color: Colors.white, size: 22),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Rendez-vous avec les profs',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text('Demander ou consulter vos RDV',
+                            style: TextStyle(color: Colors.white70, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 14),
+                ],
+              ),
+            ),
           ),
 
           const SizedBox(height: 30),

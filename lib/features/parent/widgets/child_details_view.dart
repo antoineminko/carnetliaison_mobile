@@ -934,7 +934,10 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
   }
 
   Widget _buildHomeworksList() {
-    final homeworks = widget.child['homeworks'] as List<Map<String, dynamic>>?;
+    final rawHomeworks = widget.child['homeworks'];
+    final homeworks = rawHomeworks is List 
+        ? rawHomeworks.map((e) => e as Map<String, dynamic>).toList()
+        : null;
 
     if (homeworks == null || homeworks.isEmpty) {
       return Container(

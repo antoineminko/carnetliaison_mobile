@@ -2446,7 +2446,10 @@ class _ParentHomePageState extends State<ParentHomePage> {
   }
 
   void _openChat(BuildContext context, Map<String, dynamic> data) {
-    final chatMessages = data['chatMessages'] as List<Map<String, dynamic>>;
+    final rawChat = data['chatMessages'];
+    final chatMessages = rawChat is List 
+        ? rawChat.map((e) => e as Map<String, dynamic>).toList()
+        : <Map<String, dynamic>>[];
     final Color color = data['color'] as Color;
     Navigator.push(
       context,

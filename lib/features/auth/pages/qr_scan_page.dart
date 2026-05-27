@@ -45,8 +45,11 @@ class _QrScanPageState extends State<QrScanPage> {
               duration: Duration(seconds: 4),
             ),
           );
-          // Permet de rescanner
-          setState(() => _isProcessing = false);
+          // Pause before allowing another scan to avoid spam
+          await Future.delayed(const Duration(seconds: 4));
+          if (mounted) {
+            setState(() => _isProcessing = false);
+          }
         }
       }
     } catch (e) {
@@ -54,16 +57,33 @@ class _QrScanPageState extends State<QrScanPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Erreur de connexion à l\'API.')),
         );
-        setState(() => _isProcessing = false);
+        // Pause before allowing another scan to avoid spam
+        await Future.delayed(const Duration(seconds: 4));
+        if (mounted) {
+          setState(() => _isProcessing = false);
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final scanWindowSize = screenWidth * 0.7;
+    final scanWindow = Rect.fromCenter(
+      center: Offset(screenWidth / 2, screenHeight / 2 - 50), // slightly higher than center
+      width: scanWindowSize,
+      height: scanWindowSize,
+    );
+
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Scanner le QR Code'),
+        title: const Text('Scanner le QR Code', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
         children: [
@@ -78,6 +98,28 @@ class _QrScanPageState extends State<QrScanPage> {
               }
             },
           ),
+          CustomPaint(
+            painter: QrOverlayPainter(scanWindow: scanWindow),
+            child: const SizedBox.expand(),
+          ),
+          Positioned(
+            bottom: 100,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Placez le QR Code dans le cadre',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ),
+          ),
           if (_isProcessing)
             Container(
               color: Colors.black54,
@@ -89,4 +131,52 @@ class _QrScanPageState extends State<QrScanPage> {
       ),
     );
   }
+}
+
+class QrOverlayPainter extends CustomPainter {
+  final Rect scanWindow;
+  final double borderRadius;
+
+  QrOverlayPainter({required this.scanWindow, this.borderRadius = 16.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final backgroundPaint = Paint()
+      ..color = Colors.black.withOpacity(0.7)
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path()
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRRect(RRect.fromRectAndRadius(scanWindow, Radius.circular(borderRadius)))
+      ..fillType = PathFillType.evenOdd;
+
+    canvas.drawPath(path, backgroundPaint);
+    
+    final double cornerLength = 40.0;
+    
+    // Top Left
+    canvas.drawLine(scanWindow.topLeft, scanWindow.topLeft + Offset(cornerLength, 0), borderPaint);
+    canvas.drawLine(scanWindow.topLeft, scanWindow.topLeft + Offset(0, cornerLength), borderPaint);
+    
+    // Top Right
+    canvas.drawLine(scanWindow.topRight, scanWindow.topRight + Offset(-cornerLength, 0), borderPaint);
+    canvas.drawLine(scanWindow.topRight, scanWindow.topRight + Offset(0, cornerLength), borderPaint);
+    
+    // Bottom Left
+    canvas.drawLine(scanWindow.bottomLeft, scanWindow.bottomLeft + Offset(cornerLength, 0), borderPaint);
+    canvas.drawLine(scanWindow.bottomLeft, scanWindow.bottomLeft + Offset(0, -cornerLength), borderPaint);
+    
+    // Bottom Right
+    canvas.drawLine(scanWindow.bottomRight, scanWindow.bottomRight + Offset(-cornerLength, 0), borderPaint);
+    canvas.drawLine(scanWindow.bottomRight, scanWindow.bottomRight + Offset(0, -cornerLength), borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

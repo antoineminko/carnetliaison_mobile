@@ -525,8 +525,10 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
   }
 
   Widget _buildPriorityNotifications() {
-    final List<Map<String, dynamic>>? notifs =
-        widget.child['notifications'] as List<Map<String, dynamic>>?;
+    final rawNotifs = widget.child['notifications'];
+    final notifs = rawNotifs is List 
+        ? rawNotifs.map((e) => e as Map<String, dynamic>).toList()
+        : null;
 
     if (notifs == null || notifs.isEmpty) return const SizedBox.shrink();
 

@@ -94,7 +94,6 @@ class _ParentHomePageState extends State<ParentHomePage> {
       setState(() {
         _childrenData
           ..clear()
-          ..addAll(_fakeChildrenData)
           ..addAll(children.map(_mapApiChild));
         _isDemoEmptyState = _childrenData.isEmpty;
       });

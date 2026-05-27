@@ -94,7 +94,9 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
           Stack(
             children: [
               CircleAvatar(
-                backgroundImage: AssetImage(widget.child['image']),
+                backgroundImage: widget.child['isNetworkImage'] == true 
+                    ? NetworkImage(widget.child['image']) as ImageProvider
+                    : AssetImage(widget.child['image']),
                 radius: 20,
               ),
               if (widget.child['schoolIcon'] != null)

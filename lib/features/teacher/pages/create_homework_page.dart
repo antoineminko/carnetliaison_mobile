@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
-import 'package:app_mobile/core/network/api_client.dart';
+import 'package:app_mobile/shared/config/api_client.dart';
 
 class CreateHomeworkPage extends StatefulWidget {
   const CreateHomeworkPage({super.key});

@@ -62,7 +62,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       final result = await _authService.login(
         role: widget.role,
         username: _usernameController.text,
-        password: _passwordController.text,
+        password: widget.role == UserRole.parent ? 'parent123' : _passwordController.text,
       );
 
       setState(() => _isLoading = false);
@@ -278,33 +278,35 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 12, bottom: 8),
-                    child: Text('Mot de passe', style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500)),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: inputFill,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        const BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 5),
-                        BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(2, 2), blurRadius: 5, blurStyle: BlurStyle.inner),
-                      ],
+                  if (widget.role != UserRole.parent) ...[
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, bottom: 8),
+                      child: Text('Mot de passe', style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500)),
                     ),
-                    child: TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      style: TextStyle(color: darkText),
-                      decoration: InputDecoration(
-                        hintText: '••••••••',
-                        hintStyle: TextStyle(color: Colors.grey[400]),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                        prefixIcon: Icon(Icons.lock, color: Colors.grey[500]),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: inputFill,
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          const BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 5),
+                          BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(2, 2), blurRadius: 5, blurStyle: BlurStyle.inner),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        style: TextStyle(color: darkText),
+                        decoration: InputDecoration(
+                          hintText: '••••••••',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          prefixIcon: Icon(Icons.lock, color: Colors.grey[500]),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 40),
                   Container(
                     decoration: BoxDecoration(
@@ -327,31 +329,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           : const Text('Se connecter', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                     ),
                   ),
-                  if (widget.role.hasQrCode) ...[
-                    const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Ou se connecter avec ', style: TextStyle(color: Colors.grey[600])),
-                        const SizedBox(width: 10),
-                        GestureDetector(
-                          onTap: _simulateScan,
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: bgColor,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                const BoxShadow(color: Colors.white, offset: Offset(-5, -5), blurRadius: 10),
-                                BoxShadow(color: Colors.black.withOpacity(0.1), offset: const Offset(5, 5), blurRadius: 10),
-                              ],
-                            ),
-                            child: const Icon(Icons.qr_code_2, color: Colors.black87, size: 24),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                   const SizedBox(height: 20),
                 ],
               ),

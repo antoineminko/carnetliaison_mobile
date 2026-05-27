@@ -35,7 +35,7 @@ class LocalNotificationService {
 
     // Create a notification channel for Android 8.0+
     if (Platform.isAndroid) {
-      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      final AndroidNotificationChannel channel = AndroidNotificationChannel(
         'high_importance_channel_v2', // id
         'High Importance Notifications', // title
         description: 'This channel is used for important notifications.', // description

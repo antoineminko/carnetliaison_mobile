@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
+import 'package:app_mobile/core/network/api_client.dart';
 
 class CreateHomeworkPage extends StatefulWidget {
   const CreateHomeworkPage({super.key});
@@ -9,9 +10,9 @@ class CreateHomeworkPage extends StatefulWidget {
 }
 
 class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
-  // Matière fixée — M. Obiang enseigne les Mathématiques
   final String _subject = 'Mathématiques';
   String? _selectedClass = '3ème B';
+  int _selectedClassId = 1; // ID de la classe pour la démo
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
 
@@ -103,7 +104,15 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
         label: 'Classe',
         value: _selectedClass,
         items: ['3ème B', 'Terminale A', 'Terminale C', '2nde S'],
-        onChanged: (val) => setState(() => _selectedClass = val),
+        onChanged: (val) {
+          setState(() {
+            _selectedClass = val;
+            if (val == '3ème B') _selectedClassId = 1;
+            if (val == 'Terminale A') _selectedClassId = 2;
+            if (val == 'Terminale C') _selectedClassId = 3;
+            if (val == '2nde S') _selectedClassId = 4;
+          });
+        },
       ),
     );
   }
@@ -203,9 +212,47 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
     );
   }
 
-  void _publishDevoir() {
+  Future<void> _publishDevoir() async {
     final title = _titleController.text.trim().isEmpty ? 'Devoir de Mathématiques' : _titleController.text.trim();
-    final due = '${_dueDate.day.toString().padLeft(2, '0')}/${_dueDate.month.toString().padLeft(2, '0')}/${_dueDate.year}';
+    final desc = _descController.text.trim().isEmpty ? 'Aucune description' : _descController.text.trim();
+    final due = '${_dueDate.year}-${_dueDate.month.toString().padLeft(2, '0')}-${_dueDate.day.toString().padLeft(2, '0')}';
+    final dueDisplay = '${_dueDate.day.toString().padLeft(2, '0')}/${_dueDate.month.toString().padLeft(2, '0')}/${_dueDate.year}';
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(child: CircularProgressIndicator(color: AppTheme.seaBlue)),
+      );
+
+      final response = await ApiClient.instance.post('/devoirs', data: {
+        'classe_id': _selectedClassId,
+        'enseignant_id': 1, // Fixé pour la démo
+        'matiere': _subject,
+        'titre': title,
+        'description': desc,
+        'date_remise': due,
+      });
+
+      // Fermer le loader
+      if (mounted) Navigator.pop(context);
+
+      if (response.statusCode == 201) {
+        if (!mounted) return;
+        _showSuccessDialog(title, dueDisplay);
+      } else {
+        throw Exception('Erreur serveur');
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Fermer le loader
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la publication : $e')),
+      );
+    }
+  }
+
+  void _showSuccessDialog(String title, String dueDisplay) {
 
     showDialog(
       context: context,
@@ -244,7 +291,7 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
                   const Divider(height: 16),
                   _buildRecapRow(Icons.title_rounded, 'Titre', title, AppTheme.textDark),
                   const Divider(height: 16),
-                  _buildRecapRow(Icons.event_rounded, 'Date de remise', due, Colors.orange),
+                  _buildRecapRow(Icons.event_rounded, 'Date de remise', dueDisplay, Colors.orange),
                 ],
               ),
             ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "729928386318",
+    "project_id": "carnetliaison-2e18e",
+    "storage_bucket": "carnetliaison-2e18e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:729928386318:android:99853e81fb0f116b51f95f",
+        "android_client_info": {
+          "package_name": "com.carnetliaison.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpiccFuKAU4v8jURe8hKv6CnHQKdlx2-Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -9,6 +9,8 @@ import 'package:app_mobile/shared/config/school_config.dart';
 import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 import 'package:app_mobile/features/auth/pages/qr_scan_page.dart';
 import 'package:app_mobile/features/auth/pages/link_child_page.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:app_mobile/features/parent/services/parent_service.dart';
 
 class ParentHomePage extends StatefulWidget {
   const ParentHomePage({super.key});
@@ -18,6 +20,7 @@ class ParentHomePage extends StatefulWidget {
 }
 
 class _ParentHomePageState extends State<ParentHomePage> {
+  static const String _apiBaseUrl = 'https://sirh.alwaysdata.net/api_carnet_liaison';
   int? _selectedChildIndex;
   Map<String, dynamic>? _selectedChild;
   bool _isDemoEmptyState = true; // Toggle pour la démo
@@ -31,7 +34,8 @@ class _ParentHomePageState extends State<ParentHomePage> {
   bool _notifSms = false;
   bool _notifEmail = true;
 
-  final List<Map<String, dynamic>> _childrenData = [
+  final List<Map<String, dynamic>> _childrenData = [];
+  final List<Map<String, dynamic>> _fakeChildrenData = [
     {
       'name': 'Emmanuella Nguema',
       'grade': '3ème A',
@@ -77,6 +81,47 @@ class _ParentHomePageState extends State<ParentHomePage> {
         );
       }
     });
+  }
+
+  Future<void> _loadLinkedChildren() async {
+    final parentId = await AuthService.getParentId();
+    if (parentId == null) return;
+
+    try {
+      final children = await ParentService.getChildren(parentId);
+      if (!mounted) return;
+
+      setState(() {
+        _childrenData
+          ..clear()
+          ..addAll(_fakeChildrenData)
+          ..addAll(children.map(_mapApiChild));
+        _isDemoEmptyState = _childrenData.isEmpty;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de charger vos enfants.')),
+      );
+    }
+  }
+
+  Map<String, dynamic> _mapApiChild(Map<String, dynamic> child) {
+    final photo = child['photo']?.toString();
+    final imageUrl = photo != null && photo.isNotEmpty ? '$_apiBaseUrl/storage/$photo' : null;
+
+    return {
+      'fromApi': true,
+      'id': child['id'],
+      'name': '${child['prenom'] ?? ''} ${child['nom'] ?? ''}'.trim(),
+      'grade': child['classe_nom'] ?? 'Classe non définie',
+      'school': child['ecole_nom'] ?? 'École non définie',
+      'color': const Color(0xFF2596be),
+      'image': imageUrl ?? 'assets/images/profil/eleve1.jpg',
+      'isNetworkImage': imageUrl != null,
+      'notif': 0,
+      'raw': child,
+    };
   }
 
   @override
@@ -778,7 +823,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
               shape: BoxShape.circle,
               color: child['color'],
               image: DecorationImage(
-                image: AssetImage(child['image']),
+                image: (child['isNetworkImage'] == true)
+                    ? NetworkImage(child['image'] as String)
+                    : AssetImage(child['image'] as String) as ImageProvider,
                 fit: BoxFit.cover,
               ),
             ),
@@ -1089,15 +1136,25 @@ class _ParentHomePageState extends State<ParentHomePage> {
                         ],
                       ),
                       child: ClipOval(
-                        child: Image.asset(
-                          child['image'] as String,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 35,
-                          ),
-                        ),
+                        child: (child['isNetworkImage'] == true)
+                            ? Image.network(
+                                child['image'] as String,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 35,
+                                ),
+                              )
+                            : Image.asset(
+                                child['image'] as String,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 35,
+                                ),
+                              ),
                       ),
                     ),
                     if ((child['notif'] as int) > 0)
@@ -1187,6 +1244,30 @@ class _ParentHomePageState extends State<ParentHomePage> {
       _selectedChildIndex = index;
       if (index < _childrenData.length) {
         _childrenData[index]['notif'] = 0;
+      }
+
+      final currentChild = index < _childrenData.length ? _childrenData[index] : null;
+      if (currentChild != null && currentChild['fromApi'] == true) {
+        _selectedChild = {
+          'name': currentChild['name'],
+          'grade': currentChild['grade'],
+          'id': '#${currentChild['id']}',
+          'image': currentChild['image'],
+          'newsImage': 'assets/images/profil/actualité/actu1.png',
+          'school': currentChild['school'],
+          'schoolIcon': 'assets/images/iconEcole/icon1.jpg',
+          'newsTitle': 'Espace parent connecté',
+          'newsContent': 'Votre enfant est maintenant lié à votre compte.',
+          'status': 'Présent',
+          'statusColor': Colors.green,
+          'arrivalTime': '08:00',
+          'feesOwed': '0 FCFA',
+          'homeworks': [],
+          'notifications': [],
+          'calendarDate': 'Mars 2026',
+          'incidents': [],
+        };
+        return;
       }
 
       switch (index) {
@@ -1539,6 +1620,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
           grade: child['grade'],
           school: child['school'],
           image: child['image'] ?? 'assets/images/profil/eleve1.jpg',
+          isNetworkImage: child['isNetworkImage'] == true,
           avatarColor: child['color'] ?? const Color(0xFF2596be),
           notifCount: child['notif'] ?? 0,
           isSelected: _selectedChildIndex == index,
@@ -2055,18 +2137,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
                           MaterialPageRoute(builder: (_) => const QrScanPage()),
                         );
                         if (result != null && result is Map) {
-                          setState(() {
-                            _isDemoEmptyState = false;
-                            _childrenData.add({
-                              'id': result['id'],
-                              'name': '${result['prenom']} ${result['nom']}',
-                              'grade': 'Nouveau',
-                              'school': 'Mon École',
-                              'color': const Color(0xFF2596be),
-                              'image': 'assets/images/profil/eleve1.jpg',
-                              'notif': 1,
-                            });
-                          });
+                          await _loadLinkedChildren();
                         }
                       },
                     ),
@@ -2086,18 +2157,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
                           MaterialPageRoute(builder: (_) => const LinkChildPage()),
                         );
                         if (result != null && result is Map) {
-                          setState(() {
-                            _isDemoEmptyState = false;
-                            _childrenData.add({
-                              'id': result['id'],
-                              'name': '${result['prenom']} ${result['nom']}',
-                              'grade': 'Nouveau',
-                              'school': 'Mon École',
-                              'color': const Color(0xFF2596be),
-                              'image': 'assets/images/profil/eleve1.jpg',
-                              'notif': 1,
-                            });
-                          });
+                          await _loadLinkedChildren();
                         }
                       },
                     ),
@@ -3172,6 +3232,7 @@ class _ChildCard extends StatelessWidget {
   final String grade;
   final String school;
   final String image;
+  final bool isNetworkImage;
   final Color avatarColor;
   final int notifCount;
   final bool isSelected;
@@ -3183,6 +3244,7 @@ class _ChildCard extends StatelessWidget {
     required this.grade,
     required this.school,
     required this.image,
+    this.isNetworkImage = false,
     required this.avatarColor,
     this.notifCount = 0,
     required this.isSelected,
@@ -3242,11 +3304,17 @@ class _ChildCard extends StatelessWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
-                          child: Image.asset(
-                            image,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const SizedBox(),
-                          ),
+                          child: isNetworkImage
+                              ? Image.network(
+                                  image,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const SizedBox(),
+                                )
+                              : Image.asset(
+                                  image,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const SizedBox(),
+                                ),
                         ),
                       ),
                       const SizedBox(width: 18),

@@ -1,9 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:app_mobile/features/communication/services/message_service.dart';
+import 'package:app_mobile/features/communication/models/conversation.dart';
 import 'student_details_pages.dart';
 
-class StudentMessagesPage extends StatelessWidget {
+class StudentMessagesPage extends StatefulWidget {
   const StudentMessagesPage({super.key});
+
+  @override
+  State<StudentMessagesPage> createState() => _StudentMessagesPageState();
+}
+
+class _StudentMessagesPageState extends State<StudentMessagesPage> {
+  final MessageService _messageService = MessageService();
+  bool _isLoading = true;
+  List<Conversation> _conversations = [];
+  int? _parentId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConversations();
+  }
+
+  Future<void> _loadConversations() async {
+    final parentId = await AuthService.getParentId();
+    if (parentId != null) {
+      final conversations = await _messageService.getConversationsForParent(parentId);
+      if (mounted) {
+        setState(() {
+          _parentId = parentId;
+          _conversations = conversations;
+          _isLoading = false;
+        });
+      }
+    } else {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,121 +50,50 @@ class StudentMessagesPage extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          _buildCategoryFilter(context),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator()) 
+        : RefreshIndicator(
+            onRefresh: _loadConversations,
+            child: Column(
               children: [
-                const SizedBox(height: 10),
-                
-                // Section Administratif
-                _buildSectionHeader('ADMINISTRATION & INFOS'),
-                _buildChatTile(
-                  context,
-                  name: 'Secrétariat Général',
-                  lastMsg: 'Note: Convocation réunion parents-profs.',
-                  time: 'Hier',
-                  count: 0,
-                  isGroup: true,
-                  color: AppTheme.forestGreen,
-                ),
-                _buildChatTile(
-                  context,
-                  name: 'Surveillance Générale',
-                  lastMsg: 'Rappel : Le port de la tenue est obligatoire.',
-                  time: '26 Fév',
-                  count: 0,
-                  isGroup: true,
-                  color: Colors.redAccent,
-                ),
-                
-                const SizedBox(height: 25),
-                
-                // Section Groupe Classe
-                _buildSectionHeader('GROUPES DE CLASSE'),
-                _buildChatTile(
-                  context,
-                  name: 'Ma Classe (Terminale A1)',
-                  lastMsg: 'Kévin: Quelqu\'un a les exos de philo ?',
-                  time: '12:45',
-                  count: 3,
-                  isGroup: true,
-                  color: AppTheme.seaBlue,
-                ),
-                _buildChatTile(
-                  context,
-                  name: 'Coopération Mutuelle',
-                  lastMsg: 'Awa: On se voit à la bibliothèque ?',
-                  time: '24 Fév',
-                  count: 1,
-                  isGroup: true,
-                  color: AppTheme.sunYellow,
-                ),
-                
-                const SizedBox(height: 25),
-                
-                // Section Enseignants
-                _buildSectionHeader('MES ENSEIGNANTS'),
-                _buildChatTile(
-                  context,
-                  name: 'Mme Eyi (Mathématiques)',
-                  lastMsg: 'N\'oubliez pas votre livre demain.',
-                  time: 'Hier',
-                  count: 0,
-                  isGroup: false,
-                  color: Colors.purple,
-                ),
-                _buildChatTile(
-                  context,
-                  name: 'M. Iboga (Philosophie)',
-                  lastMsg: 'Votre dissertation est excellente.',
-                  time: 'Lun',
-                  count: 0,
-                  isGroup: false,
-                  color: Colors.orange,
-                ),
+                _buildCategoryFilter(context),
+                Expanded(
+                  child: _conversations.isEmpty
+                      ? const Center(child: Text("Aucune conversation trouvée.", style: TextStyle(color: Colors.grey)))
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: _conversations.length,
+                          itemBuilder: (context, index) {
+                            final conv = _conversations[index];
+                            final isAdministration = conv.enseignantId == null;
+                            
+                            final name = isAdministration 
+                                ? (conv.adminName ?? "Administration") 
+                                : "${conv.enseignantNom} ${conv.enseignantPrenom}";
+                            
+                            final color = isAdministration ? AppTheme.forestGreen : Colors.purple;
 
-                const SizedBox(height: 25),
-                
-                // Section Sociologue / Orientation
-                _buildSectionHeader('ORIENTATION & CONSEIL'),
-                _buildChatTile(
-                  context,
-                  name: 'M. Makosso (Sociologue)',
-                  lastMsg: 'ANALYSE ORIENTATION : Guide post-bac...',
-                  time: 'Ven',
-                  count: 1,
-                  isGroup: false,
-                  color: Colors.teal,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrientationPage())),
+                            return _buildChatTile(
+                              context,
+                              name: name,
+                              lastMsg: "Nouvelle conversation...",
+                              time: "Maintenant",
+                              count: 0,
+                              isGroup: false,
+                              color: color,
+                              conversationId: conv.id,
+                              enseignantId: conv.enseignantId,
+                            );
+                          },
+                        ),
                 ),
-                const SizedBox(height: 40),
               ],
             ),
           ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: _loadConversations,
         backgroundColor: AppTheme.seaBlue,
-        child: const Icon(Icons.edit, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey,
-          letterSpacing: 1.2,
-        ),
+        child: const Icon(Icons.refresh, color: Colors.white),
       ),
     );
   }
@@ -145,11 +109,6 @@ class StudentMessagesPage extends StatelessWidget {
             _buildFilterChip('Tous', true),
             _buildFilterChip('Enseignants', false),
             _buildFilterChip('Administration', false),
-            _buildFilterChip('Groupe classe', false),
-            GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrientationPage())),
-              child: _buildFilterChip('Orientation Métier', false),
-            ),
           ],
         ),
       ),
@@ -184,10 +143,22 @@ class StudentMessagesPage extends StatelessWidget {
     required int count,
     required bool isGroup,
     required Color color,
-    VoidCallback? onTap,
+    required int conversationId,
+    int? enseignantId,
   }) {
     return InkWell(
-      onTap: onTap ?? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatDetailPage(name: name, color: color, isGroup: isGroup))),
+      onTap: () {
+        if (_parentId != null) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => ChatDetailPage(
+            name: name, 
+            color: color, 
+            isGroup: isGroup, 
+            parentId: _parentId!, 
+            enseignantId: enseignantId,
+            conversationId: conversationId,
+          )));
+        }
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(12),

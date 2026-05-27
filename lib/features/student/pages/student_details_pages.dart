@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
+import 'package:app_mobile/features/communication/services/message_service.dart';
+import 'package:app_mobile/features/communication/models/message.dart';
+import 'package:intl/intl.dart';
 
 class StudentAnnouncementDetailPage extends StatelessWidget {
   final String title;
@@ -479,12 +482,18 @@ class ChatDetailPage extends StatefulWidget {
   final String name;
   final Color color;
   final bool isGroup;
+  final int parentId;
+  final int? enseignantId;
+  final int conversationId;
 
   const ChatDetailPage({
     super.key, 
     required this.name, 
     this.color = AppTheme.seaBlue,
     this.isGroup = false,
+    required this.parentId,
+    this.enseignantId,
+    required this.conversationId,
   });
 
   @override
@@ -493,12 +502,64 @@ class ChatDetailPage extends StatefulWidget {
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final TextEditingController _messageController = TextEditingController();
+  final MessageService _messageService = MessageService();
+  
+  List<Message> _messages = [];
+  bool _isLoading = true;
 
-  final List<Map<String, dynamic>> _messages = [
-    {'text': 'Bonjour Yannick, as-tu bien reçu le support de cours ?', 'isMe': false, 'time': '10:00'},
-    {'text': 'Oui Monsieur, je suis en train de le lire.', 'isMe': true, 'time': '10:05'},
-    {'text': 'Parfait. N\'hésite pas si tu as des questions.', 'isMe': false, 'time': '10:07'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+  }
+
+  Future<void> _loadMessages() async {
+    try {
+      final data = await _messageService.getConversation(widget.parentId, widget.enseignantId);
+      if (mounted) {
+        setState(() {
+          _messages = data['messages'];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+    
+    final text = _messageController.text.trim();
+    _messageController.clear();
+    
+    // Add locally for optimistic UI update
+    final tempMsg = Message(
+      id: DateTime.now().millisecondsSinceEpoch,
+      conversationId: widget.conversationId,
+      senderType: 'parent',
+      senderId: widget.parentId,
+      content: text,
+      isRead: false,
+      createdAt: DateTime.now(),
+    );
+    
+    setState(() {
+      _messages.add(tempMsg);
+    });
+
+    try {
+      await _messageService.sendMessage(
+        conversationId: widget.conversationId,
+        senderType: 'parent',
+        senderId: widget.parentId,
+        content: text,
+      );
+      // Optional: re-fetch messages
+    } catch (e) {
+      print('Erreur envoi: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -532,6 +593,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   Text(
                     widget.name,
                     style: const TextStyle(color: AppTheme.textDark, fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const Text('en ligne', style: TextStyle(color: AppTheme.forestGreen, fontSize: 12)),
                 ],
@@ -540,26 +602,28 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.videocam, color: AppTheme.seaBlue), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.call, color: AppTheme.seaBlue), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.more_vert, color: AppTheme.seaBlue), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.refresh, color: AppTheme.seaBlue), onPressed: _loadMessages),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return _buildMessageBubble(msg['text'], msg['isMe'], msg['time']);
-              },
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final msg = _messages[index];
+                  final isMe = msg.senderType == 'parent' && msg.senderId == widget.parentId;
+                  final timeFormat = DateFormat('HH:mm').format(msg.createdAt);
+                  return _buildMessageBubble(msg.content, isMe, timeFormat);
+                },
+              ),
             ),
-          ),
-          _buildMessageInput(),
-        ],
-      ),
+            _buildMessageInput(),
+          ],
+        ),
     );
   }
 
@@ -604,41 +668,32 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return Container(
       padding: const EdgeInsets.all(10),
       color: Colors.white,
-      child: Row(
-        children: [
-          IconButton(icon: const Icon(Icons.add, color: AppTheme.seaBlue), onPressed: () {}),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: TextField(
-                controller: _messageController,
-                decoration: const InputDecoration(
-                  hintText: 'Tapez votre message...',
-                  border: InputBorder.none,
+      child: SafeArea(
+        child: Row(
+          children: [
+            IconButton(icon: const Icon(Icons.add, color: AppTheme.seaBlue), onPressed: () {}),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: TextField(
+                  controller: _messageController,
+                  decoration: const InputDecoration(
+                    hintText: 'Tapez votre message...',
+                    border: InputBorder.none,
+                  ),
                 ),
               ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send, color: AppTheme.seaBlue),
-            onPressed: () {
-              if (_messageController.text.isNotEmpty) {
-                setState(() {
-                  _messages.add({
-                    'text': _messageController.text,
-                    'isMe': true,
-                    'time': 'Aujourd\'hui',
-                  });
-                  _messageController.clear();
-                });
-              }
-            },
-          ),
-        ],
+            IconButton(
+              icon: const Icon(Icons.send, color: AppTheme.seaBlue),
+              onPressed: _sendMessage,
+            ),
+          ],
+        ),
       ),
     );
   }

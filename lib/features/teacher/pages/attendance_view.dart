@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
+import 'package:app_mobile/shared/config/api_client.dart';
+import 'package:app_mobile/features/teacher/pages/create_appointment_page.dart';
 
 enum AttendanceStatus { present, absent, late }
 
 class AttendanceView extends StatefulWidget {
   final int studentCount;
   final String className;
+  final int classeId;
 
   const AttendanceView({
     super.key, 
     required this.studentCount,
     required this.className,
+    this.classeId = 1,
   });
 
   @override
@@ -19,33 +23,43 @@ class AttendanceView extends StatefulWidget {
 
 class _AttendanceViewState extends State<AttendanceView> {
   late List<Map<String, dynamic>> _students;
+  bool _isLoading = true;
   int _markedCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _initializeStudents();
+    _fetchStudents();
   }
 
-  void _initializeStudents() {
-    final List<String> gabonNames = [
-      'Junior Nguema', 'Yannick Obiang', 'Emmanuella Mba', 'Divine Badinga',
-      'Prosper Mouity', 'Grace Ndong', 'Samuel Ekore', 'Prudence Igala',
-      'Kevin Kombila', 'Sarah Mezui', 'Franck Ogoula', 'Berenice Pambo',
-      'Boris Recka', 'Christ Taty', 'Diane Zue', 'Eric Akue',
-      'Flora Bignoumba', 'Gery Koumba', 'Hugues Mackanga', 'Ines Ngoyo',
-      'Joel Ovono', 'Kelly Peya', 'Lydie Rapontchombo', 'Marc Soungha',
-      'Nicole Toung', 'Olivier Vouma', 'Patricia Wayi', 'Quentin Yembi',
-      'Regis Zoua', 'Sonia Abessolo', 'Thibault Bekale', 'Arnaud Mengue'
-    ];
-
-    _students = List.generate(32, (index) => {
-      'name': gabonNames[index],
-      'status': null, 
-      'arrivalTime': null,
-      'matricule': '2024-${(100 + index).toString()}',
-    });
-    _markedCount = 0; 
+  Future<void> _fetchStudents() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await ApiClient.instance.get('/classes/${widget.classeId}/eleves');
+      final data = response.data as List;
+      
+      setState(() {
+        _students = data.map((e) => {
+          'id': e['id'],
+          'name': '${e['prenom']} ${e['nom']}',
+          'status': null, 
+          'arrivalTime': null,
+          'matricule': e['matricule'] ?? 'N/A',
+        }).toList();
+        _markedCount = 0;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _students = [];
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur chargement élèves: $e')),
+        );
+      }
+    }
   }
 
   void _updateMarkedCount() {
@@ -185,6 +199,10 @@ class _AttendanceViewState extends State<AttendanceView> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Column(
       children: [
         // 1. HEADER METRICS
@@ -341,42 +359,77 @@ class _AttendanceViewState extends State<AttendanceView> {
             width: double.infinity,
             height: 55,
             child: ElevatedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (ctx) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    title: const Row(
-                      children: [
-                        Icon(Icons.check_circle, color: Color(0xFF48C774), size: 28),
-                        SizedBox(width: 10),
-                        Text('Appel validé !', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    content: Text(
-                      'La présence pour la classe ${widget.className} a été enregistrée avec succès.\n\n$_markedCount élèves marqués sur ${widget.studentCount}.',
-                      style: const TextStyle(fontSize: 14, height: 1.5),
-                    ),
-                    actions: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(ctx);   // ferme dialog
-                            Navigator.pop(context); // retour accueil M.Obiang
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.forestGreen,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              onPressed: () async {
+                // Post to API
+                try {
+                  final attendances = _students.where((s) => s['status'] != null).map((s) {
+                    String statusStr = 'present';
+                    if (s['status'] == AttendanceStatus.absent) statusStr = 'absent';
+                    if (s['status'] == AttendanceStatus.late) statusStr = 'late';
+                    
+                    return {
+                      'eleve_id': s['id'],
+                      'status': statusStr,
+                    };
+                  }).toList();
+
+                  if (attendances.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Veuillez marquer au moins un élève.')),
+                    );
+                    return;
+                  }
+
+                  final response = await ApiClient.instance.post('/attendances', data: {
+                    'classe_id': widget.classeId,
+                    'date': DateTime.now().toIso8601String().split('T')[0],
+                    'attendances': attendances
+                  });
+
+                  if (response.data['success']) {
+                    if (!context.mounted) return;
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) => AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        title: const Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Color(0xFF48C774), size: 28),
+                            SizedBox(width: 10),
+                            Text('Appel validé !', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ],
                         ),
+                        content: Text(
+                          'La présence pour la classe ${widget.className} a été enregistrée avec succès.\n\n$_markedCount élèves marqués.',
+                          style: const TextStyle(fontSize: 14, height: 1.5),
+                        ),
+                        actions: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                Navigator.pop(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.forestGreen,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
+                    );
+                  }
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erreur: impossible de valider l\'appel. $e')),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.forestGreen,
@@ -578,10 +631,12 @@ class _AttendanceViewState extends State<AttendanceView> {
                           const SizedBox(height: 10),
                           ElevatedButton(
                             onPressed: () {
-                              Navigator.pop(context);
-                              // Simple navigation to appointment page simulation
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Redirection vers la prise de RDV pour Junior...')),
+                              Navigator.pop(context); // Fermer le bottomsheet
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CreateAppointmentPage(student: student),
+                                ),
                               );
                             },
                             style: ElevatedButton.styleFrom(

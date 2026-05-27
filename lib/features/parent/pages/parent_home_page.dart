@@ -94,6 +94,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
       setState(() {
         _childrenData
           ..clear()
+          ..addAll(_fakeChildrenData)
           ..addAll(children.map(_mapApiChild));
         _isDemoEmptyState = _childrenData.isEmpty;
       });
@@ -1668,90 +1669,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   void _showNotificationsModal({String? filterChildName}) {
     // Liste brute des notifications
-    final List<Map<String, dynamic>> allNotifications = [
-      {
-        'title': 'FRAIS SCOLARITÉ IMPAYÉS IMPORTANT',
-        'type': 'FINANCE',
-        'child': 'Yannick',
-        'school': SchoolConfigs.notreDame,
-        'sender': 'Service Comptabilité',
-        'time': 'À l\'instant',
-        'color': const Color(0xFF2596be),
-        'icon': Icons.account_balance_wallet_outlined,
-        'message': 'Reste à régler : 125 000 FCFA.',
-      },
-      {
-        'title': 'CHUTE DE NOTE SIGNALÉE',
-        'type': 'NOTES',
-        'child': 'Yannick',
-        'school': SchoolConfigs.notreDame,
-        'sender': 'M. Okoro (SVT)',
-        'time': 'Aujourd\'hui',
-        'color': Colors.red,
-        'icon': Icons.trending_down_rounded,
-        'message': 'Devoir SVT Génétique : Chute de note 15 a 08/20 !',
-      },
-      {
-        'title': 'BULLETIN TRIMESTRE 3 DISPONIBLE',
-        'type': 'RÉSULTATS',
-        'child': 'Emmanuella',
-        'school': SchoolConfigs.sainteTherese,
-        'sender': 'Service Administratif',
-        'time': 'Aujourd\'hui',
-        'color': AppTheme.seaBlue,
-        'icon': Icons.assignment_turned_in,
-        'message':
-            'Le bulletin de notes pour le 3ème trimestre est disponible pour consultation.',
-      },
-      {
-        'title': 'CONVOCATION URGENTE VISIO',
-        'type': 'PROFESSEURS',
-        'child': 'Junior',
-        'school': SchoolConfigs.ecoleCatholique,
-        'sender': 'Mme Marie Eyi (Français)',
-        'time': 'Aujourd\'hui',
-        'color': Colors.red,
-        'icon': Icons.videocam_outlined,
-        'message':
-            'Convocation Visioconférence suite au comportement de Junior.',
-        'isAppointmentRequest': true,
-      },
-      {
-        'title': 'CONVOCATION DIRECTION ET PARENT',
-        'type': 'ADMINISTRATION',
-        'child': 'Junior',
-        'school': SchoolConfigs.ecoleCatholique,
-        'sender': 'Administration',
-        'time': 'Aujourd\'hui',
-        'color': const Color(0xFF2596be),
-        'icon': Icons.gavel_rounded,
-        'message':
-            'Convocation des parents suite au nombre de désordres faits par Junior.',
-      },
-      {
-        'title': 'VISITE ASSOCIATION SPORTIFS',
-        'type': 'ACTUALITÉ',
-        'child': 'Junior',
-        'school': SchoolConfigs.ecoleCatholique,
-        'sender': 'Secrétariat',
-        'time': 'Samedi 08 Mars',
-        'color': AppTheme.forestGreen,
-        'icon': Icons.sports_handball_outlined,
-        'message':
-            'Visite de l\'association du collectif des sportifs handicapés.',
-      },
-      {
-        'title': 'DÉDICACE ŒUVRE JONAS DE PIERRE',
-        'type': 'ACTUALITÉ',
-        'child': 'Emmanuella',
-        'school': SchoolConfigs.sainteTherese,
-        'sender': 'Département Arts',
-        'time': 'Vendredi 14h',
-        'color': Colors.purple,
-        'icon': Icons.palette_outlined,
-        'message': 'Rencontre exceptionnelle et dédicace de son œuvre.',
-      },
-    ];
+    final List<Map<String, dynamic>> allNotifications = [];
 
     // Filtrer si nécessaire (on compare avec le prénom pour la démo)
     final filteredNotifications = filterChildName == null
@@ -2406,6 +2324,15 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   Widget _buildMessageList(String filter) {
     List<Widget> tiles = [];
+
+    if (tiles.isEmpty) {
+      return const Center(
+        child: Text(
+          'Aucun message rÃ©cent',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
 
     // M. Obiang (Enseignant)
     if (filter == 'Tous' || filter == 'Enseignants') {

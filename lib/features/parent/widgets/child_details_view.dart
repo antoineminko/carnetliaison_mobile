@@ -225,12 +225,12 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
                 TextButton.icon(
                   onPressed: () => _showAbsenceModal(),
                   icon: const Icon(
-                    Icons.sick_outlined,
+                    Icons.edit_document,
                     size: 16,
                     color: AppTheme.sunYellow,
                   ),
                   label: const Text(
-                    'Signaler absence',
+                    'Justifier',
                     style: TextStyle(
                       color: AppTheme.seaBlue,
                       fontWeight: FontWeight.bold,
@@ -1166,112 +1166,15 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
   }
 
   Widget _buildTeachersTab() {
-    final String childName = widget.child['name'].split(' ')[0];
+    final List<dynamic> teachers = _dashboardData?['teachers'] ?? [];
 
-    final List<Map<String, dynamic>> teachers;
-
-    if (childName == 'Yannick') {
-      // Notre Dame de Quaben — Terminale C
-      teachers = [
-        {
-          'name': 'M. Obiang',
-          'subject': 'Mathématiques',
-          'color': AppTheme.seaBlue,
-          'mode': 'Présentiel',
-        },
-        {
-          'name': 'M. Okoro',
-          'subject': 'SVT (Sciences de la Vie)',
-          'color': Colors.red,
-          'mode': 'Présentiel',
-        },
-        {
-          'name': 'M. Mvondo',
-          'subject': 'Physique-Chimie',
-          'color': Colors.orange,
-          'mode': 'Présentiel',
-        },
-        {
-          'name': 'Mme Zara',
-          'subject': 'Philosophie',
-          'color': Colors.purple,
-          'mode': 'Visioconférence',
-        },
-        {
-          'name': 'M. Bongo',
-          'subject': 'Histoire-Géographie',
-          'color': Colors.brown,
-          'mode': 'Présentiel',
-        },
-      ];
-    } else if (childName == 'Emmanuella') {
-      // Lycée Michel Montaigne — 3ème
-      teachers = [
-        {
-          'name': 'Mme Eyi',
-          'subject': 'Français',
-          'color': Colors.indigo,
-          'mode': 'Présentiel',
-        },
-        {
-          'name': 'Miss Sarah',
-          'subject': 'Anglais',
-          'color': Colors.teal,
-          'mode': 'Présentiel',
-        },
-        {
-          'name': 'M. Abessolo',
-          'subject': 'Physique-Chimie',
-          'color': Colors.green,
-          'mode': 'Visioconférence',
-        },
-        {
-          'name': 'M. Ndong',
-          'subject': 'Mathématiques',
-          'color': AppTheme.seaBlue,
-          'mode': 'Présentiel',
-        },
-        {
-          'name': 'Mme Koumba',
-          'subject': 'Histoire-Géographie',
-          'color': Colors.brown,
-          'mode': 'Présentiel',
-        },
-      ];
-    } else {
-      // Junior — Scolaire Bambino Village — 5e Année
-      teachers = [
-        {
-          'name': 'Mme Eyi',
-          'subject': 'Français',
-          'color': Colors.redAccent,
-          'mode': 'Visioconférence',
-        },
-        {
-          'name': 'M. Koumba',
-          'subject': 'Histoire-Géographie',
-          'color': Colors.brown,
-          'mode': 'Présentiel',
-        },
-        {
-          'name': 'Mme Nze',
-          'subject': 'Mathématiques',
-          'color': AppTheme.seaBlue,
-          'mode': 'Présentiel',
-        },
-        {
-          'name': 'M. Mbadinga',
-          'subject': 'Sciences Naturelles',
-          'color': Colors.green,
-          'mode': 'Présentiel',
-        },
-        {
-          'name': 'Mme Ondo',
-          'subject': 'Éducation Civique',
-          'color': Colors.orange,
-          'mode': 'Présentiel',
-        },
-      ];
+    if (teachers.isEmpty) {
+      return const Center(
+        child: Text(
+          'Aucun professeur trouvé pour cette classe.',
+          style: TextStyle(color: Colors.grey, fontSize: 15),
+        ),
+      );
     }
 
     return ListView.builder(
@@ -1279,14 +1182,16 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
       itemCount: teachers.length,
       itemBuilder: (context, index) {
         final teacher = teachers[index];
-        final Color tColor = teacher['color'] as Color;
+        final String fullName = "${teacher['prenom'] ?? ''} ${teacher['nom'] ?? ''}".trim();
+        final String subject = teacher['matiere'] ?? 'Matière Inconnue';
+        final bool isPrincipal = teacher['is_principal'] == true;
         return Container(
           margin: const EdgeInsets.only(bottom: 15),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey[100]!),
+            border: Border.all(color: isPrincipal ? AppTheme.seaBlue.withOpacity(0.5) : Colors.grey[100]!),
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
             ],
@@ -1294,10 +1199,10 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: tColor.withOpacity(0.12),
+                backgroundColor: AppTheme.seaBlue.withOpacity(0.12),
                 child: Text(
-                  teacher['name'].split(' ').last[0],
-                  style: TextStyle(color: tColor, fontWeight: FontWeight.bold),
+                  fullName.isNotEmpty ? fullName[0].toUpperCase() : '?',
+                  style: const TextStyle(color: AppTheme.seaBlue, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 15),
@@ -1305,15 +1210,30 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      teacher['name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          fullName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (isPrincipal) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.seaBlue,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text('Principal', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          )
+                        ]
+                      ],
                     ),
                     Text(
-                      teacher['subject'],
+                      subject,
                       style: TextStyle(color: AppTheme.textGrey, fontSize: 13),
                     ),
                   ],
@@ -1326,8 +1246,8 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
                     MaterialPageRoute(
                       builder: (context) => AppointmentPage(
                         source: AppointmentSource.parent,
-                        targetName: teacher['name'],
-                        studentName: widget.child['name'],
+                        targetName: fullName,
+                        studentName: widget.child['prenom'] ?? widget.child['name'],
                       ),
                     ),
                   );
@@ -1357,74 +1277,18 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
   }
 
   Widget _buildNotesTab() {
-    final String childName = widget.child['name'].split(' ')[0];
-    final List<Map<String, dynamic>> grades;
+    final List<dynamic> grades = _dashboardData?['grades'] ?? [];
 
-    if (childName == 'Yannick') {
-      grades = [
-        {
-          'subject': 'SVT',
-          'topic': 'Devoir maison (Génétique)',
-          'grade': '08/20',
-          'isBad': true,
-          'teacher': 'M. Okoro',
-          'date': 'Aujourd\'hui',
-        },
-        {
-          'subject': 'Mathématiques',
-          'topic': 'Devoir en classe n°1',
-          'grade': '14/20',
-          'isBad': false,
-          'teacher': 'M. Obiang',
-          'date': '20 Fév',
-        },
-        {
-          'subject': 'Philosophie',
-          'topic': 'Dissertation',
-          'grade': '11/20',
-          'isBad': false,
-          'teacher': 'Mme. Zara',
-          'date': '12 Fév',
-        },
-      ];
-    } else if (childName == 'Junior') {
-      grades = [
-        {
-          'subject': 'Français',
-          'topic': 'Devoir en classe (Dictée)',
-          'grade': '00/20',
-          'isBad': true,
-          'teacher': 'Mme. Eyi',
-          'date': 'Aujourd\'hui',
-        },
-        {
-          'subject': 'Histoire-Géo',
-          'topic': 'Contrôle continu',
-          'grade': '13/20',
-          'isBad': false,
-          'teacher': 'M. Koumba',
-          'date': '15 Fév',
-        },
-      ];
-    } else {
-      grades = [
-        {
-          'subject': 'Français',
-          'topic': 'Interrogation Orale',
-          'grade': '12/20',
-          'isBad': false,
-          'teacher': 'Mme. Eyi',
-          'date': '18 Fév',
-        },
-        {
-          'subject': 'Anglais',
-          'topic': 'Vocabulary Test',
-          'grade': '16/20',
-          'isBad': false,
-          'teacher': 'Miss Sarah',
-          'date': '10 Fév',
-        },
-      ];
+    if (grades.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Text(
+            'Aucune note trouvée.',
+            style: TextStyle(color: Colors.grey, fontSize: 15),
+          ),
+        ),
+      );
     }
 
     return SingleChildScrollView(
@@ -1449,7 +1313,11 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
   }
 
   Widget _buildGradeItem(Map<String, dynamic> g) {
-    bool isBad = g['isBad'] as bool;
+    bool isBad = g['isBad'] == true;
+    final String subject = g['matiere'] ?? g['subject'] ?? 'Inconnu';
+    final String topic = g['titre'] ?? g['topic'] ?? 'Devoir';
+    final String grade = g['note'] ?? g['grade'] ?? '0/20';
+    final String teacher = g['teacher'] ?? '';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1470,7 +1338,7 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  g['subject'],
+                  subject,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -1479,16 +1347,17 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  g['topic'],
+                  topic,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                Text(
-                  'Prof: ${g['teacher']}',
-                  style: TextStyle(color: AppTheme.textGrey, fontSize: 11),
-                ),
+                if (teacher.isNotEmpty)
+                  Text(
+                    'Prof: $teacher',
+                    style: TextStyle(color: AppTheme.textGrey, fontSize: 11),
+                  ),
               ],
             ),
           ),
@@ -1496,14 +1365,14 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                g['grade'],
+                grade,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: isBad ? Colors.red : AppTheme.seaBlue,
                 ),
               ),
-              if (isBad)
+              if (isBad && teacher.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 5),
                   child: GestureDetector(
@@ -1513,8 +1382,8 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
                         MaterialPageRoute(
                           builder: (context) => AppointmentPage(
                             source: AppointmentSource.parent,
-                            targetName: g['teacher'],
-                            studentName: widget.child['name'],
+                            targetName: teacher,
+                            studentName: widget.child['prenom'] ?? widget.child['name'],
                           ),
                         ),
                       );
@@ -1530,11 +1399,7 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
                       ),
                       child: const Text(
                         'Prendre RDV',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -1837,24 +1702,16 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
   }
 
   Widget _buildStatHeader() {
-    final String childName = widget.child['name'].split(' ')[0];
-    // Moyenne 2e trimestre, absences, conduite par enfant
-    String average = '10.00';
-    String absences = '0j';
-    String conduite = 'A';
+    String average = 'N/A';
+    String absences = 'N/A';
+    String conduite = 'N/A';
 
-    if (childName == 'Yannick') {
-      average = '10.00'; // 2e trim
-      absences = '2j';
-      conduite = 'B';
-    } else if (childName == 'Emmanuella') {
-      average = '14.80';
-      absences = '1j';
-      conduite = 'A';
-    } else if (childName == 'Junior') {
-      average = '09.50';
-      absences = '5j';
-      conduite = 'C';
+    // Extraction dynamique des statistiques si disponibles
+    if (_dashboardData != null) {
+      if (_dashboardData!['attendance'] != null) {
+        final statut = _dashboardData!['attendance']['statut'];
+        absences = (statut == 'Absente' || statut == 'Absent') ? '1j' : '0j';
+      }
     }
 
     return Container(
@@ -2064,84 +1921,15 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
       );
     }
 
-    if (childName == 'Yannick') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              termBadge('1er Trimestre', '12', '10ᵉ'),
-              const SizedBox(width: 10),
-              termBadge('2ᵉ Trimestre', '10', '20ᵉ'),
-              const SizedBox(width: 10),
-              termBadge('3ᵉ Trimestre', '', '', isPending: true),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.red[50],
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.red.withOpacity(0.15)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: const [
-                    Icon(Icons.trending_down, color: Colors.red, size: 16),
-                    SizedBox(width: 6),
-                    Text(
-                      'Causes de la chute (T1→T2)',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                _buildCauseRow(
-                  Icons.science_outlined,
-                  'SVT',
-                  '15/20 → 08/20',
-                  Colors.red,
-                ),
-                const SizedBox(height: 6),
-                _buildCauseRow(
-                  Icons.psychology_outlined,
-                  'Philosophie',
-                  '13/20 → 11/20',
-                  Colors.orange,
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    } else if (childName == 'Emmanuella') {
-      return Row(
-        children: [
-          termBadge('1er Trimestre', '14', '5ᵉ'),
-          const SizedBox(width: 10),
-          termBadge('2ᵉ Trimestre', '14.8', '3ᵉ'),
-          const SizedBox(width: 10),
-          termBadge('3ᵉ Trimestre', '', '', isPending: true),
-        ],
-      );
-    } else {
-      return Row(
-        children: [
-          termBadge('1er Trimestre', '10', '18ᵉ'),
-          const SizedBox(width: 10),
-          termBadge('2ᵉ Trimestre', '09.5', '20ᵉ'),
-          const SizedBox(width: 10),
-          termBadge('3ᵉ Trimestre', '', '', isPending: true),
-        ],
-      );
-    }
+    return Row(
+      children: [
+        termBadge('1er Trimestre', 'N/A', '-'),
+        const SizedBox(width: 10),
+        termBadge('2ᵉ Trimestre', 'N/A', '-'),
+        const SizedBox(width: 10),
+        termBadge('3ᵉ Trimestre', '', '', isPending: true),
+      ],
+    );
   }
 
   Widget _buildCauseRow(
@@ -2172,27 +1960,9 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
   }
 
   Widget _buildVulnerabilityCard() {
-    final String childName = widget.child['name'].split(' ')[0];
-    String title = 'Alerte Régression';
-    String message =
-        'Baisse notable en Sciences. L\'élève avait une meilleure moyenne auparavant.';
-    Color color = Colors.red;
-
-    if (childName == 'Yannick') {
-      title = 'Alerte SVT';
-      message =
-          'Chute brutale de la note du devoir de maison (08/20). Yannick avait pourtant eu 15/20 au dernier devoir.';
-    } else if (childName == 'Junior') {
-      title = 'Alerte Assiduité';
-      message =
-          'Les retards répétés (notamment à 09:30) commencent à impacter les notes de Français.';
-      color = Colors.orange;
-    } else {
-      title = 'Point de vigilance';
-      message =
-          'Emmanuella maintient un bon niveau, mais les Mathématiques restent sa matière la plus faible.';
-      color = Colors.blue;
-    }
+    String title = 'Point de vigilance';
+    String message = 'Maintenez les efforts pour ce trimestre.';
+    Color color = Colors.blue;
 
     return Container(
       padding: const EdgeInsets.all(16),

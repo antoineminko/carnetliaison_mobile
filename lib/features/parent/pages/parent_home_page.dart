@@ -119,7 +119,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
       'color': const Color(0xFF2596be),
       'image': imageUrl ?? 'assets/images/profil/eleve1.jpg',
       'isNetworkImage': imageUrl != null,
-      'notif': 0,
+      'notif': child['notif_count'] ?? 0,
       'raw': child,
     };
   }
@@ -1251,21 +1251,24 @@ class _ParentHomePageState extends State<ParentHomePage> {
         _selectedChild = {
           'name': currentChild['name'],
           'grade': currentChild['grade'],
-          'id': '#${currentChild['id']}',
+          'id': currentChild['id'] != null ? '#${currentChild['id']}' : '#0000',
           'image': currentChild['image'],
-          'newsImage': 'assets/images/profil/actualité/actu1.png',
+          'isNetworkImage': currentChild['isNetworkImage'],
+          'newsImage': null,
           'school': currentChild['school'],
-          'schoolIcon': 'assets/images/iconEcole/icon1.jpg',
-          'newsTitle': 'Espace parent connecté',
-          'newsContent': 'Votre enfant est maintenant lié à votre compte.',
-          'status': 'Présent',
-          'statusColor': Colors.green,
-          'arrivalTime': '08:00',
+          'schoolIcon': null,
+          'newsTitle': 'Aucune actualité',
+          'newsContent': 'Rien à signaler pour le moment.',
+          'status': 'En attente',
+          'statusColor': Colors.grey,
+          'arrivalTime': '--:--',
           'feesOwed': '0 FCFA',
           'homeworks': [],
           'notifications': [],
           'calendarDate': 'Mars 2026',
           'incidents': [],
+          'fromApi': true,
+          'raw': currentChild['raw']
         };
         return;
       }
@@ -1478,18 +1481,21 @@ class _ParentHomePageState extends State<ParentHomePage> {
             'grade': child['grade'],
             'id': child['id'] != null ? '#${child['id']}' : '#0000',
             'image': child['image'] ?? 'assets/images/profil/eleve1.jpg',
-            'newsImage': 'assets/images/profil/actualité/actu1.png',
+            'isNetworkImage': child['isNetworkImage'] == true,
+            'newsImage': null,
             'school': child['school'],
-            'schoolIcon': 'assets/images/iconEcole/icon1.jpg',
-            'newsTitle': 'Nouvel enfant ajouté',
-            'newsContent': 'Aucune actualité récente pour le moment.',
-            'status': 'Présent',
-            'statusColor': Colors.green,
-            'arrivalTime': '08:00',
+            'schoolIcon': null,
+            'newsTitle': 'Aucune actualité',
+            'newsContent': 'Rien à signaler pour le moment.',
+            'status': 'En attente',
+            'statusColor': Colors.grey,
+            'arrivalTime': '--:--',
             'feesOwed': '0 FCFA',
             'homeworks': [],
             'notifications': [],
-            'incidents': []
+            'incidents': [],
+            'fromApi': true,
+            'raw': child['raw'] ?? child
           };
       }
     });

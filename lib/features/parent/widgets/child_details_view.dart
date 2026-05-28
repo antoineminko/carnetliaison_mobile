@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/pages/appointment_page.dart';
+import 'package:app_mobile/shared/config/api_client.dart';
+import 'package:intl/intl.dart';
 
 class ChildDetailsView extends StatefulWidget {
   final Map<String, dynamic> child;
@@ -23,11 +25,32 @@ class ChildDetailsView extends StatefulWidget {
 class _ChildDetailsViewState extends State<ChildDetailsView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  Map<String, dynamic>? _dashboardData;
+  bool _isLoadingDashboard = false;
+
+  Future<void> _fetchDashboard() async {
+    if (widget.child['fromApi'] != true) return;
+    
+    setState(() => _isLoadingDashboard = true);
+    try {
+      final id = widget.child['id'];
+      final response = await ApiClient.instance.get('/eleves//dashboard');
+      if (mounted) {
+        setState(() {
+          _dashboardData = response.data;
+          _isLoadingDashboard = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingDashboard = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 7, vsync: this);
+    _fetchDashboard();
   }
 
   @override
@@ -439,85 +462,66 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
           ),
           const SizedBox(height: 15),
 
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
+          Builder(
+            builder: (context) {
+              final actualites = _dashboardData?['actualites'] as List<dynamic>? ?? [];
+              if (actualites.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
                   ),
-                  child: Container(
-                    height: 150,
-                    width: double.infinity,
-                    color: Colors.grey[300],
-                    child: Image.asset(
-                      widget.child['newsImage'] ??
-                          'assets/images/profil/actualité/actu1.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Center(
-                        child: Icon(Icons.image, size: 50, color: Colors.grey),
-                      ),
+                  child: const Center(
+                    child: Text(
+                      'Aucune actualité récente',
+                      style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'ANNONCE',
-                          style: TextStyle(
-                            color: Colors.blue[800],
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                );
+              }
+              return Column(
+                children: actualites.map((actu) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[50],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              (actu['type'] ?? 'ANNONCE').toString().toUpperCase(),
+                              style: TextStyle(color: Colors.blue[800], fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          Text(actu['titre'] ?? 'Information', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Text(actu['contenu'] ?? '', style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5)),
+                          const SizedBox(height: 12),
+                          Text(actu['date'] != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(actu['date'])) : '', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.child['newsTitle'] ??
-                            'Séance discussion sur métier d\'avenir',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        widget.child['newsContent'] ??
-                            'Une séance d\'échange avec des professionnels pour aider les élèves à choisir leur orientation.',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 13,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),
@@ -1631,73 +1635,8 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
   }
 
   Widget _buildInfosTab() {
-    final String childFirstName = widget.child['name'].split(' ')[0];
-
-    // Simulation de données différentes par enfant
-    final List<Map<String, dynamic>> adminInfos;
-    if (childFirstName == 'Junior') {
-      adminInfos = [
-        {
-          'title': 'Convocation Mme Marie Eyi (Français)',
-          'subtitle': 'Convocation Visioconférence suite au comportement.',
-          'date': 'Aujourd\'hui',
-          'type': 'PROF',
-          'color': Colors.red,
-          'icon': Icons.videocam_outlined,
-          'isConvocation': true,
-        },
-        {
-          'title': 'Détails de l\'incident : Arrivé en retard',
-          'subtitle':
-              'Motif : Désordre en classe le matin. Expulsé de classe à 7h00 et rentré à 9h30 pour cause de bavardage.',
-          'date': 'Ce matin • 09:30',
-          'type': 'DISCIPLINE',
-          'color': Colors.orange,
-          'icon': Icons.warning_amber_rounded,
-        },
-        {
-          'title': 'Convocation par l\'Administration',
-          'subtitle':
-              'Rendez-vous obligatoire avec la direction pour faire le point.',
-          'date': 'À planifier',
-          'type': 'ADMIN',
-          'color': const Color(0xFF2596be),
-          'icon': Icons.gavel_rounded,
-        },
-      ];
-    } else if (childFirstName == 'Emmanuella') {
-      adminInfos = [
-        {
-          'title': 'Bulletin Trimestre 3',
-          'subtitle': 'Disponible pour consultation et téléchargement.',
-          'date': 'Session Juin 2026',
-          'type': 'Résultat',
-          'color': AppTheme.seaBlue,
-          'icon': Icons.assignment_turned_in_outlined,
-          'isBulletin': true,
-          'image': 'assets/bulletin/1.png',
-        },
-      ];
-    } else {
-      adminInfos = [
-        {
-          'title': 'Paiement Scolarité',
-          'subtitle': 'Relance pour impayés. Reste à solder.',
-          'date': 'Reste: 125 000 FCFA',
-          'type': 'Finance',
-          'color': Colors.red,
-          'icon': Icons.warning_amber_rounded,
-        },
-        {
-          'title': 'Orientation Terminale',
-          'subtitle': 'Suivi du dossier Parcoursup / Campus France.',
-          'date': 'Prochaine étape: Avril 2026',
-          'type': 'Pédagogie',
-          'color': Colors.purple,
-          'icon': Icons.trending_up,
-        },
-      ];
-    }
+    final finances = _dashboardData?['finances'];
+    final adminInfos = _dashboardData?['adminInfos'] as List<dynamic>? ?? [];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -1705,7 +1644,7 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'INFORMATIONS ADMINISTRATIVES',
+            'SITUATION FINANCIÈRE',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -1714,482 +1653,151 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
             ),
           ),
           const SizedBox(height: 15),
-          ...adminInfos.map((info) => _buildAdminInfoCard(info)),
-
-          const SizedBox(height: 30),
-          if (widget.child['feesOwed'] != null)
-            _buildPaymentBanner(widget.child['feesOwed'] as String),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdminInfoCard(Map<String, dynamic> info) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[100]!),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: (info['color'] as Color).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(info['icon'], color: info['color'], size: 24),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: InkWell(
-                  onTap: info['isBulletin'] == true
-                      ? () => _showBulletinModal(info['image'])
-                      : null,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              info['title'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: (info['color'] as Color).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              info['type'],
-                              style: TextStyle(
-                                color: info['color'],
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        info['subtitle'],
-                        style: TextStyle(color: Colors.grey[700], fontSize: 13),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            info['date'],
-                            style: const TextStyle(
-                              color: AppTheme.seaBlue,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (info['isBulletin'] == true)
-                            const Text(
-                              'Cliquer pour voir',
-                              style: TextStyle(
-                                color: AppTheme.seaBlue,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (info['isConvocation'] == true) ...[
-            const SizedBox(height: 15),
-            const Divider(),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Demande de report envoyée'),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF2596be)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                  ),
-                  child: const Text(
-                    'Reporter',
-                    style: TextStyle(
-                      color: Color(0xFF2596be),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Convocation acceptée avec succès'),
-                        backgroundColor: Color(0xFF2596be),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2596be),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                  ),
-                  child: const Text(
-                    'Accepter',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentBanner(String feesOwed) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1565C0), Color(0xFF1976D2)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.info_outline, color: Colors.white, size: 30),
-          const SizedBox(height: 10),
-          const Text(
-            'Situation Financière',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            'Solde restant à régler : $feesOwed',
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _showInvoicesModal,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF1565C0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: const Text(
-                'VOIR MES FACTURES',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showInvoicesModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: AppTheme.background,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
+          if (finances != null)
             Container(
-              width: 40,
-              height: 4,
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'FACTURES - ${widget.child['name']}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.seaBlue,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildInvoiceItem(
-                    'Tranche n°3',
-                    'En attente',
-                    '125 000 FCFA',
-                    Colors.orange,
-                  ),
-                  _buildInvoiceItem(
-                    'Tranche n°2',
-                    'Payé',
-                    '250 000 FCFA',
-                    Colors.green,
-                  ),
-                  _buildInvoiceItem(
-                    'Tranche n°1',
-                    'Payé',
-                    '250 000 FCFA',
-                    Colors.green,
-                  ),
+                gradient: const LinearGradient(
+                  colors: [AppTheme.seaBlue, Color(0xFF1565C0)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(color: AppTheme.seaBlue.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5)),
                 ],
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Comment souhaitez-vous régler ?',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  const Text('Reste à payer', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  const SizedBox(height: 5),
+                  Text(
+                    ' ',
+                    style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 15),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: _buildPaymentOption(
-                          icon: Icons.calendar_today,
-                          label: 'Réserver une date',
-                          subtitle: 'Payer à l\'école',
-                          color: AppTheme.seaBlue,
-                          onTap: () {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Rendez-vous pris pour règlement à l\'école.',
-                                ),
-                                backgroundColor: AppTheme.seaBlue,
-                              ),
-                            );
-                          },
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Prochain paiement', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          const SizedBox(height: 2),
+                          Text(
+                            finances['prochain_paiement'] != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(finances['prochain_paiement'])) : 'N/A',
+                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: _buildPaymentOption(
-                          icon: Icons.credit_card,
-                          label: 'Payer en ligne',
-                          subtitle: 'Carte / Mobile',
-                          color: AppTheme.forestGreen,
-                          onTap: () {
-                            _showOnlinePaymentSimulation();
-                          },
+                      ElevatedButton(
+                        onPressed: () => _showPaymentModal(finances['solde_restant']),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppTheme.seaBlue,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         ),
+                        child: const Text('PAYER', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
                 ],
               ),
+            )
+          else
+            const Text('Données financières non disponibles', style: TextStyle(color: Colors.grey)),
+            
+          const SizedBox(height: 30),
+          const Text(
+            'MESSAGES ADMINISTRATION',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey,
+              letterSpacing: 1.2,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInvoiceItem(
-    String title,
-    String status,
-    String amount,
-    Color statusColor,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          ),
+          const SizedBox(height: 15),
+          if (adminInfos.isEmpty)
+            const Center(child: Text('Aucun message', style: TextStyle(color: Colors.grey)))
+          else
+            ...adminInfos.map((info) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+                  border: Border.all(color: Colors.grey[100]!),
                 ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: Colors.blue[50], shape: BoxShape.circle),
+                      child: Icon(Icons.info_outline, color: Colors.blue[700]),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(info['titre'] ?? 'Information', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text(info['contenu'] ?? '', style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.4)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          Text(
-            amount,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 17,
-              color: AppTheme.textDark,
-            ),
-          ),
+              );
+            }),
         ],
       ),
     );
   }
 
-  Widget _buildPaymentOption({
-    required IconData icon,
-    required String label,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 30),
-            const SizedBox(height: 10),
-            Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(color: Colors.grey[500], fontSize: 10),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showOnlinePaymentSimulation() {
-    showModalBottomSheet(
+  void _showPaymentModal(dynamic amount) {
+    String phone = '';
+    showDialog(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(25),
-        child: Column(
+      builder: (context) => AlertDialog(
+        title: const Text('Paiement Mobile Money', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'PAIEMENT EN LIGNE',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 25),
-            ListTile(
-              leading: const Icon(Icons.credit_card, color: Colors.blue),
-              title: const Text('Carte Bancaire'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.phone_android, color: Colors.orange),
-              title: const Text('Mobile Money (Airtel/Moov)'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.pop(context),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('ANNULER'),
+            Text('Montant :  FCFA', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+            TextField(
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Numéro de téléphone',
+                hintText: 'Ex: 066xxxxxx',
+                prefixIcon: const Icon(Icons.phone_android),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
+              onChanged: (val) => phone = val,
             ),
           ],
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Demande de paiement envoyée sur votre téléphone.')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.seaBlue),
+            child: const Text('Valider', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

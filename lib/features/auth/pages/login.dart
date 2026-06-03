@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/shared/utils/user_role.dart';
 import 'package:app_mobile/features/auth/pages/create_account.dart';
+import 'package:app_mobile/features/auth/pages/qr_scan_page.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 
@@ -50,19 +51,19 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   }
 
   Future<void> _login() async {
-    // DEMO: Bypass login for Teacher and Student roles
-    if (widget.role == UserRole.teacher || widget.role == UserRole.student) {
+    // DEMO: Bypass login for Student role
+    if (widget.role == UserRole.student) {
       _navigateHome();
       return;
     }
 
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
+
       final result = await _authService.login(
         role: widget.role,
         username: _usernameController.text,
-        password: widget.role == UserRole.parent ? 'parent123' : _passwordController.text,
+        password: _passwordController.text,
       );
 
       setState(() => _isLoading = false);
@@ -124,83 +125,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
-  // Simulation Scan
-  void _simulateScan() async {
-    // 1. Simuler délai scan
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ouverture Caméra... (Simulation)')),
-    );
-    await Future.delayed(const Duration(seconds: 1));
-    
-    // 2. Scan réussi -> Code enfant
-    final fakeChildCode = "CHILD-12345";
-    
-    if (mounted) {
-      // 3. Ouvrir Modal Authentif
-      _showScanAuthModal(fakeChildCode);
-    }
-  }
-
-  void _showScanAuthModal(String childCode) {
-    final emailCtrl = TextEditingController();
-    final passCtrl = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Vérification Parent'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Pour lier cet enfant, veuillez vous identifier.'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: emailCtrl,
-              decoration: const InputDecoration(labelText: 'Email Parent'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: passCtrl,
-              decoration: const InputDecoration(labelText: 'Mot de passe'),
-              obscureText: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-             onPressed: () => Navigator.pop(context),
-             child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(context); // Close modal
-              setState(() => _isLoading = true);
-              
-              final result = await _authService.verifyParentLink(
-                email: emailCtrl.text,
-                password: passCtrl.text,
-                childQrCode: childCode
-              );
-
-              setState(() => _isLoading = false);
-              
-              if (mounted) {
-                 // Update username controller for the creation dialog context if needed
-                 _usernameController.text = emailCtrl.text;
-                 _handleAuthResult(result, isScanFlow: true, qrCode: childCode);
-              }
-            },
-            child: const Text('Vérifier & Lier'),
-          )
-        ],
-      ),
-    );
-  }
 
   void _navigateHome() {
     switch (widget.role) {
       case UserRole.parent:
-        Navigator.pushReplacementNamed(context, '/parent/home');
+        Navigator.pushReplacementNamed(
+          context,
+          '/parent/home',
+          arguments: {'forceAddChild': true},
+        );
         break;
       case UserRole.teacher:
         Navigator.pushReplacementNamed(context, '/teacher/home');
@@ -270,7 +203,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       controller: _usernameController,
                       style: TextStyle(color: darkText),
                       decoration: InputDecoration(
-                        hintText: 'email@schooly.com',
+                        hintText: 'Email ou numéro de téléphone',
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -278,35 +211,33 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       ),
                     ),
                   ),
-                  if (widget.role != UserRole.parent) ...[
-                    const SizedBox(height: 24),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 12, bottom: 8),
-                      child: Text('Mot de passe', style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, bottom: 8),
+                    child: Text('Mot de passe', style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500)),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: inputFill,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        const BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 5),
+                        BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(2, 2), blurRadius: 5, blurStyle: BlurStyle.inner),
+                      ],
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: inputFill,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          const BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 5),
-                          BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(2, 2), blurRadius: 5, blurStyle: BlurStyle.inner),
-                        ],
-                      ),
-                      child: TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        style: TextStyle(color: darkText),
-                        decoration: InputDecoration(
-                          hintText: '••••••••',
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          prefixIcon: Icon(Icons.lock, color: Colors.grey[500]),
-                        ),
+                    child: TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      style: TextStyle(color: darkText),
+                      decoration: InputDecoration(
+                        hintText: '••••••••',
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        prefixIcon: Icon(Icons.lock, color: Colors.grey[500]),
                       ),
                     ),
-                  ],
+                  ),
                   const SizedBox(height: 40),
                   Container(
                     decoration: BoxDecoration(

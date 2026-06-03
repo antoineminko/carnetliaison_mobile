@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_mobile/shared/config/api_client.dart';
+import 'package:app_mobile/shared/utils/user_role.dart';
 
 class SplashScreenPage extends StatefulWidget {
   const SplashScreenPage({super.key});
@@ -37,12 +40,41 @@ class _SplashScreenPageState extends State<SplashScreenPage>
 
     _controller.forward();
 
-    // Navigate to SelectRole after delay
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/select_role');
+    _checkSessionAndNavigate();
+  }
+
+  Future<void> _checkSessionAndNavigate() async {
+    // Wait for the splash animation
+    await Future.delayed(const Duration(milliseconds: 2500));
+
+    if (!mounted) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final parentId = prefs.getInt('parent_id');
+    final teacherId = prefs.getInt('teacher_id');
+    // Ce flag est positionné à true uniquement après un scan QR réussi
+    // Il est effacé lors de la déconnexion explicite
+    final parentScanDone = prefs.getBool('parent_scan_done') ?? false;
+
+    String targetRoute = '/select_role';
+    Object? arguments;
+
+    if (parentId != null) {
+      if (parentScanDone) {
+        // Session active + scan déjà effectué → accès direct à l'accueil
+        targetRoute = '/parent/home';
+      } else {
+        // Connecté mais scan non encore effectué → accueil avec empty state forcé
+        targetRoute = '/parent/home';
+        arguments = {'forceAddChild': true};
       }
-    });
+    } else if (teacherId != null) {
+      targetRoute = '/teacher/home';
+    }
+
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, targetRoute, arguments: arguments);
+    }
   }
 
   @override

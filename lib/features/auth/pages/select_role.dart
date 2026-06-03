@@ -29,6 +29,7 @@ class SelectRolePage extends StatelessWidget {
                     width: double.infinity,
                     decoration: const BoxDecoration(
                       image: DecorationImage(
+
                         image: AssetImage('assets/images/parent.png'),
                         fit: BoxFit.cover,
                         alignment: Alignment.topCenter,

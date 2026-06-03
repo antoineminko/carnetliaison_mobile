@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/features/teacher/pages/create_appointment_page.dart';
+import 'package:app_mobile/features/teacher/pages/parent_info_page.dart';
 
 enum AttendanceStatus { present, absent, late }
 
@@ -39,16 +41,38 @@ class _AttendanceViewState extends State<AttendanceView> {
       final data = response.data as List;
       
       setState(() {
-        _students = data.map((e) => {
-          'id': e['id'],
-          'name': '${e['prenom']} ${e['nom']}',
-          'status': null, 
-          'arrivalTime': null,
-          'matricule': e['matricule'] ?? 'N/A',
-        }).toList();
         _markedCount = 0;
+        _students = data.map((e) {
+          AttendanceStatus? currentStatus;
+          if (e['statut_presence'] == 'present') currentStatus = AttendanceStatus.present;
+          else if (e['statut_presence'] == 'absent') currentStatus = AttendanceStatus.absent;
+          else if (e['statut_presence'] == 'late') currentStatus = AttendanceStatus.late;
+
+          if (currentStatus != null) _markedCount++;
+
+          return {
+            'id': e['id'],
+            'name': '${e['prenom']} ${e['nom']}',
+            'status': currentStatus, 
+            'arrivalTime': null,
+            'matricule': e['matricule'] ?? 'N/A',
+            'photo_url': e['photo_url'],
+            'date_naissance': e['date_naissance'],
+            'code_secret': e['code_secret'] ?? 'Non défini',
+            'parent_id': e['parent_id'],
+          };
+        }).toList();
         _isLoading = false;
       });
+
+      if (_markedCount > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('L\'appel a déjà été fait aujourd\'hui. Vous pouvez le modifier ou le réinitialiser dans "Actions".'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         _students = [];
@@ -97,11 +121,48 @@ class _AttendanceViewState extends State<AttendanceView> {
                _applyGlobalStatus(AttendanceStatus.late);
                Navigator.pop(context);
             }, textColor: Colors.black87),
+            if (_markedCount > 0) ...[
+              const Divider(height: 30),
+              _buildGlobalButton('RÉINITIALISER L\'APPEL', Colors.grey[800]!, Icons.refresh, () {
+                 _resetAttendance();
+                 Navigator.pop(context);
+              }),
+            ],
             const SizedBox(height: 20),
           ],
         ),
       ),
     );
+  }
+
+  void _resetAttendance() async {
+    try {
+      final response = await ApiClient.instance.post('/attendances/reset', data: {
+        'classe_id': widget.classeId,
+        'date': DateTime.now().toIso8601String().split('T')[0],
+      });
+
+      if (response.data['success']) {
+        setState(() {
+          for (var student in _students) {
+            student['status'] = null;
+            student['arrivalTime'] = null;
+          }
+          _markedCount = 0;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('L\'appel a été réinitialisé.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de la réinitialisation: $e')),
+        );
+      }
+    }
   }
 
   void _applyGlobalStatus(AttendanceStatus status) {
@@ -426,8 +487,15 @@ class _AttendanceViewState extends State<AttendanceView> {
                   }
                 } catch (e) {
                   if (!context.mounted) return;
+                  String errorMsg = e.toString();
+                  if (e is DioException && e.response?.data != null) {
+                    errorMsg = e.response!.data.toString();
+                  }
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Erreur: impossible de valider l\'appel. $e')),
+                    SnackBar(
+                      content: Text('Erreur backend: $errorMsg'),
+                      duration: const Duration(seconds: 10),
+                    ),
                   );
                 }
               },
@@ -484,10 +552,10 @@ class _AttendanceViewState extends State<AttendanceView> {
                 CircleAvatar(
                   radius: 40,
                   backgroundColor: const Color(0xFFF0F4F8),
-                  child: student['name'] == 'Junior' 
+                  child: student['photo_url'] != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(40),
-                        child: Image.asset('assets/images/profil/eleve3.jpg', fit: BoxFit.cover, width: 80, height: 80),
+                        child: Image.network(student['photo_url'], fit: BoxFit.cover, width: 80, height: 80, errorBuilder: (c, e, s) => Text('${index + 1}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2E3192)))),
                       )
                     : Text(
                         '${index + 1}',
@@ -500,9 +568,56 @@ class _AttendanceViewState extends State<AttendanceView> {
                   style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
                   textAlign: TextAlign.center,
                 ),
-                Text(
-                  'Matricule: ${student['matricule']}',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                
+                Builder(builder: (context) {
+                  int? age;
+                  if (student['date_naissance'] != null) {
+                    try {
+                      final dob = DateTime.parse(student['date_naissance']);
+                      final today = DateTime.now();
+                      age = today.year - dob.year;
+                      if (today.month < dob.month || (today.month == dob.month && today.day < dob.day)) {
+                        age--;
+                      }
+                    } catch (_) {}
+                  }
+                  return Text(
+                    'Âge: ${age != null ? "$age ans" : "Inconnu"} | Code Secret: ${student['code_secret']}',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[800], fontWeight: FontWeight.w500),
+                  );
+                }),
+
+                const SizedBox(height: 15),
+                
+                // Bouton Info Parent
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context); // Close the modal
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ParentInfoPage(
+                              studentId: student['id'],
+                              studentName: student['name'],
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.info_outline, size: 18),
+                      label: const Text('Info Parent', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.seaBlue.withOpacity(0.1),
+                        foregroundColor: AppTheme.seaBlue,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
                 ),
 
                 if (student['name'] == 'Junior') ...[
@@ -585,7 +700,7 @@ class _AttendanceViewState extends State<AttendanceView> {
                   ),
                 ),
 
-                if (student['name'] == 'Junior') ...[
+                if (student['name'].toString().toLowerCase().contains('junior')) ...[
                   const SizedBox(height: 25),
                   const Divider(),
                   const SizedBox(height: 15),
@@ -609,15 +724,15 @@ class _AttendanceViewState extends State<AttendanceView> {
                             children: [
                               const CircleAvatar(
                                 backgroundColor: AppTheme.seaBlue,
-                                child: Text('ED', style: TextStyle(color: Colors.white)),
+                                child: Text('PA', style: TextStyle(color: Colors.white)),
                               ),
                               const SizedBox(width: 15),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('M. Ewosso D-Gall', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    Text('Père de Junior', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                                    const Text('Parent', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    Text('Contact parent', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                                   ],
                                 ),
                               ),
@@ -635,7 +750,11 @@ class _AttendanceViewState extends State<AttendanceView> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => CreateAppointmentPage(student: student),
+                                  builder: (context) => CreateAppointmentPage(
+                                    studentId: student['id'],
+                                    parentId: student['parent_id'] ?? 1,
+                                    parentName: 'Parent',
+                                  ),
                                 ),
                               );
                             },

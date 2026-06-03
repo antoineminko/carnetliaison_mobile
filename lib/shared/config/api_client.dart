@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
   static final Dio _dio = Dio(BaseOptions(
@@ -11,6 +12,29 @@ class ApiClient {
     },
   ));
 
+  static void _installInterceptors() {
+    _dio.interceptors.add(InterceptorsWrapper(
+      onError: (DioException e, ErrorInterceptorHandler handler) async {
+        final code = e.response?.statusCode ?? 0;
+        if (code == 401) {
+          // Clear any persisted session keys
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('parent_id');
+          await prefs.remove('teacher_id');
+          await prefs.remove('last_login_time');
+        }
+        handler.next(e);
+      },
+    ));
+  }
+
   static Dio get instance => _dio;
+
+  // Ensure interceptors are installed when this file is first loaded
+  static void init() {
+    _installInterceptors();
+  }
+  // Initialize on import
+  static final _ = init();
 }
 

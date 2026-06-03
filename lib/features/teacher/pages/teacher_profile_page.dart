@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/school_config.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 
 class TeacherProfilePage extends StatefulWidget {
   const TeacherProfilePage({super.key});
@@ -14,6 +16,42 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
   bool _notifSms = false;
   bool _notifEmail = true;
 
+  String? _teacherFirstName;
+  String? _teacherLastName;
+  String? _teacherEmail;
+  String? _teacherPhone;
+  String? _teacherMatiere;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTeacherProfile();
+  }
+
+  Future<void> _loadTeacherProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _teacherFirstName = prefs.getString('teacher_prenom') ?? prefs.getString('enseignant_prenom');
+      _teacherLastName = prefs.getString('teacher_nom') ?? prefs.getString('enseignant_nom');
+      _teacherEmail = prefs.getString('teacher_email') ?? prefs.getString('enseignant_email');
+      _teacherPhone = prefs.getString('teacher_telephone') ?? prefs.getString('enseignant_telephone');
+      _teacherMatiere = prefs.getString('teacher_matiere') ?? prefs.getString('enseignant_matiere');
+    });
+  }
+
+  String get _initials {
+    final f = (_teacherFirstName ?? '').isNotEmpty ? _teacherFirstName![0].toUpperCase() : '';
+    final l = (_teacherLastName ?? '').isNotEmpty ? _teacherLastName![0].toUpperCase() : '';
+    final result = '$f$l';
+    return result.isNotEmpty ? result : 'E';
+  }
+
+  String get _fullName {
+    final full = '${_teacherFirstName ?? ''} ${_teacherLastName ?? ''}'.trim();
+    return full.isNotEmpty ? full : 'Votre profil';
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -25,57 +63,49 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
           Center(
             child: Column(
               children: [
-                Stack(
-                  children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.seaBlue.withOpacity(0.1),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
+                // Avatar avec initiales (pas de photo)
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [AppTheme.forestGreen, AppTheme.forestGreen.withOpacity(0.7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    border: Border.all(color: Colors.white, width: 4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.forestGreen.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/teacher.png', // Or assets/images/profil/enseignant.jpg
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.person, size: 50, color: Colors.grey),
-                          ),
-                        ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      _initials,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
                       ),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.forestGreen,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 15),
-                const Text(
-                  'M. Obiang',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
+                Text(
+                  _fullName,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
                 ),
                 const SizedBox(height: 5),
-                const Text(
-                  'Enseignant - Mathématiques',
-                  style: TextStyle(fontSize: 14, color: AppTheme.textGrey, fontWeight: FontWeight.w500),
+                Text(
+                  (_teacherMatiere != null && _teacherMatiere!.isNotEmpty)
+                      ? 'Enseignant - $_teacherMatiere'
+                      : 'Enseignant',
+                  style: const TextStyle(fontSize: 14, color: AppTheme.textGrey, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -93,11 +123,23 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
             ),
             child: Column(
               children: [
-                _buildInfoTile(Icons.email_outlined, 'EMAIL', 'obiang.prof@schooly.com'),
+                _buildInfoTile(
+                  Icons.email_outlined,
+                  'EMAIL',
+                  (_teacherEmail != null && _teacherEmail!.isNotEmpty) ? _teacherEmail! : 'Non renseigné',
+                ),
                 const Divider(height: 1, indent: 50),
-                _buildInfoTile(Icons.phone_outlined, 'TÉLÉPHONE', '+241 07 00 11 22'),
+                _buildInfoTile(
+                  Icons.phone_outlined,
+                  'TÉLÉPHONE',
+                  (_teacherPhone != null && _teacherPhone!.isNotEmpty) ? _teacherPhone! : 'Non renseigné',
+                ),
                 const Divider(height: 1, indent: 50),
-                _buildInfoTile(Icons.school_outlined, 'MATIÈRE', 'Mathématiques'),
+                _buildInfoTile(
+                  Icons.school_outlined,
+                  'MATIÈRE',
+                  (_teacherMatiere != null && _teacherMatiere!.isNotEmpty) ? _teacherMatiere! : 'Non renseigné',
+                ),
               ],
             ),
           ),
@@ -107,7 +149,7 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
           // SECTION ÉTABLISSEMENTS (Défilant)
           _buildSectionTitle('ÉTABLISSEMENTS'),
           SizedBox(
-            height: 110, // Légèrement augmenté pour les ombres
+            height: 110,
             child: ListView(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
@@ -116,7 +158,6 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
                 _buildSchoolCard(SchoolConfigs.sainteTherese, 'Libreville', AppTheme.seaBlue),
                 _buildSchoolCard(SchoolConfigs.notreDame, 'Libreville', AppTheme.forestGreen),
                 _buildSchoolCard(SchoolConfigs.ecoleCatholique, 'Libreville', AppTheme.sunYellow),
-                // Ajout d'une carte d'ajout pour parfaire l'UI
                 _buildAddSchoolCard(),
               ],
             ),
@@ -181,8 +222,11 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
               ),
               title: const Text('Se déconnecter', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.red)),
                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.redAccent),
-              onTap: () {
-                 Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+              onTap: () async {
+                await AuthService.logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil('/select_role', (route) => false);
+                }
               },
             ),
           ),
@@ -331,14 +375,14 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.red),
-            const SizedBox(width: 10),
-            const Text('Supprimer l\'établissement ?', style: TextStyle(fontSize: 16)),
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Supprimer l\'établissement ?', style: TextStyle(fontSize: 16)),
           ],
         ),
         content: Text(
-          'En supprimant "$schoolName", vous serez automatiquement retiré de l\'établissement et de tous les groupes associés. L\'école traitera cette demande sous 30 jours.',
+          'En supprimant "$schoolName", vous serez automatiquement retiré de l\'établissement et de tous les groupes associés.',
           style: const TextStyle(fontSize: 14, color: AppTheme.textGrey),
         ),
         actions: [

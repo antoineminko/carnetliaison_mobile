@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
+import 'package:app_mobile/shared/config/api_client.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 
 enum AppointmentSource { parent, teacher }
 
@@ -7,12 +9,16 @@ class AppointmentPage extends StatefulWidget {
   final AppointmentSource source;
   final String targetName; // Nom du prof pour le parent, ou du parent pour le prof
   final String? studentName;
+  final int? enseignantId;
+  final int? eleveId;
 
   const AppointmentPage({
     super.key,
     required this.source,
     required this.targetName,
     this.studentName,
+    this.enseignantId,
+    this.eleveId,
   });
 
   @override
@@ -20,10 +26,12 @@ class AppointmentPage extends StatefulWidget {
 }
 
 class _AppointmentPageState extends State<AppointmentPage> {
-  String selectedMode = 'Visio';
+  String selectedMode = 'video';
   DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
   String? selectedSlot;
   String? selectedMotive;
+  final TextEditingController _objetController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
 
   final List<String> motives = [
     'Suivi des notes',
@@ -36,6 +44,13 @@ class _AppointmentPageState extends State<AppointmentPage> {
   final List<String> timeSlots = [
     '08:00', '09:30', '11:00', '14:30', '16:00', '17:30'
   ];
+
+  @override
+  void dispose() {
+    _objetController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,10 +82,37 @@ class _AppointmentPageState extends State<AppointmentPage> {
             _buildSectionTitle('Mode de rencontre'),
             Row(
               children: [
-                _buildModeCard('Présentiel', Icons.location_on_outlined, 'À l\'école'),
-                const SizedBox(width: 15),
-                _buildModeCard('Visio', Icons.videocam_outlined, 'En ligne'),
+                _buildModeCard('presentiel', Icons.location_on_outlined, 'Présentiel', 'À l\'école'),
+                const SizedBox(width: 8),
+                _buildModeCard('vocal', Icons.phone_outlined, 'Vocal', 'Téléphone'),
+                const SizedBox(width: 8),
+                _buildModeCard('video', Icons.videocam_outlined, 'Vidéo', 'En ligne'),
               ],
+            ),
+
+            const SizedBox(height: 25),
+
+            // Objet du rendez-vous
+            _buildSectionTitle('Objet du rendez-vous'),
+            TextField(
+              controller: _objetController,
+              decoration: InputDecoration(
+                hintText: 'Ex: Suivi trimestriel de ${widget.studentName ?? "l\'élève"}',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey[200]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey[200]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: const BorderSide(color: AppTheme.seaBlue, width: 2),
+                ),
+              ),
             ),
             
             const SizedBox(height: 25),
@@ -113,22 +155,88 @@ class _AppointmentPageState extends State<AppointmentPage> {
 
             const SizedBox(height: 40),
 
+            // Description optionnelle
+            const SizedBox(height: 25),
+            _buildSectionTitle('Description / Détails (optionnel)'),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Précisez ici les points que vous souhaitez aborder...',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey[200]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey[200]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: const BorderSide(color: AppTheme.seaBlue, width: 2),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
             // Confirm Button
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: selectedSlot != null && selectedMotive != null 
-                    ? () => _showSuccessDialog() 
+                onPressed: selectedSlot != null && selectedMotive != null && _objetController.text.isNotEmpty && !_isSending
+                    ? () => _submit() 
                     : null,
                 style: AppTheme.primaryButtonStyle,
-                child: const Text('Confirmer le rendez-vous', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: _isSending 
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Confirmer le rendez-vous', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  bool _isSending = false;
+
+  Future<void> _submit() async {
+    setState(() => _isSending = true);
+
+    try {
+      final parts = selectedSlot!.split(':');
+      final dateHeure = DateTime(
+        selectedDate.year, selectedDate.month, selectedDate.day,
+        int.parse(parts[0]), int.parse(parts[1]),
+      );
+
+      final parentId = await AuthService.getParentId();
+
+      await ApiClient.instance.post('/appointments', data: {
+        'enseignant_id': widget.enseignantId ?? 1,
+        'parent_id': parentId ?? 1,
+        'eleve_id': widget.eleveId,
+        'objet': _objetController.text,
+        'date_heure': dateHeure.toIso8601String(),
+        'mode': selectedMode, // 'presentiel', 'vocal', 'video'
+        'motif': selectedMotive,
+        'requester': widget.source == AppointmentSource.parent ? 'parent' : 'enseignant',
+      });
+
+      if (!mounted) return;
+      _showSuccessDialog();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
   }
 
   Widget _buildTargetHeader() {
@@ -179,13 +287,13 @@ class _AppointmentPageState extends State<AppointmentPage> {
     );
   }
 
-  Widget _buildModeCard(String mode, IconData icon, String subtitle) {
-    bool isSelected = selectedMode == mode;
+  Widget _buildModeCard(String modeValue, IconData icon, String title, String subtitle) {
+    bool isSelected = selectedMode == modeValue;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => selectedMode = mode),
+        onTap: () => setState(() => selectedMode = modeValue),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: 15),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
@@ -194,9 +302,9 @@ class _AppointmentPageState extends State<AppointmentPage> {
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSelected ? AppTheme.seaBlue : AppTheme.textGrey, size: 30),
-              const SizedBox(height: 10),
-              Text(mode, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? AppTheme.seaBlue : AppTheme.textDark)),
+              Icon(icon, color: isSelected ? AppTheme.seaBlue : AppTheme.textGrey, size: 24),
+              const SizedBox(height: 8),
+              Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? AppTheme.seaBlue : AppTheme.textDark, fontSize: 12)),
               Text(subtitle, style: TextStyle(fontSize: 10, color: AppTheme.textGrey)),
             ],
           ),

@@ -6,6 +6,7 @@ import 'package:app_mobile/shared/utils/user_role.dart';
 import 'package:app_mobile/features/parent/pages/parent_home_page.dart';
 import 'package:app_mobile/features/teacher/pages/teacher_home.dart';
 import 'package:app_mobile/features/student/pages/student_main_page.dart';
+import 'package:app_mobile/features/auth/pages/qr_scan_page.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -20,7 +21,10 @@ class AppRouter {
           builder: (_) => LoginPage(role: role),
         );
       case '/parent/home':
-        return MaterialPageRoute(builder: (_) => const ParentHomePage());
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(builder: (_) => ParentHomePage(arguments: args));
+      case '/parent/scan':
+        return MaterialPageRoute(builder: (_) => const QrScanPage(isFromLogin: true));
       case '/teacher/home':
         return MaterialPageRoute(builder: (_) => const TeacherHomePage());
       case '/student/home':

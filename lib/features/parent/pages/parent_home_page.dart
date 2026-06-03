@@ -11,56 +11,224 @@ import 'package:app_mobile/features/auth/pages/qr_scan_page.dart';
 import 'package:app_mobile/features/auth/pages/link_child_page.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/features/parent/services/parent_service.dart';
+import 'package:app_mobile/features/parent/pages/chat_page.dart';
+import 'package:app_mobile/shared/config/api_client.dart';
+import 'package:app_mobile/shared/config/api_endpoints.dart';
+import 'package:app_mobile/features/notifications/services/notification_storage.dart';
+import 'package:app_mobile/features/notifications/services/notifications_service.dart';
+import 'package:app_mobile/features/appointments/pages/appointments_list_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ParentHomePage extends StatefulWidget {
-  const ParentHomePage({super.key});
+  final Map<String, dynamic>? arguments;
+  const ParentHomePage({super.key, this.arguments});
 
   @override
   State<ParentHomePage> createState() => _ParentHomePageState();
 }
 
 class _ParentHomePageState extends State<ParentHomePage> {
-  static const String _apiBaseUrl = 'https://sirh.alwaysdata.net/api_carnet_liaison';
+  static const String _apiBaseUrl =
+      'https://sirh.alwaysdata.net/api_carnet_liaison';
   int? _selectedChildIndex;
   Map<String, dynamic>? _selectedChild;
-  bool _isDemoEmptyState = true; // Toggle pour la démo
-  int _currentIndex = 0; // Index de la BottomNavigationBar
+  bool _isDemoEmptyState = true;
+  bool _forceAddChild = false;
+  bool _isLoadingChildren = true;
+  int _currentIndex = 0;
+  int _childInitialTab = 0;
   final PageController _pubPageController = PageController();
   int _currentPubIndex = 0;
   Timer? _timer;
 
-  // État des préférences
+ 
   bool _notifPush = true;
   bool _notifSms = false;
   bool _notifEmail = true;
 
   final List<Map<String, dynamic>> _childrenData = [];
-  final List<Map<String, dynamic>> _fakeChildrenData = [
-    {
-      'name': 'Emmanuella Nguema',
-      'grade': '3ème A',
-      'school': SchoolConfigs.sainteTherese,
-      'color': const Color(0xFF2596be),
-      'image': 'assets/images/profil/eleve2.jpg',
-      'notif': 2,
-    },
-    {
-      'name': 'Junior Nguema',
-      'grade': '5e Année',
-      'school': SchoolConfigs.ecoleCatholique,
-      'color': const Color(0xFF2596be),
-      'image': 'assets/images/profil/eleve3.jpg',
-      'notif': 2,
-      'isLowGrade': true,
-      'scienceGrade': '08/20',
-      'showAlert': true,
-    },
-  ];
+
+  List<Map<String, dynamic>> _appointments = [];
+  List<Map<String, dynamic>> _conversationRequests = [];
+  List<Map<String, dynamic>> _apiNotifications = [];
+  List<Map<String, dynamic>> _adminConversations = [];
+  List<Map<String, dynamic>> _teacherConversationsAll = [];
+  bool _isLoadingEvents = true;
+  String? _pendingSelectChildName;
+  int? _pendingChildInitialTab;
+  int? _pendingSelectChildId;
+  String? _pendingHighlightIncidentId;
+  String? _pendingHighlightHomeworkId;
+  Map<String, dynamic>? _notificationPayload;
+  String? _parentFirstName;
+  String? _parentLastName;
+  String? _parentAvatarUrl;
+  String? _parentEmail;
+  String? _parentPhone;
+  int _unreadNotificationsCount = 0;
+
+  void _selectChildByName(String childName, int initialTab) {
+    final idx = _childrenData.indexWhere((c) =>
+        (c['name'] as String).toLowerCase().contains(childName.toLowerCase()));
+    if (idx != -1) {
+      setState(() {
+        _childInitialTab = initialTab;
+      });
+      _onChildSelected(idx);
+    }
+  }
+
+  Future<void> _loadParentProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _parentFirstName = prefs.getString('parent_prenom');
+      _parentLastName = prefs.getString('parent_nom');
+      _parentAvatarUrl = prefs.getString('parent_avatar_url');
+      _parentEmail = prefs.getString('parent_email');
+      _parentPhone = prefs.getString('parent_telephone');
+    });
+  }
+
+  void _selectChildById(int childId, int initialTab) {
+    final idx = _childrenData.indexWhere((c) => c['id'] == childId);
+    if (idx != -1) {
+      setState(() {
+        _childInitialTab = initialTab;
+      });
+      _onChildSelected(idx);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    print('📥 [ParentHomePage] Arguments reçus: ${widget.arguments}');
+    if (widget.arguments != null) {
+      if (widget.arguments!['initialTab'] != null) {
+        _currentIndex = widget.arguments!['initialTab'];
+      }
+      if (widget.arguments!['selectChildName'] != null) {
+        _pendingSelectChildName = widget.arguments!['selectChildName'];
+        _pendingChildInitialTab = widget.arguments!['childInitialTab'] ?? 0;
+        _pendingHighlightIncidentId = widget.arguments!['highlightIncidentId'];
+        _pendingHighlightHomeworkId = widget.arguments!['highlightHomeworkId'];
+      }
+      if (widget.arguments!['openNotifications'] == true) {
+        _notificationPayload = widget.arguments!['notificationPayload'];
+        print('📥 [ParentHomePage] openNotifications=true, payload: $_notificationPayload');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          print('📥 [ParentHomePage] Ouverture modal notifications');
+          _showNotificationsModal(
+            incidentPayload: _notificationPayload?.containsKey('type') == true && _notificationPayload!['type'] == 'incident'
+                ? _notificationPayload
+                : null,
+          );
+        });
+      }
+
+      // Ouvrir la page des rendez-vous depuis une notification
+      if (widget.arguments!['openAppointments'] == true) {
+        final int? appointmentId = widget.arguments!['highlightAppointmentId'];
+        final bool isPostponed = widget.arguments!['isPostponed'] == true;
+        print('📥 [ParentHomePage] openAppointments=true, appointmentId: $appointmentId, isPostponed: $isPostponed');
+
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          final parentId = await AuthService.getParentId();
+          if (parentId != null && mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AppointmentsListPage(
+                  userId: parentId,
+                  userRole: 'parent',
+                  initialAppointmentId: appointmentId,
+                ),
+              ),
+            );
+          }
+        });
+      }
+
+      // Gérer les notifications de messagerie
+      if (widget.arguments!['openConversationId'] != null) {
+        final String? conversationId = widget.arguments!['openConversationId'];
+        final bool showValidation = widget.arguments!['showConversationValidation'] == true;
+        final String? conversationStatus = widget.arguments!['conversationStatus'];
+        final String? enseignantNom = widget.arguments!['enseignant_nom'];
+        final String? subject = widget.arguments!['subject'];
+
+        print('📥 [ParentHomePage] openConversationId=$conversationId, showValidation=$showValidation');
+
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (mounted && conversationId != null) {
+            // Naviguer directement vers le chat
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChatPage(
+                  conversation: {
+                    'conversation_id': int.tryParse(conversationId),
+                    'id': int.tryParse(conversationId),
+                    'enseignant_nom': enseignantNom ?? 'Enseignant',
+                    'subject': subject ?? 'Discussion',
+                    'status': conversationStatus ?? 'pending',
+                  },
+                ),
+              ),
+            );
+          }
+        });
+      }
+
+      // Afficher notification de refus de conversation
+      if (widget.arguments!['showRejectionNotification'] == true) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('❌ La demande de discussion a été refusée'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+        });
+      }
+      if (widget.arguments!['forceAddChild'] == true) {
+        _forceAddChild = true;
+      }
+    }
     _startPubTimer();
+    _loadParentProfile();
+    _loadLinkedChildren();
+    _fetchEvents();
+    _fetchNotifications();
+    _fetchConversations();
+    _loadUnreadNotificationsCount();
+    
+    // Enregistrer le callback pour les nouvelles notifications
+    NotificationsService().setOnNotificationReceived(() {
+      _loadUnreadNotificationsCount();
+    });
+  }
+
+  Future<void> _loadUnreadNotificationsCount() async {
+    final count = await NotificationStorage.getUnreadCount();
+    setState(() {
+      _unreadNotificationsCount = count;
+    });
+  }
+
+  Future<void> _openNotificationsModal() async {
+    // Marquer toutes les notifications comme lues
+    await NotificationStorage.markAllAsRead();
+    // Reset le compteur
+    setState(() {
+      _unreadNotificationsCount = 0;
+    });
+    // Ouvrir le modal
+    _showNotificationsModal();
   }
 
   @override
@@ -68,6 +236,15 @@ class _ParentHomePageState extends State<ParentHomePage> {
     _timer?.cancel();
     _pubPageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshDashboard() async {
+    await Future.wait([
+      _loadLinkedChildren(),
+      _fetchEvents(),
+      _fetchNotifications(),
+      _fetchConversations(),
+    ]);
   }
 
   void _startPubTimer() {
@@ -85,55 +262,236 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   Future<void> _loadLinkedChildren() async {
     final parentId = await AuthService.getParentId();
-    if (parentId == null) return;
+    print(' [DEBUG] parent_id en mémoire = $parentId');
+    if (parentId == null) {
+      print(' [DEBUG] parent_id est NULL → impossible de charger les enfants');
+      setState(() => _isLoadingChildren = false);
+      return;
+    }
 
     try {
       final children = await ParentService.getChildren(parentId);
+      print(' [DEBUG] Enfants reçus de l\'API : ${children.length}  $children');
       if (!mounted) return;
 
       setState(() {
         _childrenData
           ..clear()
-          ..addAll(_fakeChildrenData)
           ..addAll(children.map(_mapApiChild));
-        _isDemoEmptyState = _childrenData.isEmpty;
+        _isDemoEmptyState = children.isEmpty;
+        _isLoadingChildren = false;
       });
-    } catch (_) {
+
+      if (_pendingSelectChildName != null && _childrenData.isNotEmpty) {
+        _selectChildByName(_pendingSelectChildName!, _pendingChildInitialTab ?? 0);
+        _pendingSelectChildName = null;
+        _pendingChildInitialTab = null;
+      }
+      if (_pendingSelectChildId != null && _childrenData.isNotEmpty) {
+        _selectChildById(_pendingSelectChildId!, _pendingChildInitialTab ?? 0);
+        _pendingSelectChildId = null;
+        _pendingChildInitialTab = null;
+      }
+    } catch (e) {
+      print(' [DEBUG] Erreur chargement enfants : $e');
+      if (!mounted) return;
+      setState(() {
+        _isLoadingChildren = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur chargement enfants: $e')),
+      );
+      // En cas d'échec critique (ex: backend indisponible/DB vidée), forcer la déconnexion propre
+      await AuthService.logout();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, '/select_role', (route) => false);
+    }
+  }
+
+  Future<void> _fetchNotifications() async {
+    final parentId = await AuthService.getParentId();
+    if (parentId == null) return;
+    try {
+      final response = await ApiClient.instance.get(ApiEndpoints.userNotifications('parent', parentId));
+      if (response.data != null && response.data['success']) {
+        if (!mounted) return;
+        setState(() {
+          _apiNotifications = List<Map<String, dynamic>>.from(response.data['notifications'] ?? []);
+        });
+      }
+    } catch (e) {
+      debugPrint("Erreur _fetchNotifications: $e");
+    }
+  }
+
+  Future<void> _fetchConversations() async {
+    final parentId = await AuthService.getParentId();
+    if (parentId == null) return;
+    try {
+      final response = await ApiClient.instance.get(ApiEndpoints.parentConversations(parentId));
+      if (response.data != null && response.data['success']) {
+        final List<Map<String, dynamic>> all = List<Map<String, dynamic>>.from(response.data['conversations'] ?? []);
+        if (!mounted) return;
+        setState(() {
+         
+          _adminConversations = all.where((c) => c['enseignant_id'] == null).toList();
+          
+          _teacherConversationsAll = all.where((c) => c['enseignant_id'] != null && (c['status'] == 'accepted' || c['status'] == 'pending')).toList();
+        });
+
+       
+        if (widget.arguments != null && widget.arguments!['openConversationId'] != null) {
+          final convId = widget.arguments!['openConversationId'].toString();
+          final convToOpen = all.firstWhere(
+            (c) => c['id'].toString() == convId,
+            orElse: () => <String, dynamic>{},
+          );
+
+          if (convToOpen.isNotEmpty) {
+            
+            widget.arguments!.remove('openConversationId');
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => ChatPage(conversation: convToOpen)),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Erreur _fetchConversations: $e");
+    }
+  }
+
+  Future<void> _fetchEvents() async {
+    final parentId = await AuthService.getParentId();
+    if (parentId == null) {
+      setState(() => _isLoadingEvents = false);
+      return;
+    }
+    
+    try {
+      final response = await ApiClient.instance.get('/parents/$parentId/events');
+      if (response.data != null && response.data['success']) {
+        if (!mounted) return;
+        setState(() {
+          _appointments = List<Map<String, dynamic>>.from(response.data['appointments'] ?? []);
+          final allConversations = List<Map<String, dynamic>>.from(response.data['conversations'] ?? []);
+          _conversationRequests = allConversations.where((c) => c['enseignant_id'] != null).toList();
+          _isLoadingEvents = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingEvents = false);
+    }
+  }
+
+  Future<void> _updateAppointmentStatus(int? id, String status) async {
+    if (id == null) return;
+    try {
+      await ApiClient.instance.put('/appointments/$id/status', data: {'statut': status});
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible de charger vos enfants.')),
+        SnackBar(
+          content: Text(status == 'accepte' ? 'Rendez-vous accepté' : 'Rendez-vous refusé'),
+          backgroundColor: status == 'accepte' ? AppTheme.forestGreen : Colors.red,
+        ),
       );
+      _fetchEvents(); 
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
     }
   }
 
   Map<String, dynamic> _mapApiChild(Map<String, dynamic> child) {
-    final photo = child['photo']?.toString();
-    final imageUrl = photo != null && photo.isNotEmpty ? '$_apiBaseUrl/storage/$photo' : null;
+    final imageUrl = child['photo_url']?.toString().isNotEmpty == true
+        ? child['photo_url'].toString()
+        : null;
+
+    String? status;
+    Color? statusColor;
+    String? arrivalTime;
+
+    if (child['attendance_status'] != null) {
+      if (child['attendance_status'] == 'present') {
+        status = 'Présent';
+        statusColor = Colors.green;
+      } else if (child['attendance_status'] == 'absent') {
+        status = 'Absent';
+        statusColor = Colors.red;
+      } else if (child['attendance_status'] == 'late') {
+        status = 'En retard';
+        statusColor = Colors.orange;
+      }
+    }
+
+    if (child['arrival_time'] != null) {
+      try {
+        final dt = DateTime.parse(child['arrival_time']);
+        arrivalTime = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      } catch (_) {}
+    }
 
     return {
       'fromApi': true,
       'id': child['id'],
       'name': '${child['prenom'] ?? ''} ${child['nom'] ?? ''}'.trim(),
+      'prenom': child['prenom'] ?? '',
       'grade': child['classe_nom'] ?? 'Classe non définie',
       'school': child['ecole_nom'] ?? 'École non définie',
       'color': const Color(0xFF2596be),
       'image': imageUrl ?? 'assets/images/profil/eleve1.jpg',
       'isNetworkImage': imageUrl != null,
       'notif': child['notif_count'] ?? 0,
+      if (status != null) 'status': status,
+      if (statusColor != null) 'statusColor': statusColor,
+      if (arrivalTime != null) 'arrivalTime': arrivalTime,
+      'arrival_time': child['arrival_time'], // Garder la valeur originale complète pour l'affichage date
+      'attendance_status': child['attendance_status'],
       'raw': child,
     };
   }
 
+  int get _totalUnreadMessages {
+    int total = 0;
+    for (var c in _adminConversations) {
+      final val = c['unread_count'];
+      total += (val is int) ? val : (int.tryParse(val?.toString() ?? '0') ?? 0);
+    }
+    for (var c in _teacherConversationsAll) {
+      final val = c['unread_count'];
+      total += (val is int) ? val : (int.tryParse(val?.toString() ?? '0') ?? 0);
+    }
+    return total;
+  }
+
+  /// Nombre de rendez-vous en attente (à valider)
+  int get _pendingAppointmentsCount {
+    return _appointments
+        .where((a) => a['statut'] == 'en_attente' || a['statut'] == 'reporte')
+        .length;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool hasFullTabs = _childrenData.isNotEmpty && !_forceAddChild;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: BackgroundWrapper(child: SafeArea(child: _buildBody())),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
+        currentIndex: hasFullTabs
+            ? _currentIndex
+            : (_currentIndex == 3 ? 1 : 0),
         onTap: (index) {
           setState(() {
-            _currentIndex = index;
+            if (hasFullTabs) {
+              _currentIndex = index;
+            } else {
+              // Quand seuls "Accueil" et "Profil" sont visibles,
+              // on mappe l'index 0 -> 0 (Accueil) et 1 -> 3 (Profil)
+              _currentIndex = index == 0 ? 0 : 3;
+            }
           });
         },
         type: BottomNavigationBarType.fixed,
@@ -145,22 +503,85 @@ class _ParentHomePageState extends State<ParentHomePage> {
             icon: Icon(Icons.home),
             label: 'Accueil',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              _selectedChild == null
-                  ? Icons.chat_bubble_outline
-                  : Icons.menu_book,
+          if (hasFullTabs)
+            BottomNavigationBarItem(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    _selectedChild == null
+                        ? Icons.message
+                        : Icons.menu_book,
+                  ),
+                  if (_selectedChild == null && _totalUnreadMessages > 0)
+                    Positioned(
+                      right: -4,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 14,
+                          minHeight: 14,
+                        ),
+                        child: Text(
+                          '$_totalUnreadMessages',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              label: _selectedChild == null ? 'Messages' : 'Cahier',
             ),
-            label: _selectedChild == null ? 'Messages' : 'Cahier',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              _selectedChild == null
-                  ? Icons.calendar_today
-                  : Icons.notifications_active,
+          if (hasFullTabs)
+            BottomNavigationBarItem(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    _selectedChild == null
+                        ? Icons.calendar_today
+                        : Icons.notifications_active,
+                  ),
+                  // Badge pour les RDV en attente
+                  if (_selectedChild == null && _pendingAppointmentsCount > 0)
+                    Positioned(
+                      right: -4,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 14,
+                          minHeight: 14,
+                        ),
+                        child: Text(
+                          '$_pendingAppointmentsCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              label: _selectedChild == null ? 'Événements' : 'Alertes',
             ),
-            label: _selectedChild == null ? 'Événements' : 'Alertes',
-          ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             label: 'Profil',
@@ -174,9 +595,19 @@ class _ParentHomePageState extends State<ParentHomePage> {
     switch (_currentIndex) {
       case 0:
         if (_selectedChild != null) {
+          final highlightIncidentId = _pendingHighlightIncidentId;
+          final highlightHomeworkId = _pendingHighlightHomeworkId;
+          _pendingHighlightIncidentId = null; // Reset après usage
+          _pendingHighlightHomeworkId = null; // Reset après usage
           return ChildDetailsView(
             child: _selectedChild!,
-            onBack: () => setState(() => _selectedChild = null),
+            initialTab: _childInitialTab,
+            highlightIncidentId: highlightIncidentId,
+            highlightHomeworkId: highlightHomeworkId,
+            onBack: () => setState(() {
+              _selectedChild = null;
+              _childInitialTab = 0;
+            }),
             onGoToCalendar: () => setState(() => _currentIndex = 2),
             onShowNotifications: () => _showNotificationsModal(
               filterChildName: _selectedChild!['name'],
@@ -194,15 +625,14 @@ class _ParentHomePageState extends State<ParentHomePage> {
         return _buildMessagesTab();
       case 2:
         if (_selectedChild != null) {
-          return CalendarPage(
-            childName: _selectedChild!['name'],
-            childImage: _selectedChild!['image'],
-            childGrade: _selectedChild!['grade'],
-            childId: _selectedChild!['id'],
-            initialDate: _selectedChild!['calendarDate'],
-            incidents: _selectedChild!['incidents'] != null
-                ? List<Map<String, dynamic>>.from(_selectedChild!['incidents'])
-                : null,
+          return Container(
+            color: const Color(0xFFF5F7FA),
+            child: const Center(
+              child: Text(
+                'Aucune alerte pour le moment',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
           );
         }
         return _buildEventsTab();
@@ -336,6 +766,10 @@ class _ParentHomePageState extends State<ParentHomePage> {
   */
 
   Widget _buildGlobalDashboard() {
+    if (_isLoadingChildren) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Column(
       children: [
         // HEADER
@@ -364,47 +798,35 @@ class _ParentHomePageState extends State<ParentHomePage> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+                  if (((_parentFirstName ?? '').isNotEmpty) || ((_parentLastName ?? '').isNotEmpty))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        '${_parentFirstName ?? ''} ${_parentLastName ?? ''}'.trim(),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textGrey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               Row(
                 children: [
-                  // TOGGLE BUTTON (Demo)
-                  InkWell(
-                    onTap: () {
-                      setState(() {
-                        _isDemoEmptyState = !_isDemoEmptyState;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            _isDemoEmptyState
-                                ? 'Mode Démo: Aucun enfant (Interface 3)'
-                                : 'Mode Démo: Enfants chargés',
-                          ),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: _isDemoEmptyState
-                            ? AppTheme.seaBlue.withOpacity(0.1)
-                            : Colors.grey[200],
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.swap_horiz_rounded,
-                        size: 20,
-                        color: _isDemoEmptyState
-                            ? AppTheme.seaBlue
-                            : Colors.grey[600],
-                      ),
-                    ),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.white,
+                    backgroundImage: (_parentAvatarUrl != null && _parentAvatarUrl!.isNotEmpty)
+                        ? NetworkImage(_parentAvatarUrl!)
+                        : null,
+                    child: (_parentAvatarUrl == null || _parentAvatarUrl!.isEmpty)
+                        ? const Icon(Icons.person, color: AppTheme.seaBlue)
+                        : null,
                   ),
                   const SizedBox(width: 10),
                   InkWell(
-                    onTap: () => _showNotificationsModal(),
+                    onTap: () => _openNotificationsModal(),
                     child: Stack(
                       children: [
                         Container(
@@ -424,7 +846,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
                             size: 28,
                           ),
                         ),
-                        if (!_isDemoEmptyState)
+                        if (_unreadNotificationsCount > 0)
                           Positioned(
                             right: 0,
                             top: 0,
@@ -444,7 +866,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
                               ),
                               child: Center(
                                 child: Text(
-                                  '${_childrenData.fold<int>(0, (sum, child) => sum + (child['notif'] as int))}',
+                                  '$_unreadNotificationsCount',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
@@ -466,23 +888,29 @@ class _ParentHomePageState extends State<ParentHomePage> {
         const SizedBox(height: 10),
 
         // LISTE HORIZONTALE AVATARS
-        if (!_isDemoEmptyState) _buildAvatarSection(),
+        if (_childrenData.isNotEmpty && !_forceAddChild)
+          _buildAvatarSection(),
 
         const SizedBox(height: 25),
 
-        // DASHBOARD CONTENU
+        // DASHBOARD CONTENU (avec pull-to-refresh)
         Expanded(
-          child: SingleChildScrollView(
-            // On enlève le padding du SingleChildScrollView pour que les box puissent être plus larges
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Column(
-              children: [
-                _buildPromoBanner(),
-                const SizedBox(height: 20),
-                _isDemoEmptyState
-                    ? _buildEmptyState()
-                    : _buildChildrenList(), // Liste verticale des cartes complètes
-              ],
+          child: RefreshIndicator(
+            onRefresh: _refreshDashboard,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              // On enlève le padding du SingleChildScrollView pour que les box puissent être plus larges
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Column(
+                children: [
+                  _buildPromoBanner(),
+                  const SizedBox(height: 20),
+                  if (_childrenData.isEmpty || _forceAddChild)
+                    _buildEmptyState()
+                  else
+                    _buildChildrenList(), // Liste verticale des cartes complètes
+                ],
+              ),
             ),
           ),
         ),
@@ -507,53 +935,44 @@ class _ParentHomePageState extends State<ParentHomePage> {
                       height: 100,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [AppTheme.seaBlue, AppTheme.seaBlue.withOpacity(0.7)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         border: Border.all(color: Colors.white, width: 4),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.seaBlue.withOpacity(0.1),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
+                            color: AppTheme.seaBlue.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/profil/parent.jpg',
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey[200],
-                            child: const Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Colors.grey,
-                            ),
+                      child: Center(
+                        child: Text(
+                          () {
+                            final f = (_parentFirstName ?? '').isNotEmpty ? _parentFirstName![0].toUpperCase() : '';
+                            final l = (_parentLastName ?? '').isNotEmpty ? _parentLastName![0].toUpperCase() : '';
+                            return '$f$l'.isNotEmpty ? '$f$l' : 'P';
+                          }(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
                           ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.forestGreen,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 16,
                         ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 15),
-                const Text(
-                  'Ewosso D-Gall',
-                  style: TextStyle(
+                Text(
+                  '${_parentFirstName ?? ''} ${_parentLastName ?? ''}'.trim().isNotEmpty
+                      ? '${_parentFirstName ?? ''} ${_parentLastName ?? ''}'.trim()
+                      : 'Votre profil',
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textDark,
@@ -592,13 +1011,13 @@ class _ParentHomePageState extends State<ParentHomePage> {
                 _buildInfoTile(
                   Icons.email_outlined,
                   'EMAIL',
-                  'dgall.ewosso@email.com',
+                  (_parentEmail != null && _parentEmail!.isNotEmpty) ? _parentEmail! : 'Non renseigné',
                 ),
                 const Divider(height: 1, indent: 50),
                 _buildInfoTile(
                   Icons.phone_outlined,
                   'TÉLÉPHONE',
-                  '+241 07 45 89 12',
+                  (_parentPhone != null && _parentPhone!.isNotEmpty) ? _parentPhone! : 'Non renseigné',
                 ),
               ],
             ),
@@ -612,10 +1031,14 @@ class _ParentHomePageState extends State<ParentHomePage> {
             height: 125, // Augmenté de 110 à 125 pour éviter l'overflow
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: _childrenData.length + 1,
+              itemCount: (!_forceAddChild && _childrenData.isNotEmpty)
+                  ? _childrenData.length + 1
+                  : 1,
               separatorBuilder: (_, __) => const SizedBox(width: 15),
               itemBuilder: (context, index) {
-                if (index == _childrenData.length) {
+                final bool hasVisibleChildren = !_forceAddChild && _childrenData.isNotEmpty;
+                if (_childrenData.isEmpty || _forceAddChild || index == _childrenData.length) {
+                  // S'il n'y a pas d'enfant lié, on n'affiche que la carte d'ajout.
                   return _buildAddChildCard();
                 }
                 return _buildChildProfileCard(_childrenData[index]);
@@ -733,7 +1156,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
                 size: 14,
                 color: Colors.redAccent,
               ),
-              onTap: () {
+              onTap: () async {
+                await AuthService.logout();
+                if (!context.mounted) return;
                 Navigator.of(
                   context,
                 ).pushNamedAndRemoveUntil('/', (route) => false);
@@ -922,9 +1347,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
               ),
             ),
             const SizedBox(height: 30),
-            const Text(
-              'Bonjour Ewosso D-Gall 👋',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              'Bonjour ${_parentFirstName ?? 'Parent'} 👋',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             Text(
@@ -1047,7 +1472,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
               ),
               const SizedBox(width: 10),
               InkWell(
-                onTap: () => _showNotificationsModal(),
+                onTap: () => _openNotificationsModal(),
                 child: Stack(
                   children: [
                     Container(
@@ -1064,7 +1489,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
                       ),
                       child: const Icon(Icons.notifications_outlined, size: 28),
                     ),
-                    if (!_isDemoEmptyState)
+                    if (_unreadNotificationsCount > 0)
                       Positioned(
                         right: 0,
                         top: 0,
@@ -1081,7 +1506,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
                           ),
                           child: Center(
                             child: Text(
-                              '${_childrenData.fold<int>(0, (sum, child) => sum + (child['notif'] as int))}',
+                              '$_unreadNotificationsCount',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -1246,11 +1671,15 @@ class _ParentHomePageState extends State<ParentHomePage> {
         _childrenData[index]['notif'] = 0;
       }
 
-      final currentChild = index < _childrenData.length ? _childrenData[index] : null;
+      final currentChild = index < _childrenData.length
+          ? _childrenData[index]
+          : null;
       if (currentChild != null && currentChild['fromApi'] == true) {
         _selectedChild = {
           'name': currentChild['name'],
+          'prenom': currentChild['prenom'] ?? currentChild['name'],
           'grade': currentChild['grade'],
+          'raw_id': currentChild['id'],
           'id': currentChild['id'] != null ? '#${currentChild['id']}' : '#0000',
           'image': currentChild['image'],
           'isNetworkImage': currentChild['isNetworkImage'],
@@ -1259,16 +1688,19 @@ class _ParentHomePageState extends State<ParentHomePage> {
           'schoolIcon': null,
           'newsTitle': 'Aucune actualité',
           'newsContent': 'Rien à signaler pour le moment.',
-          'status': 'En attente',
-          'statusColor': Colors.grey,
-          'arrivalTime': '--:--',
+          // Utiliser les vraies valeurs de présence de l'API
+          'status': currentChild['status'] ?? currentChild['attendance_status'] ?? 'En attente',
+          'statusColor': currentChild['statusColor'] ?? Colors.grey,
+          'arrivalTime': currentChild['arrival_time'] ?? '--:--',
+          'attendance_status': currentChild['attendance_status'],
+          'arrival_time': currentChild['arrival_time'],
           'feesOwed': '0 FCFA',
           'homeworks': [],
           'notifications': [],
           'calendarDate': 'Mars 2026',
           'incidents': [],
           'fromApi': true,
-          'raw': currentChild['raw']
+          'raw': currentChild['raw'],
         };
         return;
       }
@@ -1478,7 +1910,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
           final child = _childrenData[index];
           _selectedChild = {
             'name': child['name'],
+            'prenom': child['prenom'] ?? child['name'],
             'grade': child['grade'],
+            'raw_id': child['id'],
             'id': child['id'] != null ? '#${child['id']}' : '#0000',
             'image': child['image'] ?? 'assets/images/profil/eleve1.jpg',
             'isNetworkImage': child['isNetworkImage'] == true,
@@ -1487,15 +1921,15 @@ class _ParentHomePageState extends State<ParentHomePage> {
             'schoolIcon': null,
             'newsTitle': 'Aucune actualité',
             'newsContent': 'Rien à signaler pour le moment.',
-            'status': 'En attente',
-            'statusColor': Colors.grey,
-            'arrivalTime': '--:--',
+            'status': child['status'] ?? 'En attente',
+            'statusColor': child['statusColor'] ?? Colors.grey,
+            'arrivalTime': child['arrivalTime'] ?? '--:--',
             'feesOwed': '0 FCFA',
             'homeworks': [],
             'notifications': [],
             'incidents': [],
             'fromApi': true,
-            'raw': child['raw'] ?? child
+            'raw': child['raw'] ?? child,
           };
       }
     });
@@ -1572,9 +2006,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   Widget _buildPromoBanner() {
     final List<String> pubImages = [
-      'assets/publicit/pub1.jpg',
-      'assets/publicit/pub2.jpg',
-      'assets/publicit/pub3.jpg',
+      'https://i.pinimg.com/736x/46/c9/7f/46c97fda08fb8c284e70704de113fa1a.jpg',
+      'https://i.pinimg.com/736x/70/84/85/7084854f0a3841d6cfda063c0ad64ccc.jpg',
+      'https://www.aciafrica.org/images/gabon_1642722311.jpg',
     ];
 
     return Container(
@@ -1597,7 +2031,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
           itemCount: pubImages.length,
           onPageChanged: (index) => _currentPubIndex = index,
           itemBuilder: (context, index) {
-            return Image.asset(
+            return Image.network(
               pubImages[index],
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
@@ -1673,9 +2107,96 @@ class _ParentHomePageState extends State<ParentHomePage> {
     );
   }
 
-  void _showNotificationsModal({String? filterChildName}) {
-    // Liste brute des notifications
+  void _showNotificationsModal({String? filterChildName, Map<String, dynamic>? incidentPayload}) async {
+    print('📥 [ParentHomePage] _showNotificationsModal - incidentPayload: $incidentPayload');
     final List<Map<String, dynamic>> allNotifications = [];
+    
+    // Charger les notifications locales (push notifications)
+    final localNotifications = await NotificationStorage.getNotifications();
+    for (var n in localNotifications) {
+      allNotifications.add({
+        'title': n['title'] ?? 'Notification',
+        'type': n['data']?['type'] == 'incident' ? 'INCIDENT' : 'INFO',
+        'child': n['data']?['child_name'] ?? '',
+        'school': '',
+        'sender': n['data']?['enseignant_nom'] ?? '',
+        'time': n['timestamp'] != null 
+            ? DateTime.parse(n['timestamp']).toString().substring(0, 16).replaceFirst('T', ' ')
+            : 'Récemment',
+        'color': n['data']?['type'] == 'incident' ? Colors.red : Colors.blue,
+        'icon': n['data']?['type'] == 'incident' ? Icons.warning : Icons.notifications,
+        'message': n['body'] ?? n['message'] ?? '',
+        'source': 'local',
+        'data': n['data'],
+        'isLocal': true,
+      });
+    }
+    
+    for (var rdv in _appointments) {
+      if (rdv['statut'] == 'en_attente') {
+        allNotifications.add({
+          'title': 'Demande de rendez-vous',
+          'type': 'RDV',
+          'child': '${rdv['eleve_prenom'] ?? ''} ${rdv['eleve_nom'] ?? ''}'.trim(),
+          'school': '',
+          'sender': '${rdv['enseignant_prenom'] ?? ''} ${rdv['enseignant_nom'] ?? ''}'.trim(),
+          'time': rdv['date_rdv'] ?? 'À définir',
+          'color': AppTheme.seaBlue,
+          'icon': Icons.calendar_today,
+          'isAppointmentRequest': true,
+          'message': rdv['motif'] ?? '',
+        });
+      }
+    }
+
+    // _conversationRequests retirés des notifications selon la demande de l'utilisateur
+
+    for (var n in _apiNotifications) {
+      if (n['type'] == 'teacher_message' || n['type'] == 'admin_message') {
+        continue; // Ne pas afficher les messages textuels dans les notifications
+      }
+
+      // Extraire les métadonnées de la notification (type fonctionnel, classe, etc.)
+      Map<String, dynamic>? dataMap;
+      final dynamic rawData = n['data'];
+      if (rawData is Map<String, dynamic>) {
+        dataMap = rawData;
+      }
+
+      final String dataType = dataMap?['type']?.toString() ?? '';
+
+      // Icône et couleur par défaut
+      IconData icon = Icons.notifications;
+      Color color = n['is_read'] == true ? Colors.grey : Colors.blue;
+
+      // Extraire le nom de l'enfant si disponible
+      String childName = '';
+      if (dataMap != null && dataMap['eleve_nom'] != null) {
+        childName = dataMap['eleve_nom'].toString();
+      }
+
+      // Style spécifique pour un nouveau devoir
+      if (dataType == 'new_homework') {
+        icon = Icons.menu_book;
+        color = n['is_read'] == true ? Colors.grey : Colors.deepPurple;
+      }
+
+      allNotifications.add({
+        'title': n['title'] ?? 'Notification',
+        'type': 'INFO',
+        'child': childName,
+        'school': '',
+        'sender': dataMap?['matiere'] ?? '',
+        'time': n['created_at'] != null ? n['created_at'].toString().substring(0, 10) : 'Récemment',
+        'color': color,
+        'icon': icon,
+        'message': n['message'] ?? '',
+        'id': n['id'],
+        'data': dataMap ?? n['data'],
+        'notificationId': n['id'],
+        'source': 'api',
+      });
+    }
 
     // Filtrer si nécessaire (on compare avec le prénom pour la démo)
     final filteredNotifications = filterChildName == null
@@ -1718,6 +2239,98 @@ class _ParentHomePageState extends State<ParentHomePage> {
                 color: AppTheme.seaBlue,
               ),
             ),
+            // Bannière d'incident si présente dans le payload
+            if (incidentPayload != null) ...[
+              const SizedBox(height: 15),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  final childName = incidentPayload['child_name'];
+                  if (childName != null) {
+                    _selectChildByName(childName, 5); // Onglet Infos (index 5)
+                    setState(() {
+                      _pendingHighlightIncidentId = incidentPayload['incident_id']?.toString();
+                    });
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.red, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withOpacity(0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.red,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Incident signalé',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  incidentPayload['body'] ?? 'Nouvel incident',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.red,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                      if (incidentPayload['enseignant_nom'] != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Par ${incidentPayload['enseignant_nom']}${incidentPayload['matiere'] != null ? ' - ${incidentPayload['matiere']}' : ''}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Expanded(
               child: filteredNotifications.isEmpty
@@ -1732,20 +2345,99 @@ class _ParentHomePageState extends State<ParentHomePage> {
                       itemCount: filteredNotifications.length,
                       itemBuilder: (context, index) {
                         final n = filteredNotifications[index];
-                        return _buildNotificationItem(
-                          title: n['title'],
-                          type: n['type'] ?? 'INFO',
-                          child: n['child'],
-                          school: n['school'],
-                          sender: n['sender'],
-                          time: n['time'],
-                          color: n['isAlert'] == true ? Colors.red : n['color'],
-                          icon: n['icon'],
-                          showJustify: n['showJustify'] ?? false,
-                          isAppointmentRequest:
-                              n['isAppointmentRequest'] ?? false,
-                          message: n['message'],
-                          isAlert: n['isAlert'] ?? false,
+                        return GestureDetector(
+                          onTap: () {
+                            final data = n['data'];
+                            final notificationId = n['notificationId'];
+
+                            // Navigation pour les notifications locales (incidents)
+                            if (n['source'] == 'local' && data is Map<String, dynamic>) {
+                              if (data['type'] == 'incident') {
+                                final childName = data['child_name'];
+                                if (childName != null) {
+                                  Navigator.pop(context);
+                                  _selectChildByName(childName, 5); // Onglet Infos
+                                  setState(() {
+                                    _pendingHighlightIncidentId = data['incident_id']?.toString();
+                                  });
+                                  return;
+                                }
+                              }
+                            }
+
+                            if (n['source'] == 'api' && data is Map<String, dynamic>) {
+                              if ((data['type'] == 'admin_info' || data['type'] == 'new_homework') && data['eleve_id'] != null) {
+                                final eleveId = int.tryParse(data['eleve_id'].toString());
+                                if (eleveId != null) {
+                                  final childIndex = _childrenData.indexWhere((c) {
+                                    if (c['fromApi'] == true) {
+                                      final raw = c['raw'] as Map<String, dynamic>?;
+                                      final cid = c['id'];
+                                      if (cid is int && cid == eleveId) {
+                                        return true;
+                                      }
+                                      if (raw != null && raw['id'] != null && int.tryParse(raw['id'].toString()) == eleveId) {
+                                        return true;
+                                      }
+                                    }
+                                    return false;
+                                  });
+
+                                  if (childIndex != -1) {
+                                    Navigator.pop(context);
+                                    setState(() {
+                                      _childInitialTab = data['type'] == 'new_homework' ? 2 : 5; // 2 = Devoirs, 5 = Infos
+                                      _currentIndex = 0;
+                                      if (childIndex < _childrenData.length) {
+                                        _childrenData[childIndex]['notif'] = 0;
+                                      }
+                                      if (data['type'] == 'new_homework' && data['devoir_id'] != null) {
+                                        _pendingHighlightHomeworkId = data['devoir_id']?.toString();
+                                      }
+                                    });
+                                    _onChildSelected(childIndex);
+                                  }
+
+                                  if (notificationId != null) {
+                                    ApiClient.instance.put(
+                                      ApiEndpoints.markNotificationRead(notificationId),
+                                    );
+                                  }
+                                  return;
+                                }
+                              }
+                            }
+
+                            if (n['type'] == 'INFO' || n['type'] == 'RDV' || n['type'] == 'ABSENCE') {
+                              final childName = n['child']?.toString().split(' ')[0];
+                              if (childName != null && childName.isNotEmpty) {
+                                final childIndex = _childrenData.indexWhere((c) => (c['name'] as String).contains(childName));
+                                if (childIndex != -1) {
+                                  Navigator.pop(context);
+                                  setState(() {
+                                    _childInitialTab = 5;
+                                    _currentIndex = 0;
+                                  });
+                                  _onChildSelected(childIndex);
+                                }
+                              }
+                            }
+                          },
+                          child: _buildNotificationItem(
+                            title: n['title'],
+                            type: n['type'] ?? 'INFO',
+                            child: n['child'],
+                            school: n['school'],
+                            sender: n['sender'],
+                            time: n['time'],
+                            color: n['isAlert'] == true ? Colors.red : n['color'],
+                            icon: n['icon'],
+                            showJustify: n['showJustify'] ?? false,
+                            isAppointmentRequest:
+                                n['isAppointmentRequest'] ?? false,
+                            message: n['message'],
+                            isAlert: n['isAlert'] ?? false,
+                          ),
                         );
                       },
                     ),
@@ -2060,6 +2752,12 @@ class _ParentHomePageState extends State<ParentHomePage> {
                           MaterialPageRoute(builder: (_) => const QrScanPage()),
                         );
                         if (result != null && result is Map) {
+                          SharedPreferences.getInstance().then((prefs) {
+                            prefs.setBool('parent_scan_done', true);
+                          });
+                          setState(() {
+                            _forceAddChild = false;
+                          });
                           await _loadLinkedChildren();
                         }
                       },
@@ -2077,9 +2775,17 @@ class _ParentHomePageState extends State<ParentHomePage> {
                         Navigator.pop(context);
                         final result = await Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const LinkChildPage()),
+                          MaterialPageRoute(
+                            builder: (_) => const LinkChildPage(),
+                          ),
                         );
                         if (result != null && result is Map) {
+                          SharedPreferences.getInstance().then((prefs) {
+                            prefs.setBool('parent_scan_done', true);
+                          });
+                          setState(() {
+                            _forceAddChild = false;
+                          });
                           await _loadLinkedChildren();
                         }
                       },
@@ -2330,120 +3036,61 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   Widget _buildMessageList(String filter) {
     List<Widget> tiles = [];
+    if (filter == 'Tous' || filter == 'Enseignants') {
+      for (final conv in _teacherConversationsAll) {
+        final enseignantNom = '${conv['enseignant_prenom'] ?? ''} ${conv['enseignant_nom'] ?? ''}'.trim();
+        final initials = (conv['enseignant_nom'] ?? 'E').isNotEmpty
+            ? (conv['enseignant_nom'] as String)[0].toUpperCase()
+            : 'E';
+        final unreadVal = conv['unread_count'];
+        final unread = (unreadVal is int) ? unreadVal : (int.tryParse(unreadVal.toString()) ?? 0);
+        tiles.add(
+          _buildMessageTile(
+            name: enseignantNom.isNotEmpty ? enseignantNom : 'Enseignant',
+            role: conv['subject'] ?? 'Discussion',
+            initials: initials,
+            color: AppTheme.seaBlue,
+            school: conv['admin_name'] ?? '',
+            childName: '${conv['eleve_prenom'] ?? ''} ${conv['eleve_nom'] ?? ''}'.trim(),
+            lastMsg: conv['subject'] ?? '',
+            time: '',
+            unreadCount: unread,
+            conversationId: conv['conversation_id'],
+            conversationData: Map<String, dynamic>.from(conv),
+          ),
+        );
+      }
+    }
+
+    // CONVERSATIONS ADMINISTRATION (données réelles)
+    if (filter == 'Tous' || filter == 'Administration') {
+      for (final conv in _adminConversations) {
+        final adminName = conv['admin_name'] ?? 'Administration';
+        final unreadVal = conv['unread_count'];
+        final unread = (unreadVal is int) ? unreadVal : (int.tryParse(unreadVal.toString()) ?? 0);
+        tiles.add(
+          _buildMessageTile(
+            name: adminName,
+            role: conv['subject'] ?? 'Message de l\'Administration',
+            initials: 'AD',
+            color: AppTheme.forestGreen,
+            school: adminName,
+            childName: '${conv['eleve_prenom'] ?? ''} ${conv['eleve_nom'] ?? ''}'.trim(),
+            lastMsg: conv['subject'] ?? 'Nouveau message',
+            time: '',
+            unreadCount: unread,
+            conversationId: conv['conversation_id'],
+            conversationData: Map<String, dynamic>.from(conv),
+          ),
+        );
+      }
+    }
 
     if (tiles.isEmpty) {
       return const Center(
         child: Text(
-          'Aucun message rÃ©cent',
+          'Aucun message récent',
           style: TextStyle(color: Colors.grey),
-        ),
-      );
-    }
-
-    // M. Obiang (Enseignant)
-    if (filter == 'Tous' || filter == 'Enseignants') {
-      tiles.add(
-        _buildMessageTile(
-          name: 'M. Obiang',
-          role: 'Enseignant — Maths',
-          initials: 'OB',
-          color: AppTheme.seaBlue,
-          school: SchoolConfigs.notreDame,
-          childName: 'Yannick',
-          lastMsg: 'Je vais lui en parler ce soir, merci Professeur.',
-          time: '11:05',
-          unreadCount: 1,
-          chatMessages: [
-            {
-              'sender': 'prof',
-              'text':
-                  'Bonjour. Je me permets de vous contacter concernant Yannick.',
-              'time': '10:42',
-            },
-            {
-              'sender': 'prof',
-              'text':
-                  'Prof. Okoro (SVT) vient de publier sa note pour le devoir de maison : 08/20.',
-              'time': '10:43',
-            },
-            {
-              'sender': 'prof',
-              'text':
-                  'C\'est une grosse chute car Yannick avait eu 15/20 au devoir précédent sur ce même chapitre de Génétique.',
-              'time': '10:44',
-            },
-            {
-              'sender': 'parent',
-              'text':
-                  'Bonjour M. Obiang. Merci pour l\'information. Je suis vraiment surpris !',
-              'time': '11:00',
-            },
-            {
-              'sender': 'parent',
-              'text':
-                  'Il avait pourtant révisé... Il a tendance à se déconcentrer en classe.',
-              'time': '11:01',
-            },
-            {
-              'sender': 'prof',
-              'text':
-                  'Effectivement, Prof. Okoro m\'a signalé qu\'il a passé son temps à causer avec ses camarades.',
-              'time': '11:03',
-            },
-            {
-              'sender': 'parent',
-              'text': 'Je vais lui en parler ce soir, merci Professeur.',
-              'time': '11:05',
-            },
-          ],
-        ),
-      );
-    }
-
-    // Administration (AD)
-    if (filter == 'Tous' || filter == 'Administration') {
-      tiles.add(
-        _buildMessageTile(
-          name: 'Administration',
-          role: 'Service Financier',
-          initials: 'AD',
-          color: AppTheme.forestGreen,
-          school: SchoolConfigs.notreDame,
-          childName: 'Yannick',
-          lastMsg: 'Merci. Nous attendons votre passage au secrétariat.',
-          time: '09:15',
-          unreadCount: 2,
-          chatMessages: [
-            {
-              'sender': 'prof',
-              'text':
-                  'Bonjour M./Mme Nguema. Nous vous contactons concernant la situation financière de Yannick.',
-              'time': '08:50',
-            },
-            {
-              'sender': 'prof',
-              'text':
-                  'La tranche n°3 des frais de scolarité s\'élève à 125 000 FCFA et est toujours impayée.',
-              'time': '08:51',
-            },
-            {
-              'sender': 'prof',
-              'text':
-                  'L\'échéance était fixée au 05 Mars. Merci de régulariser rapidement.',
-              'time': '08:52',
-            },
-            {
-              'sender': 'parent',
-              'text':
-                  'Bonjour, je suis désolé pour ce retard. Je vais passer au secrétariat cette semaine.',
-              'time': '09:10',
-            },
-            {
-              'sender': 'prof',
-              'text': 'Merci. Nous attendons votre passage au secrétariat.',
-              'time': '09:15',
-            },
-          ],
         ),
       );
     }
@@ -2453,7 +3100,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   void _openChat(BuildContext context, Map<String, dynamic> data) {
     final rawChat = data['chatMessages'];
-    final chatMessages = rawChat is List 
+    final chatMessages = rawChat is List
         ? rawChat.map((e) => e as Map<String, dynamic>).toList()
         : <Map<String, dynamic>>[];
     final Color color = data['color'] as Color;
@@ -2628,18 +3275,40 @@ class _ParentHomePageState extends State<ParentHomePage> {
     required String lastMsg,
     required String time,
     required int unreadCount,
-    required List<Map<String, dynamic>> chatMessages,
+    int? conversationId,
+    Map<String, dynamic>? conversationData,
   }) {
     return GestureDetector(
-      onTap: () => _openChat(context, {
-        'name': name,
-        'role': role,
-        'initials': initials,
-        'color': color,
-        'school': school,
-        'childName': childName,
-        'chatMessages': chatMessages,
-      }),
+      onTap: () {
+        if (conversationId != null) {
+          // Mettre à jour immédiatement les compteurs non lus côté UI
+          setState(() {
+            for (final conv in _teacherConversationsAll) {
+              if (conv['conversation_id'] == conversationId) {
+                conv['unread_count'] = 0;
+              }
+            }
+            for (final conv in _adminConversations) {
+              if (conv['conversation_id'] == conversationId) {
+                conv['unread_count'] = 0;
+              }
+            }
+          });
+
+          // Naviguer vers la vraie page de chat
+          final conv = conversationData ?? {};
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatPage(conversation: {
+                ...conv,
+                'conversation_id': conversationId,
+                'status': 'accepted',
+              }),
+            ),
+          ).then((_) => _fetchConversations());
+        }
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(15),
@@ -2744,6 +3413,10 @@ class _ParentHomePageState extends State<ParentHomePage> {
   }
 
   Widget _buildEventsTab() {
+    if (_isLoadingEvents) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -2759,86 +3432,170 @@ class _ParentHomePageState extends State<ParentHomePage> {
           ),
           const SizedBox(height: 20),
 
-          const Text(
-            'DEMANDES DE RENDEZ-VOUS',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueGrey,
-              letterSpacing: 1.2,
+          if (_appointments.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 20),
+              child: Text("Aucun événement pour le moment.", style: TextStyle(color: Colors.grey)),
             ),
-          ),
-          const SizedBox(height: 15),
 
-          // RDV 1 — Yannick & M. Obiang (Maths)
-          _buildRdvCard(
-            teacherName: 'M. Obiang',
-            subject: 'Mathématiques',
-            meetingType: 'Présentiel',
-            childName: 'Yannick Nguema',
-            school: 'Notre Dame de Quaben',
-            motif:
-                'Yannick a eu une chute de note importante en SVT (15/20 → 08/20). Une rencontre est nécessaire pour comprendre les difficultés et mettre en place un plan de soutien.',
-            date: 'Proposé pour le 19 Mars à 14h00',
-            color: AppTheme.seaBlue,
-            initials: 'OB',
-          ),
-          const SizedBox(height: 15),
 
-          // RDV 2 — Junior & Mme Eyi (Français)
-          _buildRdvCard(
-            teacherName: 'Mme Eyi',
-            subject: 'Français',
-            meetingType: 'Visioconférence',
-            childName: 'Junior Nguema',
-            school: 'Scolaire Bambino Village',
-            motif:
-                'Junior Nguema est arrivé en retard (09:30) et a raté le devoir en classe de Français (Dictée préparée). La note enregistrée est 00/20. Une réunion s\'impose pour traiter l\'absentéisme.',
-            date: 'Proposé pour le 18 Mars à 16h00',
-            color: Colors.orange,
-            initials: 'EY',
-          ),
-
-          const SizedBox(height: 30),
-          const Text(
-            'ÉVÉNEMENTS DES ÉTABLISSEMENTS',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueGrey,
-              letterSpacing: 1.2,
+          if (_appointments.isNotEmpty) ...[
+            const Text(
+              'DEMANDES DE RENDEZ-VOUS',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueGrey,
+                letterSpacing: 1.2,
+              ),
             ),
-          ),
-          const SizedBox(height: 15),
+            const SizedBox(height: 15),
+            ..._appointments.map((rdv) {
+              final childName = '${rdv['eleve_prenom'] ?? ''} ${rdv['eleve_nom'] ?? ''}'.trim();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 15),
+                child: _buildRdvCard(
+                  teacherName: '${rdv['enseignant_prenom'] ?? ''} ${rdv['enseignant_nom'] ?? ''}'.trim(),
+                  subject: rdv['enseignant_matiere'] ?? 'Enseignant',
+                  meetingType: rdv['type'] ?? 'Rendez-vous',
+                  childName: childName,
+                  school: '', // Could be joined if available
+                  motif: rdv['motif'] ?? 'Aucun motif',
+                  date: rdv['date_heure'] ?? '',
+                  color: _getChildColor(childName),
+                  initials: (rdv['enseignant_nom'] ?? 'P')[0].toUpperCase(),
+                  id: rdv['id'],
+                  requester: rdv['requester'] ?? 'parent',
+                  isPending: rdv['statut'] == 'en_attente',
+                ),
+              );
+            }),
+          ],
 
-          _buildEventSmallCard(
-            title: 'Visite Asso. Sportifs Handicapés',
-            date: 'Samedi 08 Mars',
-            location: 'Scolaire Bambino Village',
-            color: AppTheme.forestGreen,
+          // Les événements de l'établissement seront chargés dynamiquement ici plus tard
+          const SizedBox(height: 10),
+        ],
+      ),
+    );
+  }
+
+  Color _getChildColor(String childName) {
+    if (childName.isEmpty) return AppTheme.seaBlue;
+    final firstName = childName.split(' ')[0].toLowerCase();
+    for (var child in _childrenData) {
+      if ((child['name'] as String).toLowerCase().contains(firstName)) {
+        return child['color'] ?? AppTheme.seaBlue;
+      }
+    }
+    return AppTheme.seaBlue;
+  }
+
+  Widget _buildConversationRequestCard(Map<String, dynamic> req) {
+    String teacherName = '${req['enseignant_prenom'] ?? ''} ${req['enseignant_nom'] ?? ''}'.trim();
+    String subject = req['enseignant_matiere'] ?? req['subject'] ?? 'Messagerie';
+    
+    // Contexte de l'élève
+    String eleveNom = req['eleve_nom'] ?? '';
+    String elevePrenom = req['eleve_prenom'] ?? '';
+    String childContext = elevePrenom.isNotEmpty ? 'Pour $elevePrenom $eleveNom' : '';
+    
+    String status = req['status'] ?? 'pending';
+    String statusText = 'Nouvelle discussion';
+    Color statusColor = Colors.orange;
+    if (status == 'accepted') {
+      statusText = 'Discussion acceptée';
+      statusColor = Colors.green;
+    } else if (status == 'rejected') {
+      statusText = 'Discussion refusée';
+      statusColor = Colors.red;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: statusColor,
+                radius: 20,
+                child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusText,
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: statusColor),
+                    ),
+                    Text(
+                      '$teacherName ($subject)',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
+                    if (childContext.isNotEmpty)
+                      Text(
+                        childContext,
+                        style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          _buildEventSmallCard(
-            title: 'Dédicace Jonas de Pierre',
-            date: 'Vendredi 14 Mars, 14h00',
-            location: SchoolConfigs.sainteTherese,
-            color: Colors.purple,
-          ),
+          if (req['ecole_nom'] != null)
+            Text('École: ${req['ecole_nom']}', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
           const SizedBox(height: 12),
-          _buildEventSmallCard(
-            title: 'Réunion Orientation Campus France',
-            date: 'Jeudi 20 Mars, 15h00',
-            location: 'Notre Dame de Quaben',
-            color: AppTheme.seaBlue,
-          ),
-          const SizedBox(height: 12),
-          _buildEventSmallCard(
-            title: 'Assemblée Générale Trimestrielle',
-            date: 'Vendredi 28 Mars, 17h00',
-            location: 'Tous les établissements',
-            color: AppTheme.sunYellow,
-          ),
-          const SizedBox(height: 30),
+          if (status == 'pending')
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatPage(conversation: req),
+                    ),
+                  ).then((_) => _fetchEvents());
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: statusColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Ouvrir la discussion'),
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  status == 'accepted' ? 'Vous avez accepté cette discussion' : 'Vous avez refusé cette discussion',
+                  style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -2854,6 +3611,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
     required String date,
     required Color color,
     required String initials,
+    int? id,
+    String requester = 'parent',
+    bool isPending = false,
   }) {
     return StatefulBuilder(
       builder: (context, setCardState) {
@@ -3019,68 +3779,53 @@ class _ParentHomePageState extends State<ParentHomePage> {
                   ),
                 ),
               ],
-              const SizedBox(height: 15),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () =>
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'RDV accepté avec $teacherName pour $childName',
-                              ),
-                              backgroundColor: AppTheme.forestGreen,
-                            ),
+              if (isPending) ...[
+                const SizedBox(height: 15),
+                if (requester == 'enseignant')
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _updateAppointmentStatus(id, 'refuse'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                      icon: const Icon(Icons.check_circle_outline, size: 16),
-                      label: const Text(
-                        'ACCEPTER',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          child: const Text('Refuser'),
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.forestGreen,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _updateAppointmentStatus(id, 'accepte'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Accepter'),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
+                    ],
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
+                        SizedBox(width: 8),
+                        Text('En attente d\'acceptation par l\'enseignant', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () =>
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('RDV avec $teacherName reporté'),
-                              backgroundColor: Colors.orange,
-                            ),
-                          ),
-                      icon: const Icon(Icons.schedule_outlined, size: 16),
-                      label: const Text(
-                        'REPORTER',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.orange,
-                        side: const BorderSide(color: Colors.orange),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              ]
             ],
           ),
         );
@@ -3243,12 +3988,14 @@ class _ChildCard extends StatelessWidget {
                               ? Image.network(
                                   image,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const SizedBox(),
+                                  errorBuilder: (_, __, ___) =>
+                                      const SizedBox(),
                                 )
                               : Image.asset(
                                   image,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const SizedBox(),
+                                  errorBuilder: (_, __, ___) =>
+                                      const SizedBox(),
                                 ),
                         ),
                       ),
@@ -3415,4 +4162,3 @@ class _ChildCard extends StatelessWidget {
     );
   }
 }
-

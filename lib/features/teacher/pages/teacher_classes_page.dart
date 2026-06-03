@@ -277,10 +277,12 @@ class _TeacherClassesPageState extends State<TeacherClassesPage> with SingleTick
           context,
           MaterialPageRoute(
             builder: (context) => ClassDashboardPage(
+              classId: 1, // Dummy ID pour l'instant
+              teacherId: 1, // Dummy ID pour l'instant
               className: cls['name'],
-              studentCount: cls['students'],
               session: isTomorrow ? 'Demain' : 'Aujourd\'hui',
               subject: cls['subject'],
+              studentCount: cls['students'],
             ),
           ),
         );

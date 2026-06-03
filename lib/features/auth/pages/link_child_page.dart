@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
@@ -51,8 +52,21 @@ class _LinkChildPageState extends State<LinkChildPage> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = 'Erreur de connexion à l\'API.';
+        
+        // Handling specific backend error message (like 403 or 404)
+        if (e is DioException && e.response != null && e.response?.data != null) {
+          final data = e.response?.data;
+          if (data is Map && data.containsKey('message')) {
+            errorMessage = data['message'];
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur de connexion à l\'API.')),
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     } finally {

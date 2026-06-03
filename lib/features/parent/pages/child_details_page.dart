@@ -110,26 +110,43 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
     final now = DateTime.now();
     final formattedDate = DateFormat('d MMMM yyyy', 'fr_FR').format(now);
     
-    // Fallback dynamique ou mocké
-    final String status = widget.child['attendance_status'] ?? 'Présent';
-    final String arrivalTime = widget.child['arrival_time'] ?? '07:55 AM';
+    // Fallback dynamique
+    final String status = widget.child['attendance_status'] ?? 'non_marque';
+    
+    String rawArrivalTime = widget.child['arrival_time'] ?? '';
+    String arrivalTime = '--:--';
+    if (rawArrivalTime.isNotEmpty && rawArrivalTime.length >= 16) {
+      // e.g. "2026-05-28 08:15:00" -> "08:15"
+      arrivalTime = rawArrivalTime.substring(11, 16);
+    } else if (rawArrivalTime.isNotEmpty) {
+      arrivalTime = rawArrivalTime;
+    }
     
     Color statusColor;
     Color statusBgColor;
     IconData statusIcon;
+    String displayStatus;
     
     if (status.toLowerCase() == 'absent') {
       statusColor = const Color(0xFFC62828); // Red
       statusBgColor = const Color(0xFFFFEBEE);
       statusIcon = Icons.cancel;
-    } else if (status.toLowerCase() == 'retard') {
+      displayStatus = 'Absent';
+    } else if (status.toLowerCase() == 'late') {
       statusColor = const Color(0xFFE65100); // Orange
       statusBgColor = const Color(0xFFFFF3E0);
       statusIcon = Icons.access_time_filled;
-    } else {
+      displayStatus = 'En retard';
+    } else if (status.toLowerCase() == 'present') {
       statusColor = const Color(0xFF1B5E20); // Green
       statusBgColor = const Color(0xFFE8F5E9);
       statusIcon = Icons.check_circle;
+      displayStatus = 'Présent';
+    } else {
+      statusColor = Colors.grey[700]!; // Grey
+      statusBgColor = Colors.grey[200]!;
+      statusIcon = Icons.help_outline;
+      displayStatus = 'Non marqué';
     }
 
     return SingleChildScrollView(
@@ -166,7 +183,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(status, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: statusColor)),
+                      Text(displayStatus, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: statusColor)),
                     ],
                   ),
                 ),
@@ -283,65 +300,11 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
           const Text('Actualités de l\'école', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 15),
           
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  child: Container(
-                    height: 150,
-                    width: double.infinity,
-                    color: Colors.grey[300],
-                    child: Image.asset(
-                      widget.child['newsImage'] ?? 'assets/images/profil/actualité/actu1.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_,__,___) => const Center(child: Icon(Icons.image, size: 50, color: Colors.grey)),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(4)),
-                        child: Text('ANNONCE', style: TextStyle(color: Colors.blue[800], fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.child['newsTitle'] ?? 'Séance discussion sur métier d\'avenir',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        widget.child['newsContent'] ?? 'Une séance d\'échange avec des professionnels pour aider les élèves à choisir leur orientation.',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.4),
-                      ),
-                      const SizedBox(height: 15),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 45,
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1976D2),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('Voir plus de détails', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          // Les actualités seront chargées dynamiquement depuis l'API
+          const Center(
+            child: Text(
+              'Aucune actualité récente',
+              style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
             ),
           ),
 
@@ -436,37 +399,13 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
       child: Column(
         children: [
           Container(
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  child: Image.asset(
-                    widget.child['newsImage'] ?? 'assets/images/profil/actualité/actu1.png',
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Séance discussion sur métier d\'avenir',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Dans le cadre de l\'orientation scolaire, une séance d\'échange est organisée avec des professionnels de divers secteurs (Tech, Santé, Ingénierie) pour présenter les métiers de demain aux élèves.\n\nCette session permettra aux élèves de poser des questions et de mieux comprendre les parcours académiques requis.',
-                        style: TextStyle(color: Colors.grey[700], fontSize: 15, height: 1.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            child: const Center(
+              child: Text(
+                'Aucune actualité pour le moment.',
+                style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+              ),
             ),
           ),
         ],

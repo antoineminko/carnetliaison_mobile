@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
 
 class QrScanPage extends StatefulWidget {
-  const QrScanPage({super.key});
+  final bool isFromLogin;
+  const QrScanPage({super.key, this.isFromLogin = false});
 
   @override
   State<QrScanPage> createState() => _QrScanPageState();
@@ -19,7 +22,17 @@ class _QrScanPageState extends State<QrScanPage> {
     setState(() => _isProcessing = true);
 
     try {
-      final parentId = await AuthService.getParentId() ?? 1;
+      final parentId = await AuthService.getParentId();
+      if (parentId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Session invalide. Veuillez vous reconnecter.')),
+          );
+          await Future.delayed(const Duration(seconds: 2));
+          setState(() => _isProcessing = false);
+        }
+        return;
+      }
 
       final response = await ApiClient.instance.post(
         ApiEndpoints.linkQrCode,
@@ -35,7 +48,14 @@ class _QrScanPageState extends State<QrScanPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Enfant lié : ${eleve['prenom']} ${eleve['nom']}')),
           );
-          Navigator.pop(context, eleve);
+          if (widget.isFromLogin) {
+            // Marquer que le scan a été fait pour cette session
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('parent_scan_done', true);
+            Navigator.pushReplacementNamed(context, '/parent/home');
+          } else {
+            Navigator.pop(context, eleve);
+          }
         }
       } else {
         if (mounted) {
@@ -54,8 +74,21 @@ class _QrScanPageState extends State<QrScanPage> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = 'Erreur de connexion à l\'API.';
+        
+        // Handling specific backend error message (like 403 or 404)
+        if (e is DioException && e.response != null && e.response?.data != null) {
+          final data = e.response?.data;
+          if (data is Map && data.containsKey('message')) {
+            errorMessage = data['message'];
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur de connexion à l\'API.')),
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 4),
+          ),
         );
         // Pause before allowing another scan to avoid spam
         await Future.delayed(const Duration(seconds: 4));

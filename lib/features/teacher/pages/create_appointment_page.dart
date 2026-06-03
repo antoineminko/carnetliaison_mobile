@@ -4,9 +4,16 @@ import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
 
 class CreateAppointmentPage extends StatefulWidget {
-  final Map<String, dynamic> student;
+  final int studentId;
+  final int parentId;
+  final String parentName;
 
-  const CreateAppointmentPage({super.key, required this.student});
+  const CreateAppointmentPage({
+    super.key, 
+    required this.studentId,
+    required this.parentId,
+    required this.parentName,
+  });
 
   @override
   State<CreateAppointmentPage> createState() => _CreateAppointmentPageState();
@@ -65,8 +72,8 @@ class _CreateAppointmentPageState extends State<CreateAppointmentPage> {
   Future<void> _submit() async {
     if (_isSending) return;
 
-    final parentId = await AuthService.getParentId();
-    if (parentId == null) {
+    final enseignantId = await AuthService.getTeacherId();
+    if (enseignantId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Session expirée. Veuillez vous reconnecter.')),
@@ -84,15 +91,15 @@ class _CreateAppointmentPageState extends State<CreateAppointmentPage> {
       );
 
       await ApiClient.instance.post('/appointments', data: {
-        'enseignant_id': widget.student['enseignant_id'] ?? 1,
-        'parent_id': parentId,
-        'eleve_id': widget.student['id'],
+        'enseignant_id': enseignantId,
+        'parent_id': widget.parentId,
+        'eleve_id': widget.studentId,
         'date_heure': dateHeure.toIso8601String(),
         'type': _type,
         'motif': _motifController.text.trim().isEmpty
             ? 'Rendez-vous demandé via l\'application'
             : _motifController.text.trim(),
-        'requester': 'parent',
+        'requester': 'enseignant',
       });
 
       if (!mounted) return;
@@ -146,55 +153,45 @@ class _CreateAppointmentPageState extends State<CreateAppointmentPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Demander un Rendez-vous',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text('Nouveau Rendez-vous'),
         backgroundColor: Colors.white,
-        foregroundColor: AppTheme.textDark,
+        foregroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Card Élève
+            // Header Info
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10)],
               ),
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 24,
+                    radius: 25,
                     backgroundColor: AppTheme.seaBlue.withOpacity(0.1),
                     child: Text(
-                      (widget.student['name'] as String? ?? '?').substring(0, 1).toUpperCase(),
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.seaBlue),
+                      widget.parentName.isNotEmpty ? widget.parentName.substring(0, 1).toUpperCase() : 'P',
+                      style: const TextStyle(fontSize: 20, color: AppTheme.seaBlue, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.student['name'] ?? 'Élève',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      Text(
-                        'Matricule: ${widget.student['matricule'] ?? 'N/A'}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
-                    ],
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.parentName,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

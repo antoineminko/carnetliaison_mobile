@@ -7,17 +7,23 @@ import 'package:app_mobile/features/teacher/pages/grades_entry_view.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 
 class ClassDashboardPage extends StatefulWidget {
+  final int classId;
   final String className;
-  final int studentCount;
   final String session;
   final String subject;
+  final int teacherId;
+  final int studentCount;
+  final String schoolName;
 
   const ClassDashboardPage({
     super.key,
+    required this.classId,
     required this.className,
-    required this.studentCount,
     required this.session,
     required this.subject,
+    required this.teacherId,
+    required this.studentCount,
+    this.schoolName = 'STE THÉRÈSE',
   });
 
   @override
@@ -92,6 +98,7 @@ class _ClassDashboardPageState extends State<ClassDashboardPage> {
                           AttendanceView(
                             studentCount: widget.studentCount,
                             className: widget.className,
+                            classeId: widget.classId,
                           ),
                         ),
                       ),
@@ -126,10 +133,22 @@ class _ClassDashboardPageState extends State<ClassDashboardPage> {
                         ),
                       ),
                       _buildShortcutCard(
-                        title: 'Historique',
-                        icon: Icons.history_rounded,
-                        color: AppTheme.sunYellow,
-                        onTap: () {},
+                        title: 'Signaler',
+                        icon: Icons.warning_amber_rounded,
+                        color: Colors.redAccent,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TeacherStudentListPage(
+                                classId: widget.classId,
+                                teacherId: widget.teacherId,
+                                className: widget.className,
+                                studentCount: widget.studentCount,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -158,7 +177,7 @@ class _ClassDashboardPageState extends State<ClassDashboardPage> {
                         ),
                       ),
                       Text(
-                        'Lundi, 22 Mai',
+                        '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -175,20 +194,10 @@ class _ClassDashboardPageState extends State<ClassDashboardPage> {
                     isActive: true,
                   ),
                   _buildTimelineItem(
-                    time: '10:00',
-                    title: 'Récréation',
+                    time: '12:00',
+                    title: 'Pause',
                     subtitle: '',
                     isBreak: true,
-                  ),
-                  _buildTimelineItem(
-                    time: '10:30',
-                    title: 'Français',
-                    subtitle: 'Lecture suivie : L’enfant noir',
-                  ),
-                  _buildTimelineItem(
-                    time: '14:00',
-                    title: 'Réunion pédagogique',
-                    subtitle: 'Salle des professeurs • Trimestre 2',
                     isLast: true,
                   ),
                 ],
@@ -250,9 +259,9 @@ class _ClassDashboardPageState extends State<ClassDashboardPage> {
                   color: Colors.white.withOpacity(0.25),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text(
-                  'COURS - STE THÉRÈSE',
-                  style: TextStyle(
+                child: Text(
+                  'COURS - ${widget.schoolName.toUpperCase()}',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -293,7 +302,7 @@ class _ClassDashboardPageState extends State<ClassDashboardPage> {
               const Icon(Icons.people_outline, color: Colors.white, size: 18),
               const SizedBox(width: 8),
               Text(
-                '${widget.studentCount} élèves inscrits',
+                '${widget.studentCount} Élèves dans la classe',
                 style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
               ),
             ],
@@ -329,6 +338,8 @@ class _ClassDashboardPageState extends State<ClassDashboardPage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => TeacherStudentListPage(
+                        classId: widget.classId,
+                        teacherId: widget.teacherId,
                         className: widget.className,
                         studentCount: widget.studentCount,
                       ),

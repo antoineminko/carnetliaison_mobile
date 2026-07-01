@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
-import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 import 'package:app_mobile/features/communication/services/message_service.dart';
 import 'package:app_mobile/features/communication/models/conversation.dart';
 import 'student_details_pages.dart';

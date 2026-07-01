@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/school_config.dart';
-import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 
 class TeacherProfilePage extends StatefulWidget {
   const TeacherProfilePage({super.key});

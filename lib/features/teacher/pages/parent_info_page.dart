@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
-import 'package:app_mobile/features/parent/pages/chat_page.dart';
+import 'package:app_mobile/features/parent/messages/chat_page.dart';
 import 'package:app_mobile/features/teacher/pages/create_appointment_page.dart';
 
 class ParentInfoPage extends StatefulWidget {

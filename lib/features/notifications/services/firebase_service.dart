@@ -1,9 +1,9 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
+﻿import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'local_notification_service.dart';
 import 'notification_storage.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
-import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 import 'package:app_mobile/features/calls/pages/incoming_call_screen.dart';
 
 // Clé de navigation globale pour naviguer depuis les notifications

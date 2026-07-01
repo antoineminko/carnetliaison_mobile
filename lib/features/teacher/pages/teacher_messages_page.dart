@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
-import 'package:app_mobile/features/auth/services/auth_service.dart';
-import 'package:app_mobile/features/parent/pages/chat_page.dart';
+import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
+import 'package:app_mobile/features/parent/messages/chat_page.dart';
 
 class TeacherMessagesPage extends StatefulWidget {
   const TeacherMessagesPage({super.key});

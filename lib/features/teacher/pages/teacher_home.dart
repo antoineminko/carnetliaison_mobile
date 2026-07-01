@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
-import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 import 'package:app_mobile/features/teacher/pages/class_dashboard.dart';
 import 'package:app_mobile/features/teacher/pages/teacher_classes_page.dart';
 import 'package:app_mobile/features/teacher/pages/teacher_profile_page.dart';

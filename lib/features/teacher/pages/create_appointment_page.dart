@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
-import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 
 class CreateAppointmentPage extends StatefulWidget {
   final int studentId;

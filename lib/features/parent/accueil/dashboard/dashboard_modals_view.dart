@@ -1,4 +1,4 @@
-﻿part of 'parent_home_page.dart';
+part of 'parent_home_page.dart';
 
 extension DashboardModalsViewExtension on _ParentHomePageState {
   void _showAddChildModal() {

@@ -283,6 +283,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
           ..clear()
           ..addAll(children.map(_mapApiChild));
         _isEmptyState = children.isEmpty;
+        _forceAddChild = false; // Toujours reset après réponse API
         _isLoadingChildren = false;
       });
 
@@ -299,16 +300,14 @@ class _ParentHomePageState extends State<ParentHomePage> {
     } catch (e) {
       print(' [DEBUG] Erreur chargement enfants : $e');
       if (!mounted) return;
-      setState(() {
-        _isLoadingChildren = false;
-      });
+      setState(() => _isLoadingChildren = false);
+      // Afficher un message sans déconnecter (peut être juste un problème réseau temporaire)
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur chargement enfants: $e')),
+        const SnackBar(
+          content: Text('Impossible de charger les enfants. Vérifiez votre connexion.'),
+          duration: Duration(seconds: 4),
+        ),
       );
-      // En cas d'échec critique (ex: backend indisponible/DB vidée), forcer la déconnexion propre
-      await AuthService.logout();
-      if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/select_role', (route) => false);
     }
   }
 
@@ -458,6 +457,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
       if (arrivalTime != null) 'arrivalTime': arrivalTime,
       'arrival_time': child['arrival_time'],
       'attendance_status': child['attendance_status'],
+      'is_verified': child['is_verified'] == 1 || child['is_verified'] == true,
       'raw': child,
     };
   }
@@ -715,6 +715,13 @@ class _ParentHomePageState extends State<ParentHomePage> {
           : null;
           
       if (currentChild != null) {
+        if (currentChild['is_verified'] == false) {
+          // Si l'enfant n'est pas vérifié, afficher la popup de vérification au lieu de le sélectionner
+          _selectedChildIndex = null;
+          _showVerifyChildModal(currentChild);
+          return;
+        }
+
         _selectedChild = {
           'name': currentChild['name'],
           'prenom': currentChild['prenom'] ?? currentChild['name'],

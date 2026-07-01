@@ -110,24 +110,37 @@ extension ParentProfileExtension on _ParentHomePageState {
 
           // SECTION MES ENFANTS
           _buildSectionTitle('ENFANT(S)'),
-          SizedBox(
-            height: 125, // Augmenté de 110 à 125 pour éviter l'overflow
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: (!_forceAddChild && _childrenData.isNotEmpty)
-                  ? _childrenData.length + 1
-                  : 1,
-              separatorBuilder: (_, __) => const SizedBox(width: 15),
-              itemBuilder: (context, index) {
-                final bool hasVisibleChildren = !_forceAddChild && _childrenData.isNotEmpty;
-                if (_childrenData.isEmpty || _forceAddChild || index == _childrenData.length) {
-                  // S'il n'y a pas d'enfant lié, on n'affiche que la carte d'ajout.
-                  return _buildAddChildCard();
-                }
-                return _buildChildProfileCard(_childrenData[index]);
-              },
+          if (_isLoadingChildren)
+            const SizedBox(
+              height: 90,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(strokeWidth: 2),
+                    SizedBox(height: 10),
+                    Text('Chargement...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 125,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: (!_forceAddChild && _childrenData.isNotEmpty)
+                    ? _childrenData.length + 1
+                    : 1,
+                separatorBuilder: (_, __) => const SizedBox(width: 15),
+                itemBuilder: (context, index) {
+                  if (_childrenData.isEmpty || _forceAddChild || index == _childrenData.length) {
+                    return _buildAddChildCard();
+                  }
+                  return _buildChildProfileCard(_childrenData[index]);
+                },
+              ),
             ),
-          ),
 
           const SizedBox(height: 25),
 

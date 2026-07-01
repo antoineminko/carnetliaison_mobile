@@ -11,6 +11,7 @@ class ChildCard extends StatelessWidget {
   final int notifCount;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool isVerified;
   final String attendanceStatus; // 'En attente', 'Présent', 'Absent', 'En retard'
 
   const ChildCard({
@@ -25,6 +26,7 @@ class ChildCard extends StatelessWidget {
     this.notifCount = 0,
     required this.isSelected,
     required this.onTap,
+    this.isVerified = true,
     this.attendanceStatus = 'En attente',
   });
 
@@ -207,14 +209,16 @@ class ChildCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            isSelected ? 'Sélectionné' : 'Sélectionner',
+                            !isVerified
+                                ? 'Scanner pour débloquer'
+                                : (isSelected ? 'Sélectionné' : 'Sélectionner'),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(width: 10),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                          Icon(!isVerified ? Icons.lock_outline : Icons.arrow_forward_ios_rounded, size: 16),
                         ],
                       ),
                     ),

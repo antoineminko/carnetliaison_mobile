@@ -2,46 +2,75 @@ part of 'parent_home_page.dart';
 
 extension DashboardCardsViewExtension on _ParentHomePageState {
   Widget _buildChildProfileCard(Map<String, dynamic> child) {
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[100]!),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: child['color'],
-              image: DecorationImage(
-                image: (child['isNetworkImage'] == true)
-                    ? NetworkImage(child['image'] as String)
-                    : AssetImage(child['image'] as String) as ImageProvider,
-                fit: BoxFit.cover,
+    final isVerified = child['is_verified'] ?? false;
+
+    return GestureDetector(
+      onTap: () {
+        if (!isVerified) {
+          _showVerifyChildModal(child);
+        } else {
+          // Déjà vérifié, on peut soit sélectionner l'enfant, soit ne rien faire
+          _onChildSelected(_childrenData.indexOf(child));
+        }
+      },
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isVerified ? Colors.white : Colors.grey[100],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[100]!),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: child['color'],
+                    image: DecorationImage(
+                      image: (child['isNetworkImage'] == true)
+                          ? NetworkImage(child['image'] as String)
+                          : AssetImage(child['image'] as String) as ImageProvider,
+                      fit: BoxFit.cover,
+                      colorFilter: isVerified
+                          ? null
+                          : ColorFilter.mode(
+                              Colors.black.withOpacity(0.5),
+                              BlendMode.darken,
+                            ),
+                    ),
+                  ),
+                ),
+                if (!isVerified)
+                  const Icon(Icons.lock, color: Colors.white, size: 20),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              child['name'],
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: isVerified ? Colors.black : Colors.grey,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              child['grade'],
+              style: TextStyle(
+                color: isVerified ? AppTheme.seaBlue : Colors.grey,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            child['name'],
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            child['grade'],
-            style: const TextStyle(
-              color: AppTheme.seaBlue,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -79,12 +108,13 @@ extension DashboardCardsViewExtension on _ParentHomePageState {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(30.0),
+        padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 40.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(30),
               decoration: BoxDecoration(
@@ -132,9 +162,9 @@ extension DashboardCardsViewExtension on _ParentHomePageState {
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.add, color: Colors.white),
                     SizedBox(width: 8),
                     Text(
@@ -149,6 +179,7 @@ extension DashboardCardsViewExtension on _ParentHomePageState {
                 ),
               ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -170,6 +201,7 @@ extension DashboardCardsViewExtension on _ParentHomePageState {
           avatarColor: child['color'] ?? const Color(0xFF2596be),
           notifCount: child['notif'] ?? 0,
           isSelected: _selectedChildIndex == index,
+          isVerified: child['is_verified'] ?? false,
           onTap: () => _onChildSelected(index),
           attendanceStatus: child['status'] ?? 'En attente',
         );

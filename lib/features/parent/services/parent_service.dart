@@ -40,4 +40,19 @@ class ParentService {
     }
     return [];
   }
+
+  static Future<bool> verifyChildAccess(int parentId, int eleveId, String code) async {
+    try {
+      final response = await ApiClient.instance.post(
+        '/parents/$parentId/children/$eleveId/verify',
+        data: {'code': code},
+      );
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
 }

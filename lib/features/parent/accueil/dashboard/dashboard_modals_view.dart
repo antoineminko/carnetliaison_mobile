@@ -63,9 +63,15 @@ extension DashboardModalsViewExtension on _ParentHomePageState {
                           SharedPreferences.getInstance().then((prefs) {
                             prefs.setBool('parent_scan_done', true);
                           });
-                          setState(() {
-                            _forceAddChild = false;
-                          });
+                          final rawId = result['id'];
+                          if (rawId != null) {
+                            final childId = rawId is int ? rawId : int.tryParse(rawId.toString());
+                            if (childId != null) {
+                              await ParentService.addLocallyVerifiedChild(childId);
+                              print('[DEBUG] addLocallyVerifiedChild appelé avec id=$childId');
+                            }
+                          }
+                          setState(() { _forceAddChild = false; });
                           await _loadLinkedChildren();
                         }
                       },
@@ -91,9 +97,15 @@ extension DashboardModalsViewExtension on _ParentHomePageState {
                           SharedPreferences.getInstance().then((prefs) {
                             prefs.setBool('parent_scan_done', true);
                           });
-                          setState(() {
-                            _forceAddChild = false;
-                          });
+                          final rawId = result['id'];
+                          if (rawId != null) {
+                            final childId = rawId is int ? rawId : int.tryParse(rawId.toString());
+                            if (childId != null) {
+                              await ParentService.addLocallyVerifiedChild(childId);
+                              print('[DEBUG] addLocallyVerifiedChild appelé avec id=$childId');
+                            }
+                          }
+                          setState(() { _forceAddChild = false; });
                           await _loadLinkedChildren();
                         }
                       },

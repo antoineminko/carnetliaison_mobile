@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
+import 'package:app_mobile/features/parent/services/parent_service.dart';
 
 class LinkChildPage extends StatefulWidget {
   const LinkChildPage({super.key});
@@ -56,7 +57,7 @@ class _LinkChildPageState extends State<LinkChildPage> {
       if (response.statusCode == 200 && response.data['success']) {
         final eleve = response.data['eleve'];
         if (mounted) {
-          await showDialog(
+          showDialog(
             context: context,
             barrierDismissible: false,
             builder: (context) => AlertDialog(
@@ -77,6 +78,15 @@ class _LinkChildPageState extends State<LinkChildPage> {
           await Future.delayed(const Duration(seconds: 1));
           if (mounted) {
             Navigator.pop(context); // Close success dialog
+            
+            final childIdRaw = eleve['id'];
+            if (childIdRaw != null) {
+              final childId = int.tryParse(childIdRaw.toString());
+              if (childId != null) {
+                await ParentService.addLocallyVerifiedChild(childId);
+              }
+            }
+            
             Navigator.pop(context, eleve); // Pop the page
           }
         }

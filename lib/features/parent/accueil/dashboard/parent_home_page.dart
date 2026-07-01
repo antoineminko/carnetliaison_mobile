@@ -263,36 +263,73 @@ class _ParentHomePageState extends State<ParentHomePage> {
     ]);
   }
 
-
   Future<void> _loadLinkedChildren() async {
     final parentId = await AuthService.getParentId();
-    print(' [DEBUG] parent_id en mémoire = $parentId');
     if (parentId == null) {
-      print(' [DEBUG] parent_id est NULL → impossible de charger les enfants');
       setState(() => _isLoadingChildren = false);
       return;
     }
 
     try {
       final children = await ParentService.getChildren(parentId);
-      print(' [DEBUG] Enfants reçus de l\'API : ${children.length}  $children');
       if (!mounted) return;
 
-      final localVerifiedIds = await ParentService.getLocallyVerifiedChildren();
+      // ─── MIGRATION UNE SEULE FOIS ───────────────────────────────────────
+      // Si l'utilisateur a déjà fait un scan sur CE téléphone (parent_scan_done=true)
+      // mais que la mémoire locale est vide (bug des versions précédentes),
+      // on synchronise automatiquement les enfants vérifiés par l'API.
+      // Sur un NOUVEAU téléphone : parent_scan_done n'est pas défini → pas de sync.
+      final prefs = await SharedPreferences.getInstance();
+      final migrationDone = prefs.getBool('_local_verify_v2_migrated') == true;
+      if (!migrationDone) {
+        final scanDone = prefs.getBool('parent_scan_done') == true;
+        if (scanDone) {
+          // Scan déjà fait sur ce téléphone → sync les enfants is_verified=1 en local
+          for (final child in children) {
+            final v = child['is_verified'];
+            final isVerified = v == 1 || v == true || v == '1';
+            if (isVerified) {
+              final idRaw = child['id'];
+              if (idRaw != null) {
+                final childId = idRaw is int ? idRaw : int.tryParse(idRaw.toString());
+                if (childId != null) {
+                  await ParentService.addLocallyVerifiedChild(childId);
+                  print('[MIGRATION] Enfant $childId synchronisé localement');
+                }
+              }
+            }
+          }
+        }
+        await prefs.setBool('_local_verify_v2_migrated', true);
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
-      // On filtre pour ne garder que les enfants que l'API considère comme vérifiés
-      // (Si c'est false côté API, ils sont invisibles et doivent être scannés via le bouton +)
-      final apiVerifiedChildren = children.where((c) {
-        final isVerified = c['is_verified'] == 1 || c['is_verified'] == true;
-        return isVerified;
+      // IDs des enfants vérifiés localement sur CE téléphone
+      final localVerifiedIds = await ParentService.getLocallyVerifiedChildren();
+      print('[DEBUG] localVerifiedIds = $localVerifiedIds');
+
+      // Cas 1 - Premier téléphone :
+      //   is_verified=0 → enfant jamais scanné → n'apparaît PAS (doit être scanné via +)
+      //   is_verified=1 → enfant scanné au moins une fois → s'affiche débloqué
+      //
+      // Cas 2 - Nouveau téléphone :
+      //   is_verified=1 + local_verified=false → s'affiche VERROUILLÉ (cadenas)
+      //   Après entrée du code secret → local_verified=true → DÉBLOQUÉ
+
+      // On n'affiche que les enfants qui ont déjà été scannés au moins une fois (is_verified=1)
+      final verifiedByApi = children.where((c) {
+        final v = c['is_verified'];
+        return v == 1 || v == true || v == '1';
       }).toList();
 
       setState(() {
         _childrenData
           ..clear()
-          ..addAll(apiVerifiedChildren.map((c) => _mapApiChild(c, localVerifiedIds)));
+          ..addAll(verifiedByApi.map((c) => _mapApiChild(c, localVerifiedIds)));
+        // Empty state = aucun enfant vérifié par l'API
+        // → redirige vers page "ajouter un enfant"
         _isEmptyState = _childrenData.isEmpty;
-        _forceAddChild = false; // Toujours reset après réponse API
+        _forceAddChild = false;
         _isLoadingChildren = false;
       });
 
@@ -445,7 +482,13 @@ class _ParentHomePageState extends State<ParentHomePage> {
       } catch (_) {}
     }
 
-    final childId = child['id'] ?? -1;
+    final childIdRaw = child['id'];
+    final childId = childIdRaw is int ? childIdRaw : int.tryParse(childIdRaw?.toString() ?? '') ?? -1;
+
+    final isApiVerified = child['is_verified'] == 1 || child['is_verified'] == true || child['is_verified'] == '1';
+    final isLocalVerified = localVerifiedIds.contains(childId);
+
+    print('[DEBUG] child $childId: isApiVerified=$isApiVerified, isLocalVerified=$isLocalVerified, localIds=$localVerifiedIds');
 
     return {
       'fromApi': true,
@@ -463,8 +506,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
       if (arrivalTime != null) 'arrivalTime': arrivalTime,
       'arrival_time': child['arrival_time'],
       'attendance_status': child['attendance_status'],
-      'is_verified': child['is_verified'] == 1 || child['is_verified'] == true,
-      'local_verified': localVerifiedIds.contains(childId),
+      'is_verified': isApiVerified,
+      // Verrouillé si pas encore vérifié localement sur CE téléphone
+      'local_verified': isLocalVerified,
       'raw': child,
     };
   }

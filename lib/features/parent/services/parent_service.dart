@@ -1,5 +1,6 @@
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ParentService {
   static Future<List<Map<String, dynamic>>> getChildren(int parentId) async {
@@ -41,6 +42,23 @@ class ParentService {
     return [];
   }
 
+  static const String _verifiedChildrenKey = 'locally_verified_children';
+
+  static Future<List<int>> getLocallyVerifiedChildren() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> stringList = prefs.getStringList(_verifiedChildrenKey) ?? [];
+    return stringList.map((e) => int.tryParse(e) ?? -1).where((e) => e != -1).toList();
+  }
+
+  static Future<void> addLocallyVerifiedChild(int childId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> stringList = prefs.getStringList(_verifiedChildrenKey) ?? [];
+    if (!stringList.contains(childId.toString())) {
+      stringList.add(childId.toString());
+      await prefs.setStringList(_verifiedChildrenKey, stringList);
+    }
+  }
+
   static Future<bool> verifyChildAccess(int parentId, int eleveId, String code) async {
     try {
       final response = await ApiClient.instance.post(
@@ -48,6 +66,8 @@ class ParentService {
         data: {'code': code},
       );
       if (response.statusCode == 200 && response.data['success'] == true) {
+        // Sauvegarder localement après succès côté serveur
+        await addLocallyVerifiedChild(eleveId);
         return true;
       }
       return false;

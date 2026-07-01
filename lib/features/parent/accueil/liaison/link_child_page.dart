@@ -24,6 +24,23 @@ class _LinkChildPageState extends State<LinkChildPage> {
     try {
       final parentId = await AuthService.getParentId() ?? 1;
 
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text('Vérification en cours...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        );
+      }
+
       final response = await ApiClient.instance.post(
         ApiEndpoints.linkSecretCode,
         data: {
@@ -32,29 +49,66 @@ class _LinkChildPageState extends State<LinkChildPage> {
         },
       );
 
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+      }
+
       if (response.statusCode == 200 && response.data['success']) {
         final eleve = response.data['eleve'];
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Enfant lié : ${eleve['prenom']} ${eleve['nom']}')),
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green, size: 64),
+                  const SizedBox(height: 20),
+                  const Text('Enfant lié avec succès !', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                  const SizedBox(height: 10),
+                  Text('${eleve['prenom']} ${eleve['nom']}', style: const TextStyle(fontSize: 18, color: Colors.grey), textAlign: TextAlign.center),
+                ],
+              ),
+            ),
           );
-          Navigator.pop(context, eleve);
+          
+          await Future.delayed(const Duration(seconds: 1));
+          if (mounted) {
+            Navigator.pop(context); // Close success dialog
+            Navigator.pop(context, eleve); // Pop the page
+          }
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Merci pour votre demande de fusion à cet enfant, mais vous n'êtes pas identifié comme parent. Veuillez contacter l'administration."),
-              duration: Duration(seconds: 4),
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red),
+                  SizedBox(width: 10),
+                  Text('Erreur de liaison'),
+                ],
+              ),
+              content: const Text("Merci pour votre demande de fusion à cet enfant, mais vous n'êtes pas identifié comme parent. Veuillez contacter l'administration."),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Compris'),
+                ),
+              ],
             ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        String errorMessage = 'Erreur de connexion à l\'API.';
+        Navigator.pop(context); // Close loading dialog if error happens
         
-        // Handling specific backend error message (like 403 or 404)
+        String errorMessage = 'Erreur de connexion à l\'API.';
         if (e is DioException && e.response != null && e.response?.data != null) {
           final data = e.response?.data;
           if (data is Map && data.containsKey('message')) {
@@ -62,10 +116,24 @@ class _LinkChildPageState extends State<LinkChildPage> {
           }
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                SizedBox(width: 10),
+                Text('Attention'),
+              ],
+            ),
             content: Text(errorMessage),
-            duration: const Duration(seconds: 4),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Fermer'),
+              ),
+            ],
           ),
         );
       }

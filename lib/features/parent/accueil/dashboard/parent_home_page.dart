@@ -278,11 +278,20 @@ class _ParentHomePageState extends State<ParentHomePage> {
       print(' [DEBUG] Enfants reçus de l\'API : ${children.length}  $children');
       if (!mounted) return;
 
+      final localVerifiedIds = await ParentService.getLocallyVerifiedChildren();
+
+      // On filtre pour ne garder que les enfants que l'API considère comme vérifiés
+      // (Si c'est false côté API, ils sont invisibles et doivent être scannés via le bouton +)
+      final apiVerifiedChildren = children.where((c) {
+        final isVerified = c['is_verified'] == 1 || c['is_verified'] == true;
+        return isVerified;
+      }).toList();
+
       setState(() {
         _childrenData
           ..clear()
-          ..addAll(children.map(_mapApiChild));
-        _isEmptyState = children.isEmpty;
+          ..addAll(apiVerifiedChildren.map((c) => _mapApiChild(c, localVerifiedIds)));
+        _isEmptyState = _childrenData.isEmpty;
         _forceAddChild = false; // Toujours reset après réponse API
         _isLoadingChildren = false;
       });
@@ -406,27 +415,22 @@ class _ParentHomePageState extends State<ParentHomePage> {
     }
   }
 
-  Map<String, dynamic> _mapApiChild(Map<String, dynamic> child) {
+  Map<String, dynamic> _mapApiChild(Map<String, dynamic> child, List<int> localVerifiedIds) {
     final imageUrl = child['photo_url']?.toString().isNotEmpty == true
         ? child['photo_url'].toString()
         : null;
 
-    String? status;
-    Color? statusColor;
+    String status = child['status'] ?? 'Présent';
+    Color statusColor = AppTheme.forestGreen;
     String? arrivalTime;
 
     if (child['attendance_status'] != null) {
-      if (child['attendance_status'] == 'present') {
-        status = 'Présent';
-        statusColor = Colors.green;
-      } else if (child['attendance_status'] == 'absent') {
-        status = 'Absent';
+      status = child['attendance_status'];
+      if (status == 'Absent') {
         statusColor = Colors.red;
-      } else if (child['attendance_status'] == 'late') {
-        status = 'En retard';
+      } else if (status == 'En retard') {
         statusColor = Colors.orange;
-      } else {
-        status = 'En attente';
+      } else if (status == 'En attente') {
         statusColor = Colors.grey;
       }
     } else {
@@ -441,9 +445,11 @@ class _ParentHomePageState extends State<ParentHomePage> {
       } catch (_) {}
     }
 
+    final childId = child['id'] ?? -1;
+
     return {
       'fromApi': true,
-      'id': child['id'],
+      'id': childId,
       'name': '${child['prenom'] ?? ''} ${child['nom'] ?? ''}'.trim(),
       'prenom': child['prenom'] ?? '',
       'grade': child['classe_nom'] ?? 'Classe non définie',
@@ -458,6 +464,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
       'arrival_time': child['arrival_time'],
       'attendance_status': child['attendance_status'],
       'is_verified': child['is_verified'] == 1 || child['is_verified'] == true,
+      'local_verified': localVerifiedIds.contains(childId),
       'raw': child,
     };
   }
@@ -715,8 +722,8 @@ class _ParentHomePageState extends State<ParentHomePage> {
           : null;
           
       if (currentChild != null) {
-        if (currentChild['is_verified'] == false) {
-          // Si l'enfant n'est pas vérifié, afficher la popup de vérification au lieu de le sélectionner
+        if (currentChild['local_verified'] != true) {
+          // Si l'enfant n'est pas vérifié localement, afficher la popup de vérification au lieu de le sélectionner
           _selectedChildIndex = null;
           _showVerifyChildModal(currentChild);
           return;

@@ -2,7 +2,7 @@ part of 'parent_home_page.dart';
 
 extension DashboardCardsViewExtension on _ParentHomePageState {
   Widget _buildChildProfileCard(Map<String, dynamic> child) {
-    final isVerified = child['is_verified'] ?? false;
+    final isVerified = child['local_verified'] == true;
 
     return GestureDetector(
       onTap: () {
@@ -201,7 +201,7 @@ extension DashboardCardsViewExtension on _ParentHomePageState {
           avatarColor: child['color'] ?? const Color(0xFF2596be),
           notifCount: child['notif'] ?? 0,
           isSelected: _selectedChildIndex == index,
-          isVerified: child['is_verified'] ?? false,
+          isVerified: child['local_verified'] == true,
           onTap: () => _onChildSelected(index),
           attendanceStatus: child['status'] ?? 'En attente',
         );

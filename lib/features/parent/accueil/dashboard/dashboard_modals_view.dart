@@ -231,4 +231,149 @@ extension DashboardModalsViewExtension on _ParentHomePageState {
     );
   }
 
+  void _showVerifyChildModal(Map<String, dynamic> child) {
+    final TextEditingController codeController = TextEditingController();
+    bool isLoading = false;
+    String? errorText;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 20,
+                right: 20,
+                top: 20,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Icon(Icons.lock_outline, size: 50, color: Colors.orange),
+                  const SizedBox(height: 15),
+                  const Text(
+                    'Débloquer l\'accès',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Veuillez entrer le code secret inscrit sur le carnet de ${child['prenom'] ?? child['name']} pour vérifier votre identité.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textGrey,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: codeController,
+                    decoration: InputDecoration(
+                      hintText: 'Code secret (ex: LYNDQ-...)',
+                      errorText: errorText,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.key),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              final code = codeController.text.trim();
+                              if (code.isEmpty) {
+                                setModalState(() => errorText = 'Veuillez entrer le code secret');
+                                return;
+                              }
+                              setModalState(() {
+                                isLoading = true;
+                                errorText = null;
+                              });
+
+                              final parentId = await AuthService.getParentId();
+                              if (parentId != null) {
+                                final success = await ParentService.verifyChildAccess(
+                                  parentId,
+                                  child['id'] ?? child['raw_id'],
+                                  code,
+                                );
+
+                                if (!mounted) return;
+                                if (success) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Accès débloqué avec succès !'),
+                                      backgroundColor: AppTheme.forestGreen,
+                                    ),
+                                  );
+                                  // Recharger la liste des enfants pour mettre is_verified à true
+                                  _loadLinkedChildren();
+                                } else {
+                                  setModalState(() {
+                                    isLoading = false;
+                                    errorText = 'Code secret incorrect ou erreur serveur.';
+                                  });
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.forestGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Vérifier et Débloquer',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }

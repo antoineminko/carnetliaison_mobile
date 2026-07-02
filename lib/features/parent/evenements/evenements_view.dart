@@ -6,43 +6,123 @@ extension EvenementsViewExtension on _ParentHomePageState {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final filters = ['Tous', 'En attente', 'Accepté', 'À venir'];
+    final now = DateTime.now();
+    
+    // Filtrer les événements
+    List<Map<String, dynamic>> filteredAppointments = _appointments;
+    
+    if (_selectedEventFilter != 'Tous') {
+      filteredAppointments = _appointments.where((rdv) {
+        final status = rdv['statut'] ?? 'en_attente';
+        final dateStr = rdv['date_heure']?.toString() ?? '';
+        DateTime? date;
+        if (dateStr.isNotEmpty) {
+           try {
+             if (dateStr.contains('/')) {
+                final parts = dateStr.split(' ')[0].split('/');
+                if (parts.length >= 3) {
+                   date = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+                }
+             } else {
+                date = DateTime.parse(dateStr);
+             }
+           } catch (_) {}
+        }
+        
+        switch (_selectedEventFilter) {
+          case 'En attente':
+            return status == 'en_attente';
+          case 'Accepté':
+            return status == 'accepted' || status == 'accepte';
+          case 'À venir':
+            if (date == null) return false;
+            return date.isAfter(now.subtract(const Duration(days: 1))) && status != 'rejected';
+          default:
+            return true;
+        }
+      }).toList();
+    }
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Événements et Rendez-vous',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textDark,
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Événements et Rendez-vous',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          // Chips de filtre
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: filters.map((filter) {
+                final isSelected = _selectedEventFilter == filter;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedEventFilter = filter;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF1377b5) : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        filter,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ),
           const SizedBox(height: 20),
 
-          if (_appointments.isEmpty)
+          if (filteredAppointments.isEmpty)
             const Padding(
-              padding: EdgeInsets.only(bottom: 20),
-              child: Text("Aucun événement pour le moment.", style: TextStyle(color: Colors.grey)),
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Text("Aucun événement pour ce filtre.", style: TextStyle(color: Colors.grey)),
             ),
 
-
-          if (_appointments.isNotEmpty) ...[
-            const Text(
-              'DEMANDES DE RENDEZ-VOUS',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueGrey,
-                letterSpacing: 1.2,
+          if (filteredAppointments.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                'DEMANDES DE RENDEZ-VOUS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueGrey,
+                  letterSpacing: 1.2,
+                ),
               ),
             ),
             const SizedBox(height: 15),
-            ..._appointments.map((rdv) {
+            ...filteredAppointments.map((rdv) {
               final childName = '${rdv['eleve_prenom'] ?? ''} ${rdv['eleve_nom'] ?? ''}'.trim();
               return Padding(
-                padding: const EdgeInsets.only(bottom: 15),
+                padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
                 child: _buildRdvCard(
                   teacherName: '${rdv['enseignant_prenom'] ?? ''} ${rdv['enseignant_nom'] ?? ''}'.trim(),
                   subject: rdv['enseignant_matiere'] ?? 'Enseignant',

@@ -229,9 +229,18 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
             Expanded(
               child: filteredNotifications.isEmpty
                   ? Center(
-                      child: Text(
-                        'Aucune notification pour $filterChildName',
-                        style: TextStyle(color: Colors.grey),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.notifications_off_outlined, size: 60, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
+                          Text(
+                            filterChildName != null
+                                ? 'Aucune notification pour $filterChildName'
+                                : 'Aucune notification',
+                            style: TextStyle(color: Colors.grey[500], fontSize: 15),
+                          ),
+                        ],
                       ),
                     )
                   : ListView.builder(

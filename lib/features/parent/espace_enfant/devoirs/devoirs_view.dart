@@ -146,7 +146,44 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
   }
 
   Widget _buildHomeworksList() {
-    final homeworks = _parseHomeworks();
+    List<Map<String, dynamic>> homeworks = _parseHomeworks();
+
+    // Appliquer le filtre
+    final now = DateTime.now();
+    if (_selectedDevoirFilter != 'Tous') {
+      homeworks = homeworks.where((hw) {
+        final type = hw['type']?.toString().toLowerCase() ?? 'maison';
+        // 'date_remise' might be a string in ISO format or a short string, handle parsing safely
+        DateTime? dueDate;
+        if (hw['date_remise'] != null) {
+           dueDate = DateTime.tryParse(hw['date_remise'].toString());
+           if (dueDate == null && hw['date_remise'].toString().length == 10) {
+              // format dd/MM/yyyy to yyyy-MM-dd
+              final parts = hw['date_remise'].toString().split('/');
+              if (parts.length == 3) {
+                 dueDate = DateTime.tryParse('${parts[2]}-${parts[1]}-${parts[0]}');
+              }
+           }
+        }
+
+        switch (_selectedDevoirFilter) {
+          case 'Maison':
+            return type == 'maison';
+          case 'Classe':
+            return type == 'classe';
+          case 'Exercice':
+            return type == 'exercice';
+          case 'À venir':
+            if (dueDate == null) return false;
+            return dueDate.isAfter(now.subtract(const Duration(days: 1)));
+          case 'Passé':
+            if (dueDate == null) return false;
+            return dueDate.isBefore(now.subtract(const Duration(days: 1)));
+          default:
+            return true;
+        }
+      }).toList();
+    }
 
     if (homeworks.isEmpty) {
       return _buildEmptyHomeworkCard();
@@ -394,17 +431,52 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
   }
 
   Widget _buildHomeworksTab() {
+    final filters = ['Tous', 'Maison', 'Classe', 'Exercice', 'À venir', 'Passé'];
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Tous les devoirs',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: filters.map((filter) {
+                final isSelected = _selectedDevoirFilter == filter;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedDevoirFilter = filter;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF1377b5) : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        filter,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
-          const SizedBox(height: 15),
-          _buildHomeworksList(),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildHomeworksList(),
+          ),
         ],
       ),
     );

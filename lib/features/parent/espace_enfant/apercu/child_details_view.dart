@@ -45,6 +45,7 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
   bool _isLoadingDashboard = false;
   List<dynamic> _incidents = [];
   bool _isLoadingIncidents = false;
+  String _selectedDevoirFilter = 'Tous';
 
   Future<void> _fetchDashboard() async {
     print('[DEBUG _fetchDashboard] fromApi: ${widget.child['fromApi']}');

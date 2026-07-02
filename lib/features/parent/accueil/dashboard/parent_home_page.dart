@@ -70,6 +70,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
   List<Map<String, dynamic>> _adminConversations = [];
   List<Map<String, dynamic>> _teacherConversationsAll = [];
   bool _isLoadingEvents = true;
+  String _selectedEventFilter = 'Tous';
   String? _pendingSelectChildName;
   int? _pendingChildInitialTab;
   int? _pendingSelectChildId;
@@ -230,10 +231,15 @@ class _ParentHomePageState extends State<ParentHomePage> {
   }
 
   Future<void> _loadUnreadNotificationsCount() async {
-    final count = await NotificationStorage.getUnreadCount();
-    setState(() {
-      _unreadNotificationsCount = count;
-    });
+    // Compter les notifications push locales non lues (Firebase)
+    final localCount = await NotificationStorage.getUnreadCount();
+    // Compter les notifications API non lues (serveur)
+    final apiCount = _apiNotifications.where((n) => n['is_read'] != true && n['is_read'] != 1).length;
+    if (mounted) {
+      setState(() {
+        _unreadNotificationsCount = localCount + apiCount;
+      });
+    }
   }
 
   Future<void> _openNotificationsModal() async {
@@ -367,6 +373,8 @@ class _ParentHomePageState extends State<ParentHomePage> {
         setState(() {
           _apiNotifications = List<Map<String, dynamic>>.from(response.data['notifications'] ?? []);
         });
+        // Mettre à jour le badge après chargement des notifs API
+        _loadUnreadNotificationsCount();
       }
     } catch (e) {
       debugPrint("Erreur _fetchNotifications: $e");
@@ -758,7 +766,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
     setState(() {
       _selectedChildIndex = index;
       if (index < _childrenData.length) {
-        _childrenData[index]['notif'] = 0;
+        _childrenData[index]['notif'] = 0; // Reset visuel immédiat
       }
 
       final currentChild = index < _childrenData.length
@@ -799,9 +807,33 @@ class _ParentHomePageState extends State<ParentHomePage> {
           'fromApi': true,
           'raw': currentChild['raw'] ?? currentChild,
         };
+
+        // Marquer toutes les notifications de cet enfant comme lues côté API
+        final childId = currentChild['id'];
+        if (childId != null) {
+          _markAllChildNotificationsRead(childId);
+        }
       }
     });
   }
+
+  /// Appelle l'API pour marquer toutes les notifications d'un enfant comme lues
+  /// → remet le notif_count à 0 côté serveur (admin_informations.is_read = true)
+  Future<void> _markAllChildNotificationsRead(dynamic childId) async {
+    try {
+      final eleveId = childId is int ? childId : int.tryParse(childId.toString());
+      if (eleveId == null) return;
+      final parentId = await AuthService.getParentId();
+      await ApiClient.instance.put(
+        ApiEndpoints.markAllNotificationsReadForChild(eleveId),
+        data: parentId != null ? {'parent_id': parentId} : null,
+      );
+      debugPrint('[Notifications] Toutes les notifs de l\'enfant $eleveId marquées comme lues');
+    } catch (e) {
+      debugPrint('[Notifications] Erreur markAllChildNotificationsRead: $e');
+    }
+  }
+
 
 
 

@@ -19,4 +19,6 @@ class ApiEndpoints {
   static const String registerFcmToken = '/notifications/register-token';
   static String userNotifications(String role, int userId) => '/users/$role/$userId/notifications';
   static String markNotificationRead(int notificationId) => '/notifications/$notificationId/read';
+  static String markAllNotificationsReadForChild(int eleveId) => '/notifications/child/$eleveId/read-all';
 }
+

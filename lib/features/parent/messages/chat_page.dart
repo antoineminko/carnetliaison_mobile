@@ -79,21 +79,23 @@ class _ChatPageState extends State<ChatPage> {
       );
 
       if (response.data != null && response.data['conversation_id'] != null) {
-        setState(() {
-          _conversationId = response.data['conversation_id'];
-          _conversationStatus = response.data['status'];
-          if (response.data['messages'] != null) {
-            _messages = List<Map<String, dynamic>>.from(response.data['messages']);
-          }
-          _isLoading = false;
-        });
-        _scrollToBottom();
+        if (mounted) {
+          setState(() {
+            _conversationId = response.data['conversation_id'];
+            _conversationStatus = response.data['status'];
+            if (response.data['messages'] != null) {
+              _messages = List<Map<String, dynamic>>.from(response.data['messages']);
+            }
+            _isLoading = false;
+          });
+          _scrollToBottom();
+        }
       } else {
-        setState(() => _isLoading = false);
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
       // 404 means no conversation yet, which is fine
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -104,9 +106,11 @@ class _ChatPageState extends State<ChatPage> {
         '/messages/conversation/$_conversationId/status',
         data: {'status': status},
       );
-      setState(() {
-        _conversationStatus = status;
-      });
+      if (mounted) {
+        setState(() {
+          _conversationStatus = status;
+        });
+      }
       if (status == 'rejected') {
         if (mounted) Navigator.pop(context);
       }

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: mysql-sirh.alwaysdata.net
--- Generation Time: Jul 01, 2026 at 05:49 PM
+-- Generation Time: Jul 02, 2026 at 07:53 AM
 -- Server version: 10.11.18-MariaDB
 -- PHP Version: 8.4.21
 
@@ -45,12 +45,7 @@ CREATE TABLE `admin_informations` (
 -- Dumping data for table `admin_informations`
 --
 
-INSERT INTO `admin_informations` (`id`, `eleve_id`, `type`, `titre`, `contenu`, `montant`, `montant_paye`, `montant_restant`, `is_read`, `created_at`, `updated_at`) VALUES
-(1, 1, 'convocation', 'Information Administration', 'Bonjour, vous êtes convoqué(e) à la direction de l\'établissement concernant votre enfant. Merci de vous présenter dès réception de ce message.', NULL, NULL, NULL, 0, '2026-06-06 08:43:59', '2026-06-06 08:43:59'),
-(2, 2, 'convocation', 'Information Administration', 'Bonjour, vous êtes convoqué(e) à la direction de l\'établissement concernant votre enfant. Merci de vous présenter dès réception de ce message.', NULL, NULL, NULL, 0, '2026-06-06 08:43:59', '2026-06-06 08:43:59'),
-(3, 3, 'convocation', 'Information Administration', 'Bonjour, vous êtes convoqué(e) à la direction de l\'établissement concernant votre enfant. Merci de vous présenter dès réception de ce message.', NULL, NULL, NULL, 0, '2026-06-06 08:43:59', '2026-06-06 08:43:59'),
-(4, 4, 'convocation', 'Information Administration', 'Bonjour, vous êtes convoqué(e) à la direction de l\'établissement concernant votre enfant. Merci de vous présenter dès réception de ce message.', NULL, NULL, NULL, 0, '2026-06-06 08:43:59', '2026-06-06 08:43:59'),
-(5, 5, 'convocation', 'Information Administration', 'Bonjour, vous êtes convoqué(e) à la direction de l\'établissement concernant votre enfant. Merci de vous présenter dès réception de ce message.', NULL, NULL, NULL, 0, '2026-06-06 08:43:59', '2026-06-06 08:43:59');
+-- INSERT INTO `admin_informations` nettoyé
 
 -- --------------------------------------------------------
 
@@ -230,8 +225,7 @@ CREATE TABLE `conversations` (
 -- Dumping data for table `conversations`
 --
 
-INSERT INTO `conversations` (`id`, `ecole_id`, `enseignant_id`, `parent_id`, `subject`, `status`, `created_at`, `updated_at`) VALUES
-(1, NULL, 1, 1, 'Discussion avec dgall Nguema', 'accepted', '2026-06-05 13:39:47', '2026-06-05 13:40:00');
+-- INSERT INTO `conversations` nettoyé
 
 -- --------------------------------------------------------
 
@@ -374,7 +368,7 @@ CREATE TABLE `eleve_parents` (
 --
 
 INSERT INTO `eleve_parents` (`id`, `eleve_id`, `parent_id`, `relation`, `is_verified`, `created_at`, `updated_at`) VALUES
-(4, 1, 2, 'Père', 0, '2026-06-15 11:32:08', '2026-06-15 11:32:08'),
+(4, 1, 2, 'Père', 1, '2026-06-15 11:32:08', '2026-06-15 11:32:08'),
 (5, 2, 3, 'Mère', 0, '2026-06-15 11:34:58', '2026-06-15 11:34:58'),
 (6, 2, 2, 'Tuteur', 0, '2026-06-29 07:47:49', '2026-06-29 07:47:49');
 
@@ -448,11 +442,7 @@ CREATE TABLE `incidents` (
 -- Dumping data for table `incidents`
 --
 
-INSERT INTO `incidents` (`id`, `eleve_id`, `enseignant_id`, `classe_id`, `type`, `description`, `date`, `is_read`, `read_at`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 1, 'bavardage', 'bagarré avec collègue clqse', '2026-06-05', 1, '2026-06-05 10:17:42', '2026-06-05 10:17:00', '2026-06-05 10:17:42'),
-(2, 1, 1, 1, 'injure', 'ton cut', '2026-06-05', 1, '2026-06-05 10:51:58', '2026-06-05 10:48:10', '2026-06-05 10:51:58'),
-(3, 1, 1, 1, 'bagarre', 'ddd', '2026-06-05', 0, NULL, '2026-06-05 10:52:12', '2026-06-05 10:52:12'),
-(4, 1, 1, 1, 'retenu', 'problème', '2026-06-05', 1, '2026-06-05 10:55:50', '2026-06-05 10:54:49', '2026-06-05 10:55:50');
+-- INSERT INTO `incidents` nettoyé
 
 -- --------------------------------------------------------
 
@@ -510,9 +500,7 @@ CREATE TABLE `messages` (
 -- Dumping data for table `messages`
 --
 
-INSERT INTO `messages` (`id`, `conversation_id`, `sender_type`, `sender_id`, `content`, `is_read`, `created_at`, `updated_at`) VALUES
-(1, 1, 'enseignant', 1, 'bjr', 1, '2026-06-05 13:39:47', '2026-06-05 13:39:57'),
-(2, 1, 'parent', 1, 'bjr', 1, '2026-06-05 13:40:08', '2026-06-06 09:13:24');
+-- INSERT INTO `messages` nettoyé
 
 -- --------------------------------------------------------
 
@@ -589,26 +577,7 @@ CREATE TABLE `notifications` (
 -- Dumping data for table `notifications`
 --
 
-INSERT INTO `notifications` (`id`, `user_type`, `user_id`, `type`, `title`, `message`, `data`, `is_read`, `created_at`, `updated_at`) VALUES
-(1, 'parent', 1, 'new_homework', 'Devoir de classe - Mathématiques', 'fonctionnement linéaire\nÀ rendre pour le 08/06/2026', '{\"devoir_id\":\"1\",\"type\":\"new_homework\",\"homework_type\":\"classe\",\"classe_id\":\"1\",\"matiere\":\"Math\\u00e9matiques\",\"titre\":\"fonctionnement lin\\u00e9aire\",\"date_remise\":\"2026-06-08\",\"eleve_id\":\"1\",\"eleve_nom\":\"Yannick Nguema\"}', 0, '2026-06-05 10:18:34', '2026-06-05 10:18:34'),
-(2, 'parent', 1, 'appointment_request', '📅 Nouveau rendez-vous proposé', 'Michel Obame propose un rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"2\",\"type\":\"appointment_request\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06T09:00:00.000\",\"mode\":\"presentiel\",\"enseignant_nom\":\"Michel Obame\",\"eleve_nom\":\"Yannick Nguema\",\"statut\":\"en_attente\"}', 0, '2026-06-05 11:59:54', '2026-06-05 11:59:54'),
-(3, 'parent', 1, 'appointment_request', '📅 Nouveau rendez-vous proposé', 'Michel Obame propose un rendez-vous pour le 06/06/2026 à 03:00', '{\"appointment_id\":\"3\",\"type\":\"appointment_request\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06T03:00:00.000\",\"mode\":\"presentiel\",\"enseignant_nom\":\"Michel Obame\",\"eleve_nom\":\"Yannick Nguema\",\"statut\":\"en_attente\"}', 0, '2026-06-05 12:01:02', '2026-06-05 12:01:02'),
-(4, 'parent', 1, 'appointment_accepted', '✅ Rendez-vous accepté', 'Michel Obame a accepté votre demande de rendez-vous pour le 22/06/2026 à 08:00', '{\"appointment_id\":\"1\",\"type\":\"appointment_accepted\",\"statut\":\"accepte\",\"objet\":\"tyh\",\"date_heure\":\"2026-06-22 08:00:00\",\"mode\":\"video\",\"enseignant_nom\":\"Michel Obame\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null}', 0, '2026-06-05 12:05:46', '2026-06-05 12:05:46'),
-(5, 'parent', 1, 'appointment_accepted', '✅ Rendez-vous accepté', 'Michel Obame a accepté votre demande de rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"5\",\"type\":\"appointment_accepted\",\"statut\":\"accepte\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06 09:00:00\",\"mode\":\"presentiel\",\"enseignant_nom\":\"Michel Obame\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null}', 0, '2026-06-05 13:31:41', '2026-06-05 13:31:41'),
-(6, 'parent', 1, 'appointment_accepted', '✅ Rendez-vous accepté', 'Michel Obame a accepté votre demande de rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"4\",\"type\":\"appointment_accepted\",\"statut\":\"accepte\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06 09:00:00\",\"mode\":\"presentiel\",\"enseignant_nom\":\"Michel Obame\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null}', 0, '2026-06-05 13:31:44', '2026-06-05 13:31:44'),
-(7, 'parent', 1, 'appointment_accepted', '✅ Rendez-vous accepté', 'Michel Obame a accepté votre demande de rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"6\",\"type\":\"appointment_accepted\",\"statut\":\"accepte\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06 09:00:00\",\"mode\":\"presentiel\",\"enseignant_nom\":\"Michel Obame\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null}', 0, '2026-06-05 13:31:50', '2026-06-05 13:31:50'),
-(8, 'parent', 1, 'appointment_request', '📅 Nouveau rendez-vous proposé', 'Michel Obame propose un rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"7\",\"type\":\"appointment_request\",\"objet\":\"Demande de rendez-vous en vid\\u00e9o\",\"date_heure\":\"2026-06-06T09:00:00.000\",\"mode\":\"video\",\"enseignant_nom\":\"Michel Obame\",\"eleve_nom\":\"Yannick Nguema\",\"statut\":\"en_attente\"}', 0, '2026-06-05 13:32:08', '2026-06-05 13:32:08'),
-(9, 'enseignant', 1, 'appointment_request', '📅 Nouvelle demande de rendez-vous', 'dgall Nguema demande un rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"8\",\"type\":\"appointment_request\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06T09:00:00.000\",\"mode\":\"presentiel\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null,\"statut\":\"en_attente\"}', 0, '2026-06-05 13:36:28', '2026-06-05 13:36:28'),
-(10, 'enseignant', 1, 'appointment_request', '📅 Nouvelle demande de rendez-vous', 'dgall Nguema demande un rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"9\",\"type\":\"appointment_request\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06T09:00:00.000\",\"mode\":\"presentiel\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null,\"statut\":\"en_attente\"}', 0, '2026-06-05 13:36:57', '2026-06-05 13:36:57'),
-(11, 'enseignant', 1, 'appointment_request', '📅 Nouvelle demande de rendez-vous', 'dgall Nguema demande un rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"10\",\"type\":\"appointment_request\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06T09:00:00.000\",\"mode\":\"presentiel\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null,\"statut\":\"en_attente\"}', 0, '2026-06-05 13:37:13', '2026-06-05 13:37:13'),
-(12, 'parent', 1, 'appointment_accepted', '✅ Rendez-vous accepté', 'Michel Obame a accepté votre demande de rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"10\",\"type\":\"appointment_accepted\",\"statut\":\"accepte\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06 09:00:00\",\"mode\":\"presentiel\",\"enseignant_nom\":\"Michel Obame\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null}', 0, '2026-06-05 13:37:32', '2026-06-05 13:37:32'),
-(13, 'parent', 1, 'appointment_accepted', '✅ Rendez-vous accepté', 'Michel Obame a accepté votre demande de rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"9\",\"type\":\"appointment_accepted\",\"statut\":\"accepte\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06 09:00:00\",\"mode\":\"presentiel\",\"enseignant_nom\":\"Michel Obame\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null}', 0, '2026-06-05 13:37:36', '2026-06-05 13:37:36'),
-(14, 'parent', 1, 'appointment_accepted', '✅ Rendez-vous accepté', 'Michel Obame a accepté votre demande de rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"8\",\"type\":\"appointment_accepted\",\"statut\":\"accepte\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06 09:00:00\",\"mode\":\"presentiel\",\"enseignant_nom\":\"Michel Obame\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null}', 0, '2026-06-05 13:37:39', '2026-06-05 13:37:39'),
-(15, 'parent', 1, 'appointment_accepted', '✅ Rendez-vous accepté', 'Michel Obame a accepté votre demande de rendez-vous pour le 06/06/2026 à 09:00', '{\"appointment_id\":\"8\",\"type\":\"appointment_accepted\",\"statut\":\"accepte\",\"objet\":\"Demande de rendez-vous en pr\\u00e9sentiel\",\"date_heure\":\"2026-06-06 09:00:00\",\"mode\":\"presentiel\",\"enseignant_nom\":\"Michel Obame\",\"parent_nom\":\"dgall Nguema\",\"eleve_nom\":null}', 0, '2026-06-05 13:37:41', '2026-06-05 13:37:41'),
-(16, 'parent', 1, 'new_conversation_request', '💬 Nouveau message de Michel Obame', 'bjr', '{\"type\":\"new_conversation_request\",\"conversation_id\":\"1\",\"enseignant_id\":\"1\",\"enseignant_nom\":\"Michel Obame\",\"subject\":\"Discussion avec dgall Nguema\",\"status\":\"pending\",\"action\":\"validate_conversation\"}', 0, '2026-06-05 13:39:47', '2026-06-05 13:39:47'),
-(17, 'parent', 1, 'chat_accepted', '✅ Liaison acceptée', 'Vous pouvez maintenant discuter avec Michel Obame.', '{\"type\":\"chat_accepted\",\"conversation_id\":\"1\",\"status\":\"accepted\",\"action\":\"open_chat\"}', 0, '2026-06-05 13:40:00', '2026-06-05 13:40:00'),
-(18, 'enseignant', 1, 'parent_message', 'Nouveau message de Un parent', 'bjr', '{\"conversation_id\":\"1\",\"type\":\"parent_message\"}', 0, '2026-06-05 13:40:08', '2026-06-05 13:40:08'),
-(19, 'parent', 1, 'admin_info', 'Nouveau message de l\'Administration', 'Bonjour, vous êtes convoqué(e) à la direction de l\'établissement concernant votre enfant. Merci ...', '{\"type\":\"admin_info\",\"eleve_id\":\"1\",\"admin_info_id\":\"1\"}', 0, '2026-06-06 08:43:59', '2026-06-06 08:43:59');
+-- INSERT INTO `notifications` nettoyé
 
 -- --------------------------------------------------------
 
@@ -633,7 +602,7 @@ CREATE TABLE `parent_users` (
 --
 
 INSERT INTO `parent_users` (`id`, `nom`, `prenom`, `email`, `password`, `telephone`, `created_at`, `updated_at`, `fcm_token`) VALUES
-(2, 'Nguema', 'dgall', 'dgall@gmail.com', '$2y$12$zEY1tE5Ghlq5KfQFFQaf1uriNQZBHgsIzC4lPH481BoibpDI6RTcG', '+24165546609', '2026-06-15 11:32:08', '2026-07-01 13:22:37', 'e106U936SZydFR47lMDxUZ:APA91bGbOyOACxLiAYaeQvDa4ToE9ffi7uZh96aojCfW3RBmJoc6nQoo9cO6U_lko7CtREukunDCilO5b4sJP7csrAXSP7ZBByDRm0ivxmVGKmeddzsyy0A'),
+(2, 'Nguema', 'dgall', 'dgall@gmail.com', '$2y$12$zEY1tE5Ghlq5KfQFFQaf1uriNQZBHgsIzC4lPH481BoibpDI6RTcG', '+24165546609', '2026-06-15 11:32:08', '2026-07-02 03:46:20', 'ep0giDRJR_yjFdwilbfQpv:APA91bE9ZnO2FCwu9nGcUwp5GC1gOiIuh_ZQhiK1khcIH2vOlmunfg7d5SSnqSGBpNjMaIm1NSHPxfqsOh39ioqkaugs5_xYqcapNIvjR3Mdi2XarCnsH5Y'),
 (3, 'Obone', 'ada', 'Obone@gmail.com', '$2y$12$myQqKqruhgmHLkjCjVOjQOqDs9wiF4enkgK.01duSdqjvkiBcmjgm', '+24156699778', '2026-06-15 11:34:58', '2026-06-15 11:34:58', NULL);
 
 -- --------------------------------------------------------

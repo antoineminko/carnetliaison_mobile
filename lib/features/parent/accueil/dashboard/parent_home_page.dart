@@ -11,6 +11,7 @@ import 'package:app_mobile/shared/config/school_config.dart';
 import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 import 'package:app_mobile/features/parent/accueil/liaison/qr_scan_page.dart';
 import 'package:app_mobile/features/parent/accueil/liaison/link_child_page.dart';
+import 'package:app_mobile/features/parent/accueil/dashboard/verify_child_scanner_page.dart';
 import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 import 'package:app_mobile/features/parent/services/parent_service.dart';
 import 'package:app_mobile/features/parent/messages/chat_page.dart';
@@ -514,6 +515,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
       if (arrivalTime != null) 'arrivalTime': arrivalTime,
       'arrival_time': child['arrival_time'],
       'attendance_status': child['attendance_status'],
+      'code_secret': child['code_secret'] ?? child['codeSecret'] ?? child['code'] ?? 'DEBUG_NULL',
       'is_verified': isApiVerified,
       // Verrouillé si pas encore vérifié localement sur CE téléphone
       'local_verified': isLocalVerified,
@@ -732,19 +734,34 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   Widget _buildGlobalDashboard() {
     if (_isEmptyState) {
-      return _buildEmptyState();
+      return RefreshIndicator(
+        onRefresh: _loadLinkedChildren,
+        color: AppTheme.seaBlue,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height - 200,
+            child: _buildEmptyState(),
+          ),
+        ),
+      );
     }
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildHeader(),
-          _buildAvatarSection(),
-          const SizedBox(height: 20),
-          _buildChildrenList(),
-          const SizedBox(height: 20),
-          const PromoBannerWidget(),
-          const SizedBox(height: 30),
-        ],
+    return RefreshIndicator(
+      onRefresh: _loadLinkedChildren,
+      color: AppTheme.seaBlue,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            _buildHeader(),
+            _buildAvatarSection(),
+            const SizedBox(height: 20),
+            _buildChildrenList(),
+            const SizedBox(height: 20),
+            const PromoBannerWidget(),
+            const SizedBox(height: 30),
+          ],
+        ),
       ),
     );
   }
@@ -799,6 +816,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
           'arrivalTime': currentChild['arrival_time'] ?? currentChild['arrivalTime'] ?? '--:--',
           'attendance_status': currentChild['attendance_status'],
           'arrival_time': currentChild['arrival_time'],
+          'code_secret': currentChild['code_secret'],
           'feesOwed': '0 FCFA',
           'homeworks': [],
           'notifications': [],

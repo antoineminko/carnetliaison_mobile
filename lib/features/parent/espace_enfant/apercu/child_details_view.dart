@@ -239,49 +239,35 @@ class _ChildDetailsViewState extends State<ChildDetailsView>
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${widget.child['school'] ?? 'École'} • ${widget.child['grade']} • ID: ${widget.child['id'] ?? '#---'}',
+                  '${widget.child['school'] ?? 'École'} • ${widget.child['grade']}',
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                   overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-          ),
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_outlined,
-                  color: AppTheme.seaBlue,
-                  size: 26,
-                ),
-                onPressed: widget.onShowNotifications,
-              ),
-              if (widget.child['notif'] != null && widget.child['notif'] > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '${widget.child['notif']}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.seaBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.key, size: 12, color: AppTheme.seaBlue),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Code: ${widget.child['code_secret'] ?? 'ERR_KEY_MISSING'}',
+                        style: const TextStyle(
+                          color: AppTheme.seaBlue,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
+                    ],
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

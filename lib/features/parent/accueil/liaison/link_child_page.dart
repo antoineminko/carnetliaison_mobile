@@ -42,11 +42,43 @@ class _LinkChildPageState extends State<LinkChildPage> {
         );
       }
 
-      final response = await ApiClient.instance.post(
+      int targetParentId = parentId;
+      final dio = ApiClient.getInstanceForCode(code);
+
+      // Si le code pointe vers un serveur différent, on doit s'authentifier silencieusement !
+      if (dio.options.baseUrl != ApiClient.defaultServerUrl) {
+        final prefs = await SharedPreferences.getInstance();
+        final parentEmail = prefs.getString('parent_email');
+        final parentPassword = prefs.getString('parent_password');
+        
+        if (parentEmail != null && parentPassword != null) {
+          try {
+            final loginResponse = await dio.post(
+              ApiEndpoints.login,
+              data: {
+                'identifier': parentEmail,
+                'password': parentPassword,
+              },
+            );
+            if (loginResponse.statusCode == 200 && loginResponse.data['success']) {
+              targetParentId = loginResponse.data['parent']['id'];
+              // Optionnel: sauvegarder ce parent_id spécifique au serveur
+            } else {
+              throw Exception("Connexion au second serveur impossible.");
+            }
+          } catch (e) {
+            throw Exception("Votre compte n'existe pas encore sur cette école. Veuillez vous inscrire sur leur site web.");
+          }
+        } else {
+          throw Exception("Veuillez vous reconnecter pour lier un enfant d'une autre école.");
+        }
+      }
+
+      final response = await dio.post(
         ApiEndpoints.linkSecretCode,
         data: {
           'code_secret': code,
-          'parent_id': parentId,
+          'parent_id': targetParentId,
         },
       );
 

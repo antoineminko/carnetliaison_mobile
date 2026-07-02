@@ -47,6 +47,10 @@ class AuthService {
           if (avatarUrl != null) await prefs.setString('parent_avatar_url', avatarUrl);
           if (email != null) await prefs.setString('parent_email', email);
           if (telephone != null) await prefs.setString('parent_telephone', telephone);
+          
+          // Sauvegarde secrète du mot de passe pour la connexion multi-serveurs
+          await prefs.setString('parent_password', password);
+          
           // ✅ Enregistrer le token FCM maintenant que parent_id est disponible
           await _registerFcmToken(parentId);
         } else if (role == UserRole.teacher) {

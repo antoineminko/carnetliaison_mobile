@@ -3,19 +3,50 @@ import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ParentService {
-  static Future<List<Map<String, dynamic>>> getChildren(int parentId) async {
-    final response = await ApiClient.instance.get(
-      ApiEndpoints.parentChildren(parentId),
-    );
-    if (response.statusCode == 200) {
-      final data = response.data;
-      if (data is List) {
-        return data.map((item) => Map<String, dynamic>.from(item)).toList();
+  static Future<List<Map<String, dynamic>>> getChildren(int defaultParentId) async {
+    List<Map<String, dynamic>> allChildren = [];
+    final prefs = await SharedPreferences.getInstance();
+
+    for (final prefix in ApiClient.schoolServers.keys) {
+      final dio = ApiClient.getInstanceForUrl(ApiClient.schoolServers[prefix]!);
+      int targetParentId = defaultParentId;
+
+      if (dio.options.baseUrl != ApiClient.defaultServerUrl) {
+        targetParentId = prefs.getInt('parent_id_$prefix') ?? -1;
+        if (targetParentId == -1) {
+          final email = prefs.getString('parent_email');
+          final password = prefs.getString('parent_password');
+          if (email != null && password != null) {
+            try {
+              final loginResp = await dio.post(ApiEndpoints.login, data: {'identifier': email, 'password': password});
+              if (loginResp.statusCode == 200 && loginResp.data['success']) {
+                targetParentId = loginResp.data['parent']['id'];
+                await prefs.setInt('parent_id_$prefix', targetParentId);
+              }
+            } catch (_) {}
+          }
+        }
       }
-      // Réponse inattendue (ex: DB vide, erreur backend)
-      throw Exception('Unexpected children response format');
+
+      if (targetParentId != -1) {
+        try {
+          final response = await dio.get(ApiEndpoints.parentChildren(targetParentId));
+          if (response.statusCode == 200) {
+            final data = response.data;
+            if (data is List) {
+              for (var item in data) {
+                final childMap = Map<String, dynamic>.from(item);
+                childMap['_school_prefix'] = prefix;
+                allChildren.add(childMap);
+              }
+            }
+          }
+        } catch (_) {
+          // Ignore errors for a specific server to allow others to load
+        }
+      }
     }
-    throw Exception('Failed to fetch children: ${response.statusCode}');
+    return allChildren;
   }
 
   static Future<List<Map<String, dynamic>>> getConversations(int parentId) async {

@@ -4,8 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiClient {
   // Dictionnaire des serveurs selon le préfixe
   static final Map<String, String> schoolServers = {
-    'COLB': 'https://sirh.alwaysdata.net/api_carnet_liaison/api',
-    'QUAB': 'https://sirh.alwaysdata.net/api_carnetliaison2/api',
+    'LYIMA': 'https://sirh.alwaysdata.net/api_carnet_liaison/api',
+    'LYNDQ': 'https://sirh.alwaysdata.net/api_carnetliaison2/api',
   };
 
   // Serveur par défaut (Colbert) si on ne connaît pas le préfixe

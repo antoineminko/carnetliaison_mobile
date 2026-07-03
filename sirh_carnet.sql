@@ -41,12 +41,6 @@ CREATE TABLE `admin_informations` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `admin_informations`
---
-
--- INSERT INTO `admin_informations` nettoyé
-
 -- --------------------------------------------------------
 
 --
@@ -88,18 +82,6 @@ CREATE TABLE `attendances` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `attendances`
---
-
-INSERT INTO `attendances` (`id`, `eleve_id`, `classe_id`, `status`, `heure_arrivee`, `date`, `created_at`, `updated_at`) VALUES
-(3, 1, 1, 'late', NULL, '2026-06-05', '2026-06-05 10:55:03', '2026-06-05 10:55:03'),
-(10, 1, 1, 'absent', NULL, '2026-06-06', '2026-06-06 08:52:48', '2026-06-06 08:59:50'),
-(11, 2, 1, 'present', NULL, '2026-06-06', '2026-06-06 08:52:48', '2026-06-06 08:52:48'),
-(12, 3, 1, 'present', NULL, '2026-06-06', '2026-06-06 08:52:48', '2026-06-06 08:52:48'),
-(13, 4, 1, 'present', NULL, '2026-06-06', '2026-06-06 08:52:48', '2026-06-06 08:52:48'),
-(14, 5, 1, 'absent', NULL, '2026-06-06', '2026-06-06 08:52:48', '2026-06-06 08:52:48');
 
 -- --------------------------------------------------------
 
@@ -183,13 +165,6 @@ CREATE TABLE `classes` (
   `prof_principal_id` bigint(20) UNSIGNED DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `classes`
---
-
-INSERT INTO `classes` (`id`, `nom`, `code`, `ecole_id`, `created_at`, `updated_at`, `prof_principal_id`) VALUES
-(1, 'Terminale C', 'TERMI', 1, '2026-06-05 10:08:23', '2026-06-05 10:08:38', 1);
-
 -- --------------------------------------------------------
 
 --
@@ -220,12 +195,6 @@ CREATE TABLE `conversations` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `conversations`
---
-
--- INSERT INTO `conversations` nettoyé
 
 -- --------------------------------------------------------
 
@@ -261,13 +230,6 @@ CREATE TABLE `devoirs` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `devoirs`
---
-
-INSERT INTO `devoirs` (`id`, `classe_id`, `enseignant_id`, `matiere`, `type`, `titre`, `description`, `date_remise`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 'Mathématiques', 'classe', 'fonctionnement linéaire', 'pas de calculatrice', '2026-06-08', '2026-06-05 10:18:34', '2026-06-05 10:18:34');
-
 -- --------------------------------------------------------
 
 --
@@ -281,13 +243,6 @@ CREATE TABLE `devoir_eleve` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `devoir_eleve`
---
-
-INSERT INTO `devoir_eleve` (`id`, `devoir_id`, `eleve_id`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, '2026-06-05 10:18:34', '2026-06-05 10:18:34');
 
 -- --------------------------------------------------------
 
@@ -306,13 +261,6 @@ CREATE TABLE `ecoles` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `ecoles`
---
-
-INSERT INTO `ecoles` (`id`, `nom`, `code`, `annee_scolaire`, `nb_classes`, `nb_profs`, `nb_eleves`, `created_at`, `updated_at`) VALUES
-(1, 'Lycée Notre dame quaben', 'LYNDQ', '2026-2027', 6, 20, 150, '2026-06-05 08:58:53', '2026-06-05 08:58:53');
 
 -- --------------------------------------------------------
 
@@ -336,17 +284,6 @@ CREATE TABLE `eleves` (
   `statut` varchar(255) DEFAULT 'actif'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `eleves`
---
-
-INSERT INTO `eleves` (`id`, `nom`, `prenom`, `matricule`, `classe_id`, `code_secret`, `qr_code`, `created_at`, `updated_at`, `photo`, `date_naissance`, `lieu_naissance`, `statut`) VALUES
-(1, 'Nguema', 'Yannick', 'MAT-6A22BC9C459E9', 1, 'LYNDQ-TERMI-7584', NULL, '2026-06-05 10:10:04', '2026-06-05 10:10:04', 'photos/eleves/irvg9Tsu2PIBIuCTBAdwuQadHN8m8CAwvhBEpBfh.jpg', '2004-02-05', 'Libreville', 'actif'),
-(2, 'Obone', 'Verone', 'MAT-6A23E0FD96886', 1, 'LYNDQ-TERMI-8897', NULL, '2026-06-06 06:57:33', '2026-06-06 06:57:33', 'photos/eleves/oh3C9iWjpTlGvni2dJGexoOr0aG7qPUNyqym0FvR.jpg', '2007-06-06', 'Libreville', 'actif'),
-(3, 'Loumbet', 'jessy', 'MAT-6A23E154D1B64', 1, 'LYNDQ-TERMI-6286', NULL, '2026-06-06 06:59:00', '2026-06-06 06:59:00', 'photos/eleves/XKks1Zn1h19DWag7bDj2ayTPoBPso5Cn4oCmA350.jpg', '2001-05-30', 'Libreville', 'actif'),
-(4, 'ngou', 'joann', 'MAT-6A23E18F75566', 1, 'LYNDQ-TERMI-4145', NULL, '2026-06-06 06:59:59', '2026-06-06 06:59:59', 'photos/eleves/dzqJRwguZi36ZnxSSglVZ8ykE8Ls1LLwVJH6ZIer.jpg', '2005-02-06', 'oyem', 'actif'),
-(5, 'mvou', 'vanille', 'MAT-6A23E1C3CBADF', 1, 'LYNDQ-TERMI-8065', NULL, '2026-06-06 07:00:51', '2026-06-06 07:00:51', 'photos/eleves/O3MLWfU85RHue4Fiqw5iOouHPHS0MTlnvduwT02j.jpg', '2002-07-11', 'LLIBREVILLE', 'actif');
-
 -- --------------------------------------------------------
 
 --
@@ -362,15 +299,6 @@ CREATE TABLE `eleve_parents` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `eleve_parents`
---
-
-INSERT INTO `eleve_parents` (`id`, `eleve_id`, `parent_id`, `relation`, `is_verified`, `created_at`, `updated_at`) VALUES
-(4, 1, 2, 'Père', 1, '2026-06-15 11:32:08', '2026-06-15 11:32:08'),
-(5, 2, 3, 'Mère', 0, '2026-06-15 11:34:58', '2026-06-15 11:34:58'),
-(6, 2, 2, 'Tuteur', 0, '2026-06-29 07:47:49', '2026-06-29 07:47:49');
 
 -- --------------------------------------------------------
 
@@ -391,16 +319,6 @@ CREATE TABLE `enseignants` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `enseignants`
---
-
-INSERT INTO `enseignants` (`id`, `prenom`, `nom`, `matiere`, `email`, `fcm_token`, `telephone`, `password`, `ecole_id`, `created_at`, `updated_at`) VALUES
-(1, 'Michel', 'Obame', 'Mathématiques', 'Michel@gmail.com', 'cUB7mgthRmSZ3lAzT6OZE8:APA91bGClAPL2wEq4iUAGPLvBfnZRMTucqkMt3mn5JZy30Y6ene_Wxa-23WzN5-4nUQ7DxBZIiZXN891zBuUxNmpWOUtzGr7w23cHHAYNxiDGLeAsWSxZec', '065546609', '$2y$12$lir1rZ/FEqbmyj0X7ZCkiugiF7YmXOOeO0ACvuwdnIaKDC1nGAk1S', NULL, '2026-06-05 10:08:09', '2026-06-18 16:04:26'),
-(2, 'servais', 'mba', 'Philosophie', 'mba@gmail.com', NULL, '+24165660978', '$2y$12$VhmCynFoqc9oug8idrfEXudx5eU4W/ghYgoyjF5TnKSydf5.Mbv6u', NULL, '2026-06-06 07:08:52', '2026-06-06 07:08:52'),
-(3, 'Odou', 'Charles', 'Physique-Chimie', 'Edou@gmail.com', NULL, '+24178963233', '$2y$12$lZ/xAXFQDMrPjIKigR5m5OUZ3FgDGndR.9gng3H7okINfi0BqPsla', NULL, '2026-06-06 07:10:06', '2026-06-06 07:10:06'),
-(4, 'vivian', 'Eyann', 'Français', 'eyan@gmail.com', NULL, '+24165866877', '$2y$12$iJJHttN3fZ1ntoI/pdjdUupFkrzgv1g..I.UTlHZD3aFPhzNc30q.', NULL, '2026-06-06 07:10:46', '2026-06-06 07:10:46');
 
 -- --------------------------------------------------------
 
@@ -437,12 +355,6 @@ CREATE TABLE `incidents` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `incidents`
---
-
--- INSERT INTO `incidents` nettoyé
 
 -- --------------------------------------------------------
 
@@ -495,12 +407,6 @@ CREATE TABLE `messages` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `messages`
---
-
--- INSERT INTO `messages` nettoyé
 
 -- --------------------------------------------------------
 
@@ -573,12 +479,6 @@ CREATE TABLE `notifications` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `notifications`
---
-
--- INSERT INTO `notifications` nettoyé
-
 -- --------------------------------------------------------
 
 --
@@ -596,14 +496,6 @@ CREATE TABLE `parent_users` (
   `updated_at` timestamp NULL DEFAULT NULL,
   `fcm_token` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `parent_users`
---
-
-INSERT INTO `parent_users` (`id`, `nom`, `prenom`, `email`, `password`, `telephone`, `created_at`, `updated_at`, `fcm_token`) VALUES
-(2, 'Nguema', 'dgall', 'dgall@gmail.com', '$2y$12$zEY1tE5Ghlq5KfQFFQaf1uriNQZBHgsIzC4lPH481BoibpDI6RTcG', '+24165546609', '2026-06-15 11:32:08', '2026-07-02 03:46:20', 'ep0giDRJR_yjFdwilbfQpv:APA91bE9ZnO2FCwu9nGcUwp5GC1gOiIuh_ZQhiK1khcIH2vOlmunfg7d5SSnqSGBpNjMaIm1NSHPxfqsOh39ioqkaugs5_xYqcapNIvjR3Mdi2XarCnsH5Y'),
-(3, 'Obone', 'ada', 'Obone@gmail.com', '$2y$12$myQqKqruhgmHLkjCjVOjQOqDs9wiF4enkgK.01duSdqjvkiBcmjgm', '+24156699778', '2026-06-15 11:34:58', '2026-06-15 11:34:58', NULL);
 
 -- --------------------------------------------------------
 
@@ -893,19 +785,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `admin_informations`
 --
 ALTER TABLE `admin_informations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `attendances`
 --
 ALTER TABLE `attendances`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `calls`
@@ -923,7 +815,7 @@ ALTER TABLE `call_signaling`
 -- AUTO_INCREMENT for table `classes`
 --
 ALTER TABLE `classes`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `classe_enseignant`
@@ -935,7 +827,7 @@ ALTER TABLE `classe_enseignant`
 -- AUTO_INCREMENT for table `conversations`
 --
 ALTER TABLE `conversations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `device_tokens`
@@ -947,37 +839,37 @@ ALTER TABLE `device_tokens`
 -- AUTO_INCREMENT for table `devoirs`
 --
 ALTER TABLE `devoirs`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `devoir_eleve`
 --
 ALTER TABLE `devoir_eleve`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `ecoles`
 --
 ALTER TABLE `ecoles`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `eleves`
 --
 ALTER TABLE `eleves`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `eleve_parents`
 --
 ALTER TABLE `eleve_parents`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `enseignants`
 --
 ALTER TABLE `enseignants`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `failed_jobs`
@@ -989,7 +881,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `incidents`
 --
 ALTER TABLE `incidents`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -1001,7 +893,7 @@ ALTER TABLE `jobs`
 -- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `migrations`
@@ -1013,13 +905,13 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `parent_users`
 --
 ALTER TABLE `parent_users`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `reports`

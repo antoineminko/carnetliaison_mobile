@@ -4,6 +4,7 @@ import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 import 'package:app_mobile/features/calls/pages/call_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatPage extends StatefulWidget {
   final Map<String, dynamic> conversation;
@@ -314,6 +315,39 @@ class _ChatPageState extends State<ChatPage> {
                                   color: isMe ? Colors.white : AppTheme.textDark,
                                 ),
                               ),
+                              if (msg['fichier_url'] != null) ...[
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () async {
+                                    final url = Uri.parse(msg['fichier_url']);
+                                    if (await canLaunchUrl(url)) {
+                                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: isMe ? Colors.white.withOpacity(0.2) : AppTheme.background,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.attach_file, size: 16, color: isMe ? Colors.white : AppTheme.primaryBlue),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Ouvrir la pièce jointe',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: isMe ? Colors.white : AppTheme.primaryBlue,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 6),
                               Align(
                                 alignment: Alignment.bottomRight,

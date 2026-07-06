@@ -21,10 +21,10 @@ class VerifyChildScannerPage extends StatefulWidget {
 
 enum ScannerState { scanning, connecting, success, error }
 
-class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with SingleTickerProviderStateMixin {
+class _VerifyChildScannerPageState extends State<VerifyChildScannerPage>
+    with SingleTickerProviderStateMixin {
   final MobileScannerController _scannerController = MobileScannerController();
   ScannerState _state = ScannerState.scanning;
-  String? _errorMessage;
 
   late AnimationController _animationController;
   late Animation<double> _scanAnimation;
@@ -70,7 +70,6 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
     if (parentId == null) {
       setState(() {
         _state = ScannerState.error;
-        _errorMessage = 'Erreur d\'authentification. Veuillez vous reconnecter.';
       });
       return;
     }
@@ -96,7 +95,6 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
     } else {
       setState(() {
         _state = ScannerState.error;
-        _errorMessage = 'Code secret incorrect ou erreur serveur.';
       });
     }
   }
@@ -150,7 +148,10 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
                   Text(
                     'Entrez le code secret de ${widget.child['prenom'] ?? widget.child['name']}.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 14, color: AppTheme.textGrey),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textGrey,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   TextField(
@@ -174,7 +175,10 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
                           : () async {
                               final code = codeController.text.trim();
                               if (code.isEmpty) {
-                                setModalState(() => errorText = 'Veuillez entrer le code secret');
+                                setModalState(
+                                  () => errorText =
+                                      'Veuillez entrer le code secret',
+                                );
                                 return;
                               }
                               setModalState(() {
@@ -184,27 +188,36 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
 
                               final parentId = await AuthService.getParentId();
                               if (parentId != null) {
-                                final success = await ParentService.verifyChildAccess(
-                                  parentId,
-                                  widget.child['id'] ?? widget.child['raw_id'],
-                                  code,
-                                );
+                                final success =
+                                    await ParentService.verifyChildAccess(
+                                      parentId,
+                                      widget.child['id'] ??
+                                          widget.child['raw_id'],
+                                      code,
+                                    );
 
                                 if (!mounted) return;
                                 if (success) {
-                                  Navigator.pop(context); // Fermer le modal de saisie
+                                  Navigator.pop(
+                                    context,
+                                  ); // Fermer le modal de saisie
                                   setState(() {
                                     _state = ScannerState.success;
                                   });
-                                  await Future.delayed(const Duration(seconds: 2));
+                                  await Future.delayed(
+                                    const Duration(seconds: 2),
+                                  );
                                   if (mounted) {
                                     widget.onSuccess();
-                                    Navigator.pop(context); // Fermer la page du scanner
+                                    Navigator.pop(
+                                      context,
+                                    ); // Fermer la page du scanner
                                   }
                                 } else {
                                   setModalState(() {
                                     isLoading = false;
-                                    errorText = 'Code secret incorrect ou erreur serveur.';
+                                    errorText =
+                                        'Code secret incorrect ou erreur serveur.';
                                   });
                                 }
                               }
@@ -219,11 +232,18 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
                           : const Text(
                               'Vérifier',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                     ),
                   ),
@@ -250,10 +270,15 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
         child: Column(
           children: [
             const SizedBox(height: 20),
-            if (_state == ScannerState.scanning || _state == ScannerState.connecting) ...[
+            if (_state == ScannerState.scanning ||
+                _state == ScannerState.connecting) ...[
               const Text(
                 'Scanner le QR code',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -266,7 +291,11 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
                   padding: EdgeInsets.only(top: 8.0),
                   child: Text(
                     'QR code détecté',
-                    style: TextStyle(fontSize: 14, color: AppTheme.seaBlue, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.seaBlue,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
             ],
@@ -283,7 +312,10 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
                 onPressed: _showManualEntryModal,
                 child: const Text(
                   'Saisir manuellement',
-                  style: TextStyle(color: AppTheme.seaBlue, decoration: TextDecoration.underline),
+                  style: TextStyle(
+                    color: AppTheme.seaBlue,
+                    decoration: TextDecoration.underline,
+                  ),
                 ),
               ),
             const SizedBox(height: 30),
@@ -304,13 +336,21 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
               color: Colors.green.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.check_circle, color: Colors.green, size: 80),
+            child: const Icon(
+              Icons.check_circle,
+              color: Colors.green,
+              size: 80,
+            ),
           ),
           const SizedBox(height: 30),
           const Text(
             'Liaison établie\navec succès',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textDark,
+            ),
           ),
           const SizedBox(height: 15),
           const Text(
@@ -337,7 +377,11 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
           const Text(
             'Désolé',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textDark,
+            ),
           ),
           const SizedBox(height: 15),
           const Padding(
@@ -352,7 +396,11 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
           const Text(
             'Veuillez contacter l\'administration.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.red),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
           ),
           const SizedBox(height: 30),
           ElevatedButton(
@@ -363,10 +411,18 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.seaBlue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
             ),
-            child: const Text('Réessayer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Réessayer',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       );
@@ -387,7 +443,9 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isConnecting ? Colors.green : AppTheme.seaBlue.withOpacity(0.5),
+            color: isConnecting
+                ? Colors.green
+                : AppTheme.seaBlue.withOpacity(0.5),
             width: 3,
           ),
         ),
@@ -399,7 +457,11 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
                   ? Container(
                       color: Colors.white,
                       child: Center(
-                        child: Icon(Icons.qr_code_2, size: size * 0.8, color: Colors.black87),
+                        child: Icon(
+                          Icons.qr_code_2,
+                          size: size * 0.8,
+                          color: Colors.black87,
+                        ),
                       ),
                     )
                   : MobileScanner(
@@ -420,7 +482,11 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
                       decoration: BoxDecoration(
                         color: Colors.cyanAccent,
                         boxShadow: [
-                          BoxShadow(color: Colors.cyanAccent.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)
+                          BoxShadow(
+                            color: Colors.cyanAccent.withOpacity(0.5),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
                         ],
                       ),
                     ),
@@ -443,7 +509,11 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
               padding: EdgeInsets.only(bottom: 10),
               child: Text(
                 'Connexion en cours...',
-                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                style: TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
               ),
             ),
           Row(
@@ -456,7 +526,9 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: LinearProgressIndicator(
                       backgroundColor: Colors.grey[200],
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Colors.green,
+                      ),
                     ),
                   ),
                 )
@@ -464,13 +536,14 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Container(
-                      height: 1,
-                      color: Colors.grey[300],
-                    ),
+                    child: Container(height: 1, color: Colors.grey[300]),
                   ),
                 ),
-              _buildBottomIcon(Icons.person_outline, 'Parent', AppTheme.seaBlue),
+              _buildBottomIcon(
+                Icons.person_outline,
+                'Parent',
+                AppTheme.seaBlue,
+              ),
             ],
           ),
         ],
@@ -486,7 +559,11 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage> with Si
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
         ),
       ],
     );

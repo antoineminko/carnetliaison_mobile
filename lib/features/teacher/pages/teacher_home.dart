@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
@@ -8,7 +7,6 @@ import 'package:app_mobile/features/teacher/pages/class_dashboard.dart';
 import 'package:app_mobile/features/teacher/pages/teacher_classes_page.dart';
 import 'package:app_mobile/features/teacher/pages/teacher_profile_page.dart';
 import 'package:app_mobile/features/teacher/pages/teacher_messages_page.dart';
-import 'package:app_mobile/features/teacher/pages/attendance_view.dart';
 import 'package:app_mobile/features/teacher/pages/create_homework_page.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/school_config.dart';
@@ -23,7 +21,6 @@ class TeacherHomePage extends StatefulWidget {
 
 class _TeacherHomePageState extends State<TeacherHomePage> {
   int _currentIndex = 0;
-  String _activeSchool = SchoolConfigs.sainteTherese;
 
   // Carousel State
   late PageController _pageController;
@@ -59,16 +56,20 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
       }
       _teacherId = tid;
 
-      final response = await ApiClient.instance.get(ApiEndpoints.teacherDashboard(tid));
-      
+      final response = await ApiClient.instance.get(
+        ApiEndpoints.teacherDashboard(tid),
+      );
+
       if (response.data['success'] == true) {
         setState(() {
           _dashboardData = response.data;
         });
       }
-      
+
       try {
-        final eventsResponse = await ApiClient.instance.get('/enseignants/$tid/events');
+        final eventsResponse = await ApiClient.instance.get(
+          '/enseignants/$tid/events',
+        );
         setState(() {
           _appointments = eventsResponse.data['appointments'] ?? [];
           _conversations = eventsResponse.data['conversations'] ?? [];
@@ -112,12 +113,8 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, 
-      body: BackgroundWrapper(
-        child: SafeArea(
-          child: _buildBody(),
-        ),
-      ),
+      backgroundColor: Colors.transparent,
+      body: BackgroundWrapper(child: SafeArea(child: _buildBody())),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
@@ -139,8 +136,6 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
     }
   }
 
-
-
   Widget _buildHomeContent() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -148,7 +143,6 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
 
     final teacher = _dashboardData?['teacher'] ?? {};
     final classes = (_dashboardData?['classes'] as List?) ?? [];
-    final prenom = teacher['prenom'] ?? '';
     final nom = teacher['nom'] ?? '';
     final matiere = teacher['matiere'] ?? 'Professeur';
     final premierClasse = classes.isNotEmpty ? classes[0] : null;
@@ -197,24 +191,28 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                   ],
                 ),
               ),
-               Container(
+              Container(
                 width: 45,
                 height: 45,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.forestGreen.withOpacity(0.2), width: 2),
+                  border: Border.all(
+                    color: AppTheme.forestGreen.withOpacity(0.2),
+                    width: 2,
+                  ),
                   image: const DecorationImage(
-                     image: AssetImage('assets/images/teacher.png'),
-                     fit: BoxFit.cover,
+                    image: AssetImage('assets/images/teacher.png'),
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 25),          // 2. NEXT CLASS CARD (Linked to a school)
-          const SizedBox(height: 25),          // 2. NEXT CLASS CARD (Linked to a school)
+          const SizedBox(height: 25),
+          // 2. NEXT CLASS CARD (Linked to a school)
+          const SizedBox(height: 25), // 2. NEXT CLASS CARD (Linked to a school)
           GestureDetector(
             onTap: () {
               Navigator.push(
@@ -264,82 +262,100 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.access_time_filled, color: Colors.white, size: 20),
+                            child: const Icon(
+                              Icons.access_time_filled,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           const Text(
                             'VOTRE CLASSE',
                             style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.0,
-                              ),
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.0,
                             ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            premierClasse?['ecole_nom'] ?? 'ÉCOLE',
-                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    Text(
-                      premierClasse?['classe_nom'] ?? 'Aucune classe',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                        ],
                       ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          premierClasse?['ecole_nom'] ?? 'ÉCOLE',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    premierClasse?['classe_nom'] ?? 'Aucune classe',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 5),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.location_on, color: Colors.white, size: 16),
-                            SizedBox(width: 5),
-                            Text(
-                              'Sur place',
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Sur place',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blueAccent.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Text(
+                              '08:00 - 12:00',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            SizedBox(width: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.blueAccent.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Text(
-                                '08:00 - 12:00',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
+          ),
 
           const SizedBox(height: 30),
 
@@ -375,12 +391,14 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                     MaterialPageRoute(
                       builder: (context) => ClassDashboardPage(
                         classId: premierClasse?['id'] ?? 1,
-                        className: premierClasse?['classe_nom'] ?? 'Aucune classe',
+                        className:
+                            premierClasse?['classe_nom'] ?? 'Aucune classe',
                         subject: teacher['matiere'] ?? 'Mathématiques',
                         session: 'Matin',
                         teacherId: _teacherId ?? 1,
                         studentCount: premierClasse?['students_count'] ?? 30,
-                        schoolName: premierClasse?['ecole_nom'] ?? 'Aucune école',
+                        schoolName:
+                            premierClasse?['ecole_nom'] ?? 'Aucune école',
                       ),
                     ),
                   );
@@ -395,7 +413,9 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CreateHomeworkPage()),
+                    MaterialPageRoute(
+                      builder: (context) => const CreateHomeworkPage(),
+                    ),
                   );
                 },
               ),
@@ -483,7 +503,9 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                     width: _currentPage == index ? 20 : 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: _currentPage == index ? Colors.white : Colors.white.withOpacity(0.5),
+                      color: _currentPage == index
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -495,14 +517,21 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
               top: 15,
               left: 15,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.4),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
                   'Sponsoring',
-                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -517,7 +546,9 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isSelected ? (isSainteTherese ? AppTheme.forestGreen : AppTheme.seaBlue) : Colors.white,
+        color: isSelected
+            ? (isSainteTherese ? AppTheme.forestGreen : AppTheme.seaBlue)
+            : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isSelected ? Colors.transparent : Colors.grey[300]!,
@@ -574,7 +605,10 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                 ),
                 if (isUrgent)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.sunYellow.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
@@ -582,7 +616,7 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                     child: const Text(
                       'URGENT',
                       style: TextStyle(
-                      color: AppTheme.sunYellow,
+                        color: AppTheme.sunYellow,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -611,7 +645,7 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -626,10 +660,14 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
         children: [
           const Text(
             'Agenda & Réunions',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textDark,
+            ),
           ),
           const SizedBox(height: 20),
-          
+
           // Availability Toggle
           Container(
             padding: const EdgeInsets.all(15),
@@ -643,37 +681,67 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                 const Icon(Icons.event_available, color: AppTheme.seaBlue),
                 const SizedBox(width: 15),
                 const Expanded(
-                  child: Text('Ma disponibilité pour RDV', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Ma disponibilité pour RDV',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
-                Switch(value: true, onChanged: (v) {}, activeColor: AppTheme.seaBlue),
+                Switch(
+                  value: true,
+                  onChanged: (v) {},
+                  activeColor: AppTheme.seaBlue,
+                ),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 25),
-          const Text('RENDEZ-VOUS PARENTS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1.2)),
+          const Text(
+            'RENDEZ-VOUS PARENTS',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(height: 15),
 
           if (_appointments.isEmpty)
-            const Text('Aucun rendez-vous prévu.', style: TextStyle(color: Colors.grey)),
-            
+            const Text(
+              'Aucun rendez-vous prévu.',
+              style: TextStyle(color: Colors.grey),
+            ),
+
           ..._appointments.map((appt) {
             final parentName = '${appt['parent_prenom']} ${appt['parent_nom']}';
-            final eleveName = appt['eleve_prenom'] != null ? '${appt['eleve_prenom']} ${appt['eleve_nom']}' : 'Élève';
-            final date = appt['date_heure'] != null ? appt['date_heure'].toString().substring(0, 16).replaceFirst('T', ' ') : '';
+            final eleveName = appt['eleve_prenom'] != null
+                ? '${appt['eleve_prenom']} ${appt['eleve_nom']}'
+                : 'Élève';
+            final date = appt['date_heure'] != null
+                ? appt['date_heure']
+                      .toString()
+                      .substring(0, 16)
+                      .replaceFirst('T', ' ')
+                : '';
             final isPending = appt['statut'] == 'en_attente';
             final requester = appt['requester'] ?? 'parent';
             final motif = appt['motif'] ?? 'Aucun motif';
-            
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 15),
               child: _buildMeetingCard(
-                title: 'RDV ${appt['type'] == 'video' ? 'Vidéo' : 'Présentiel'} : $parentName',
+                title:
+                    'RDV ${appt['type'] == 'video' ? 'Vidéo' : 'Présentiel'} : $parentName',
                 time: '$date\nMotif : $motif',
-                location: appt['type'] == 'video' ? 'Visioconférence' : 'À l\'école',
+                location: appt['type'] == 'video'
+                    ? 'Visioconférence'
+                    : 'À l\'école',
                 participants: '$parentName (pour $eleveName)',
                 color: isPending ? Colors.orange : Colors.deepPurple,
-                icon: appt['type'] == 'video' ? Icons.videocam : Icons.location_on,
+                icon: appt['type'] == 'video'
+                    ? Icons.videocam
+                    : Icons.location_on,
                 showVisioButton: appt['type'] == 'video' && !isPending,
                 isPending: isPending,
                 requester: requester,
@@ -682,19 +750,30 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
               ),
             );
           }).toList(),
-          
+
           const SizedBox(height: 25),
-          const Text('DEMANDES DE MESSAGERIE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1.2)),
+          const Text(
+            'DEMANDES DE MESSAGERIE',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(height: 15),
 
           if (_conversations.isEmpty)
-            const Text('Aucune demande en attente.', style: TextStyle(color: Colors.grey)),
+            const Text(
+              'Aucune demande en attente.',
+              style: TextStyle(color: Colors.grey),
+            ),
 
           ..._conversations.map((conv) {
             final parentName = '${conv['parent_prenom']} ${conv['parent_nom']}';
             final status = conv['status'] ?? 'pending';
             final isPending = status == 'pending';
-            
+
             String title = 'Nouvelle conversation: $parentName';
             Color color = Colors.blue;
             if (status == 'accepted') {
@@ -774,11 +853,29 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                   children: [
                     Text(
                       SchoolConfigs.sainteTherese,
-                      style: TextStyle(color: Colors.grey[400], fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(time, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(
+                      time,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -787,116 +884,162 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
           const SizedBox(height: 20),
           Row(
             children: [
-              const Icon(Icons.location_on_outlined, size: 16, color: AppTheme.textGrey),
+              const Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: AppTheme.textGrey,
+              ),
               const SizedBox(width: 8),
-              Text(location, style: const TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+              Text(
+                location,
+                style: const TextStyle(color: AppTheme.textGrey, fontSize: 13),
+              ),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.group_outlined, size: 16, color: AppTheme.textGrey),
+              const Icon(
+                Icons.group_outlined,
+                size: 16,
+                color: AppTheme.textGrey,
+              ),
               const SizedBox(width: 8),
-              Text(participants, style: const TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+              Text(
+                participants,
+                style: const TextStyle(color: AppTheme.textGrey, fontSize: 13),
+              ),
             ],
           ),
-            if (showVisioButton) ...[
-              const SizedBox(height: 15),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.video_call),
-                  label: const Text('Rejoindre la visio', style: TextStyle(fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: color,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+          if (showVisioButton) ...[
+            const SizedBox(height: 15),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.video_call),
+                label: const Text(
+                  'Rejoindre la visio',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-              )
-            ],
-            
-            if (isPending) ...[
-              const SizedBox(height: 15),
-              if (requester == 'parent')
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _updateRequestStatus(id, type, 'rejected'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('Refuser'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => _updateRequestStatus(id, type, 'accepted'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('Accepter'),
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
-                      SizedBox(width: 8),
-                      Text('En attente d\'acceptation', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
-                    ],
-                  ),
-                ),
-            ] else if (status == 'accepted' || status == 'rejected') ...[
-              const SizedBox(height: 15),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Text(
-                    status == 'accepted' ? 'Vous avez accepté cette demande' : 'Vous avez refusé cette demande',
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: color,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
-            ]
+            ),
+          ],
+
+          if (isPending) ...[
+            const SizedBox(height: 15),
+            if (requester == 'parent')
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () =>
+                          _updateRequestStatus(id, type, 'rejected'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Refuser'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          _updateRequestStatus(id, type, 'accepted'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Accepter'),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'En attente d\'acceptation',
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ] else if (status == 'accepted' || status == 'rejected') ...[
+            const SizedBox(height: 15),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  status == 'accepted'
+                      ? 'Vous avez accepté cette demande'
+                      : 'Vous avez refusé cette demande',
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Future<void> _updateRequestStatus(int? id, String? type, String status) async {
+  Future<void> _updateRequestStatus(
+    int? id,
+    String? type,
+    String status,
+  ) async {
     if (id == null || type == null) return;
     try {
       if (type == 'appointment') {
-        await ApiClient.instance.put('/appointments/$id/status', data: {'statut': status == 'rejected' ? 'refuse' : 'accepte'});
+        await ApiClient.instance.put(
+          '/appointments/$id/status',
+          data: {'statut': status == 'rejected' ? 'refuse' : 'accepte'},
+        );
       } else if (type == 'conversation') {
-        await ApiClient.instance.put('/messages/conversation/$id/status', data: {'status': status});
+        await ApiClient.instance.put(
+          '/messages/conversation/$id/status',
+          data: {'status': status},
+        );
       }
       _loadDashboardData();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
     }
   }
 
@@ -923,8 +1066,14 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppTheme.seaBlue, // Sea Blue for active nav
         unselectedItemColor: Colors.grey[400],
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        ),
         elevation: 0,
         items: const [
           BottomNavigationBarItem(
@@ -936,8 +1085,8 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
             label: 'Classes',
           ),
           BottomNavigationBarItem(
-             icon: Icon(Icons.calendar_today_rounded),
-             label: 'Événements',
+            icon: Icon(Icons.calendar_today_rounded),
+            label: 'Événements',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline_rounded),

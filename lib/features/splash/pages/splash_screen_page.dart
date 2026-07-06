@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app_mobile/shared/config/api_client.dart';
-import 'package:app_mobile/shared/utils/user_role.dart';
 
 class SplashScreenPage extends StatefulWidget {
   const SplashScreenPage({super.key});
@@ -73,7 +71,11 @@ class _SplashScreenPageState extends State<SplashScreenPage>
     }
 
     if (mounted) {
-      Navigator.pushReplacementNamed(context, targetRoute, arguments: arguments);
+      Navigator.pushReplacementNamed(
+        context,
+        targetRoute,
+        arguments: arguments,
+      );
     }
   }
 

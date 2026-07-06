@@ -52,12 +52,16 @@ extension MessagesViewExtension on _ParentHomePageState {
     List<Widget> tiles = [];
     if (filter == 'Tous' || filter == 'Enseignants') {
       for (final conv in _teacherConversationsAll) {
-        final enseignantNom = '${conv['enseignant_prenom'] ?? ''} ${conv['enseignant_nom'] ?? ''}'.trim();
+        final enseignantNom =
+            '${conv['enseignant_prenom'] ?? ''} ${conv['enseignant_nom'] ?? ''}'
+                .trim();
         final initials = (conv['enseignant_nom'] ?? 'E').isNotEmpty
             ? (conv['enseignant_nom'] as String)[0].toUpperCase()
             : 'E';
         final unreadVal = conv['unread_count'];
-        final unread = (unreadVal is int) ? unreadVal : (int.tryParse(unreadVal.toString()) ?? 0);
+        final unread = (unreadVal is int)
+            ? unreadVal
+            : (int.tryParse(unreadVal.toString()) ?? 0);
         tiles.add(
           _buildMessageTile(
             name: enseignantNom.isNotEmpty ? enseignantNom : 'Enseignant',
@@ -65,7 +69,9 @@ extension MessagesViewExtension on _ParentHomePageState {
             initials: initials,
             color: AppTheme.seaBlue,
             school: conv['admin_name'] ?? '',
-            childName: '${conv['eleve_prenom'] ?? ''} ${conv['eleve_nom'] ?? ''}'.trim(),
+            childName:
+                '${conv['eleve_prenom'] ?? ''} ${conv['eleve_nom'] ?? ''}'
+                    .trim(),
             lastMsg: conv['subject'] ?? '',
             time: '',
             unreadCount: unread,
@@ -81,7 +87,9 @@ extension MessagesViewExtension on _ParentHomePageState {
       for (final conv in _adminConversations) {
         final adminName = conv['admin_name'] ?? 'Administration';
         final unreadVal = conv['unread_count'];
-        final unread = (unreadVal is int) ? unreadVal : (int.tryParse(unreadVal.toString()) ?? 0);
+        final unread = (unreadVal is int)
+            ? unreadVal
+            : (int.tryParse(unreadVal.toString()) ?? 0);
         tiles.add(
           _buildMessageTile(
             name: adminName,
@@ -89,7 +97,9 @@ extension MessagesViewExtension on _ParentHomePageState {
             initials: 'AD',
             color: AppTheme.forestGreen,
             school: adminName,
-            childName: '${conv['eleve_prenom'] ?? ''} ${conv['eleve_nom'] ?? ''}'.trim(),
+            childName:
+                '${conv['eleve_prenom'] ?? ''} ${conv['eleve_nom'] ?? ''}'
+                    .trim(),
             lastMsg: conv['subject'] ?? 'Nouveau message',
             time: '',
             unreadCount: unread,
@@ -129,6 +139,7 @@ extension MessagesViewExtension on _ParentHomePageState {
       onTap: () {
         if (conversationId != null) {
           // Mettre à jour immédiatement les compteurs non lus côté UI
+          // ignore: invalid_use_of_protected_member
           setState(() {
             for (final conv in _teacherConversationsAll) {
               if (conv['conversation_id'] == conversationId) {
@@ -147,11 +158,13 @@ extension MessagesViewExtension on _ParentHomePageState {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ChatPage(conversation: {
-                ...conv,
-                'conversation_id': conversationId,
-                'status': 'accepted',
-              }),
+              builder: (_) => ChatPage(
+                conversation: {
+                  ...conv,
+                  'conversation_id': conversationId,
+                  'status': 'accepted',
+                },
+              ),
             ),
           ).then((_) => _fetchConversations());
         }
@@ -258,5 +271,4 @@ extension MessagesViewExtension on _ParentHomePageState {
       ),
     );
   }
-
 }

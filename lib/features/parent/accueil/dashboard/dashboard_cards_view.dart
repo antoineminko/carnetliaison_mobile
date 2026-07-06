@@ -36,7 +36,8 @@ extension DashboardCardsViewExtension on _ParentHomePageState {
                     image: DecorationImage(
                       image: (child['isNetworkImage'] == true)
                           ? NetworkImage(child['image'] as String)
-                          : AssetImage(child['image'] as String) as ImageProvider,
+                          : AssetImage(child['image'] as String)
+                                as ImageProvider,
                       fit: BoxFit.cover,
                       colorFilter: isVerified
                           ? null
@@ -209,43 +210,6 @@ extension DashboardCardsViewExtension on _ParentHomePageState {
     );
   }
 
-  Widget _buildAddChildButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-      child: GestureDetector(
-        onTap: _showAddChildModal,
-        child: Container(
-          width: double.infinity,
-          height: 60,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEDF7FF),
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(
-              color: Colors.blue.withOpacity(0.3),
-              width: 1.5,
-              style: BorderStyle.solid,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.person_add_alt_1_rounded, color: Colors.blue),
-              SizedBox(width: 10),
-              Text(
-                'Ajouter un enfant',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildMethodCard({
     required IconData icon,
     required String title,
@@ -309,5 +273,4 @@ extension DashboardCardsViewExtension on _ParentHomePageState {
       ),
     );
   }
-
 }

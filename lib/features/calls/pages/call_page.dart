@@ -4,7 +4,6 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/features/calls/services/webrtc_service.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
-import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 
 /// Page d'appel vocal ou vidéo
 class CallPage extends StatefulWidget {
@@ -37,7 +36,6 @@ class _CallPageState extends State<CallPage> {
   String _callStatus = 'Connexion...';
   int _callDuration = 0;
   Timer? _durationTimer;
-  String? _myRole;
 
   @override
   void initState() {
@@ -101,7 +99,10 @@ class _CallPageState extends State<CallPage> {
 
   Future<void> _sendOfferToServer(dynamic offer) async {
     try {
-      await ApiClient.instance.post('/calls/${widget.callId}/offer', data: offer);
+      await ApiClient.instance.post(
+        '/calls/${widget.callId}/offer',
+        data: offer,
+      );
     } catch (e) {
       print('❌ [CallPage] Erreur envoi offer: $e');
     }
@@ -238,7 +239,8 @@ class _CallPageState extends State<CallPage> {
               child: _webRTCService.remoteRenderer != null
                   ? RTCVideoView(
                       _webRTCService.remoteRenderer!,
-                      objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      objectFit:
+                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                     )
                   : Container(
                       color: Colors.grey[900],
@@ -248,8 +250,14 @@ class _CallPageState extends State<CallPage> {
                           children: [
                             CircleAvatar(
                               radius: 60,
-                              backgroundColor: AppTheme.seaBlue.withOpacity(0.3),
-                              child: const Icon(Icons.person, size: 60, color: Colors.white),
+                              backgroundColor: AppTheme.seaBlue.withOpacity(
+                                0.3,
+                              ),
+                              child: const Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Colors.white,
+                              ),
                             ),
                             const SizedBox(height: 20),
                             Text(
@@ -272,10 +280,7 @@ class _CallPageState extends State<CallPage> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.grey[900]!,
-                    Colors.black,
-                  ],
+                  colors: [Colors.grey[900]!, Colors.black],
                 ),
               ),
               child: Center(
@@ -350,7 +355,8 @@ class _CallPageState extends State<CallPage> {
                       ? RTCVideoView(
                           _webRTCService.localRenderer!,
                           mirror: true,
-                          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                          objectFit:
+                              RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                         )
                       : Container(color: Colors.grey[800]),
                 ),
@@ -371,16 +377,12 @@ class _CallPageState extends State<CallPage> {
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(color: Colors.black54, blurRadius: 4),
-                      ],
+                      shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    _isConnected
-                        ? _formatDuration(_callDuration)
-                        : _callStatus,
+                    _isConnected ? _formatDuration(_callDuration) : _callStatus,
                     style: TextStyle(
                       color: _isConnected ? Colors.green : Colors.white70,
                       fontSize: 14,
@@ -405,7 +407,10 @@ class _CallPageState extends State<CallPage> {
                   if (_isConnecting)
                     Container(
                       margin: const EdgeInsets.only(bottom: 30),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(20),
@@ -439,24 +444,32 @@ class _CallPageState extends State<CallPage> {
                         icon: _isMuted ? Icons.mic_off : Icons.mic,
                         label: _isMuted ? 'Muet' : 'Micro',
                         color: _isMuted ? Colors.red : Colors.white,
-                        backgroundColor: _isMuted ? Colors.red.withOpacity(0.3) : Colors.white24,
+                        backgroundColor: _isMuted
+                            ? Colors.red.withOpacity(0.3)
+                            : Colors.white24,
                         onPressed: _toggleMute,
                       ),
 
                       // Vidéo (uniquement pour appel vidéo)
                       if (isVideo)
                         _buildControlButton(
-                          icon: _isVideoOff ? Icons.videocam_off : Icons.videocam,
+                          icon: _isVideoOff
+                              ? Icons.videocam_off
+                              : Icons.videocam,
                           label: _isVideoOff ? 'Cam off' : 'Caméra',
                           color: _isVideoOff ? Colors.red : Colors.white,
-                          backgroundColor: _isVideoOff ? Colors.red.withOpacity(0.3) : Colors.white24,
+                          backgroundColor: _isVideoOff
+                              ? Colors.red.withOpacity(0.3)
+                              : Colors.white24,
                           onPressed: _toggleVideo,
                         ),
 
                       // Haut-parleur (audio uniquement)
                       if (!isVideo)
                         _buildControlButton(
-                          icon: _isSpeakerOn ? Icons.volume_up : Icons.volume_off,
+                          icon: _isSpeakerOn
+                              ? Icons.volume_up
+                              : Icons.volume_off,
                           label: _isSpeakerOn ? 'HP' : 'Oreille',
                           color: _isSpeakerOn ? Colors.white : Colors.grey,
                           backgroundColor: Colors.white24,

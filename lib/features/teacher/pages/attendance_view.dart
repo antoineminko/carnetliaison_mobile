@@ -13,7 +13,7 @@ class AttendanceView extends StatefulWidget {
   final int classeId;
 
   const AttendanceView({
-    super.key, 
+    super.key,
     required this.studentCount,
     required this.className,
     this.classeId = 1,
@@ -37,23 +37,28 @@ class _AttendanceViewState extends State<AttendanceView> {
   Future<void> _fetchStudents() async {
     setState(() => _isLoading = true);
     try {
-      final response = await ApiClient.instance.get('/classes/${widget.classeId}/eleves');
+      final response = await ApiClient.instance.get(
+        '/classes/${widget.classeId}/eleves',
+      );
       final data = response.data as List;
-      
+
       setState(() {
         _markedCount = 0;
         _students = data.map((e) {
           AttendanceStatus? currentStatus;
-          if (e['statut_presence'] == 'present') currentStatus = AttendanceStatus.present;
-          else if (e['statut_presence'] == 'absent') currentStatus = AttendanceStatus.absent;
-          else if (e['statut_presence'] == 'late') currentStatus = AttendanceStatus.late;
+          if (e['statut_presence'] == 'present')
+            currentStatus = AttendanceStatus.present;
+          else if (e['statut_presence'] == 'absent')
+            currentStatus = AttendanceStatus.absent;
+          else if (e['statut_presence'] == 'late')
+            currentStatus = AttendanceStatus.late;
 
           if (currentStatus != null) _markedCount++;
 
           return {
             'id': e['id'],
             'name': '${e['prenom']} ${e['nom']}',
-            'status': currentStatus, 
+            'status': currentStatus,
             'arrivalTime': null,
             'matricule': e['matricule'] ?? 'N/A',
             'photo_url': e['photo_url'],
@@ -68,7 +73,9 @@ class _AttendanceViewState extends State<AttendanceView> {
       if (_markedCount > 0 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('L\'appel a déjà été fait aujourd\'hui. Vous pouvez le modifier ou le réinitialiser dans "Actions".'),
+            content: Text(
+              'L\'appel a déjà été fait aujourd\'hui. Vous pouvez le modifier ou le réinitialiser dans "Actions".',
+            ),
             duration: Duration(seconds: 4),
           ),
         );
@@ -79,9 +86,9 @@ class _AttendanceViewState extends State<AttendanceView> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur chargement élèves: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur chargement élèves: $e')));
       }
     }
   }
@@ -105,28 +112,56 @@ class _AttendanceViewState extends State<AttendanceView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('ACTIONS GLOBALES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.2)),
+            const Text(
+              'ACTIONS GLOBALES',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                letterSpacing: 1.2,
+              ),
+            ),
             const SizedBox(height: 25),
-            _buildGlobalButton('TOUT PRÉSENT', const Color(0xFF48C774), Icons.check_circle, () {
-               _applyGlobalStatus(AttendanceStatus.present);
-               Navigator.pop(context);
-            }),
+            _buildGlobalButton(
+              'TOUT PRÉSENT',
+              const Color(0xFF48C774),
+              Icons.check_circle,
+              () {
+                _applyGlobalStatus(AttendanceStatus.present);
+                Navigator.pop(context);
+              },
+            ),
             const SizedBox(height: 12),
-            _buildGlobalButton('TOUT ABSENT', const Color(0xFFF14668), Icons.cancel, () {
-               _applyGlobalStatus(AttendanceStatus.absent);
-               Navigator.pop(context);
-            }),
+            _buildGlobalButton(
+              'TOUT ABSENT',
+              const Color(0xFFF14668),
+              Icons.cancel,
+              () {
+                _applyGlobalStatus(AttendanceStatus.absent);
+                Navigator.pop(context);
+              },
+            ),
             const SizedBox(height: 12),
-            _buildGlobalButton('TOUT EN RETARD', const Color(0xFFFFDD57), Icons.access_time_filled, () {
-               _applyGlobalStatus(AttendanceStatus.late);
-               Navigator.pop(context);
-            }, textColor: Colors.black87),
+            _buildGlobalButton(
+              'TOUT EN RETARD',
+              const Color(0xFFFFDD57),
+              Icons.access_time_filled,
+              () {
+                _applyGlobalStatus(AttendanceStatus.late);
+                Navigator.pop(context);
+              },
+              textColor: Colors.black87,
+            ),
             if (_markedCount > 0) ...[
               const Divider(height: 30),
-              _buildGlobalButton('RÉINITIALISER L\'APPEL', Colors.grey[800]!, Icons.refresh, () {
-                 _resetAttendance();
-                 Navigator.pop(context);
-              }),
+              _buildGlobalButton(
+                'RÉINITIALISER L\'APPEL',
+                Colors.grey[800]!,
+                Icons.refresh,
+                () {
+                  _resetAttendance();
+                  Navigator.pop(context);
+                },
+              ),
             ],
             const SizedBox(height: 20),
           ],
@@ -137,10 +172,13 @@ class _AttendanceViewState extends State<AttendanceView> {
 
   void _resetAttendance() async {
     try {
-      final response = await ApiClient.instance.post('/attendances/reset', data: {
-        'classe_id': widget.classeId,
-        'date': DateTime.now().toIso8601String().split('T')[0],
-      });
+      final response = await ApiClient.instance.post(
+        '/attendances/reset',
+        data: {
+          'classe_id': widget.classeId,
+          'date': DateTime.now().toIso8601String().split('T')[0],
+        },
+      );
 
       if (response.data['success']) {
         setState(() {
@@ -176,41 +214,36 @@ class _AttendanceViewState extends State<AttendanceView> {
       _updateMarkedCount();
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Statut appliqué à tous les élèves')),
+      const SnackBar(content: Text('Statut appliqué à tous les élèves')),
     );
   }
 
-  Widget _buildGlobalButton(String label, Color color, IconData icon, VoidCallback onTap, {Color textColor = Colors.white}) {
+  Widget _buildGlobalButton(
+    String label,
+    Color color,
+    IconData icon,
+    VoidCallback onTap, {
+    Color textColor = Colors.white,
+  }) {
     return SizedBox(
       width: double.infinity,
       height: 55,
       child: ElevatedButton.icon(
         onPressed: onTap,
         icon: Icon(icon, color: textColor),
-        label: Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+        label: Text(
+          label,
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
         ),
       ),
     );
-  }
-
-  void _toggleStatus(int index) {
-    setState(() {
-      final current = _students[index]['status'];
-      if (current == null) {
-        _students[index]['status'] = AttendanceStatus.present;
-      } else if (current == AttendanceStatus.present) {
-        _students[index]['status'] = AttendanceStatus.absent;
-      } else if (current == AttendanceStatus.absent) {
-        _students[index]['status'] = AttendanceStatus.late;
-      } else {
-        _students[index]['status'] = AttendanceStatus.present; // Cycle back to present
-      }
-      _updateMarkedCount();
-    });
   }
 
   Color _getStatusColor(AttendanceStatus? status) {
@@ -239,25 +272,6 @@ class _AttendanceViewState extends State<AttendanceView> {
     }
   }
 
-  IconData _getStatusIcon(AttendanceStatus? status) {
-    switch (status) {
-      case AttendanceStatus.present:
-        return Icons.check_circle;
-      case AttendanceStatus.absent:
-        return Icons.cancel;
-      case AttendanceStatus.late:
-        return Icons.access_time_filled;
-      default:
-        return Icons.radio_button_unchecked;
-    }
-  }
-
-  Color _getStatusTextColor(AttendanceStatus? status) {
-      if (status == AttendanceStatus.late) return Colors.black87;
-      if (status == null) return Colors.grey[600]!;
-      return Colors.white;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -279,10 +293,7 @@ class _AttendanceViewState extends State<AttendanceView> {
               Expanded(
                 child: Row(
                   children: [
-                     const Text(
-                      '📊',
-                      style: TextStyle(fontSize: 20),
-                    ),
+                    const Text('📊', style: TextStyle(fontSize: 20)),
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
@@ -306,7 +317,9 @@ class _AttendanceViewState extends State<AttendanceView> {
                   backgroundColor: const Color(0xFFF0F7F4),
                   foregroundColor: AppTheme.seaBlue,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
               ),
             ],
@@ -328,7 +341,6 @@ class _AttendanceViewState extends State<AttendanceView> {
               final student = _students[index];
               final status = student['status'] as AttendanceStatus?;
               final color = _getStatusColor(status);
-              final textColor = status == null ? Colors.grey[700] : Colors.white;
 
               return GestureDetector(
                 onTap: () => _showStudentProfileModal(index),
@@ -339,12 +351,18 @@ class _AttendanceViewState extends State<AttendanceView> {
                     color: status == null ? Colors.white : color,
                     borderRadius: BorderRadius.circular(15),
                     border: Border.all(
-                      color: status == null ? Colors.grey[300]! : Colors.transparent,
+                      color: status == null
+                          ? Colors.grey[300]!
+                          : Colors.transparent,
                       width: 1.5,
                     ),
                     boxShadow: [
                       if (status != null)
-                        BoxShadow(color: color.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+                        BoxShadow(
+                          color: color.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
                     ],
                   ),
                   child: Row(
@@ -353,7 +371,9 @@ class _AttendanceViewState extends State<AttendanceView> {
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: status == null ? Colors.grey[100] : Colors.white.withOpacity(0.2),
+                          color: status == null
+                              ? Colors.grey[100]
+                              : Colors.white.withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -362,7 +382,9 @@ class _AttendanceViewState extends State<AttendanceView> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: status == null ? Colors.grey[600] : Colors.white,
+                              color: status == null
+                                  ? Colors.grey[600]
+                                  : Colors.white,
                             ),
                           ),
                         ),
@@ -378,17 +400,25 @@ class _AttendanceViewState extends State<AttendanceView> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: status == null ? Colors.black87 : (status == AttendanceStatus.late ? Colors.black87 : Colors.white),
+                                color: status == null
+                                    ? Colors.black87
+                                    : (status == AttendanceStatus.late
+                                          ? Colors.black87
+                                          : Colors.white),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             if (status != null)
                               Text(
-                                status == AttendanceStatus.late ? 'Retard: ${student['arrivalTime']}' : _getStatusText(status),
+                                status == AttendanceStatus.late
+                                    ? 'Retard: ${student['arrivalTime']}'
+                                    : _getStatusText(status),
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: status == AttendanceStatus.late ? Colors.black54 : Colors.white70,
+                                  color: status == AttendanceStatus.late
+                                      ? Colors.black54
+                                      : Colors.white70,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -423,29 +453,36 @@ class _AttendanceViewState extends State<AttendanceView> {
               onPressed: () async {
                 // Post to API
                 try {
-                  final attendances = _students.where((s) => s['status'] != null).map((s) {
-                    String statusStr = 'present';
-                    if (s['status'] == AttendanceStatus.absent) statusStr = 'absent';
-                    if (s['status'] == AttendanceStatus.late) statusStr = 'late';
-                    
-                    return {
-                      'eleve_id': s['id'],
-                      'status': statusStr,
-                    };
-                  }).toList();
+                  final attendances = _students
+                      .where((s) => s['status'] != null)
+                      .map((s) {
+                        String statusStr = 'present';
+                        if (s['status'] == AttendanceStatus.absent)
+                          statusStr = 'absent';
+                        if (s['status'] == AttendanceStatus.late)
+                          statusStr = 'late';
+
+                        return {'eleve_id': s['id'], 'status': statusStr};
+                      })
+                      .toList();
 
                   if (attendances.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Veuillez marquer au moins un élève.')),
+                      const SnackBar(
+                        content: Text('Veuillez marquer au moins un élève.'),
+                      ),
                     );
                     return;
                   }
 
-                  final response = await ApiClient.instance.post('/attendances', data: {
-                    'classe_id': widget.classeId,
-                    'date': DateTime.now().toIso8601String().split('T')[0],
-                    'attendances': attendances
-                  });
+                  final response = await ApiClient.instance.post(
+                    '/attendances',
+                    data: {
+                      'classe_id': widget.classeId,
+                      'date': DateTime.now().toIso8601String().split('T')[0],
+                      'attendances': attendances,
+                    },
+                  );
 
                   if (response.data['success']) {
                     if (!context.mounted) return;
@@ -453,12 +490,21 @@ class _AttendanceViewState extends State<AttendanceView> {
                       context: context,
                       barrierDismissible: false,
                       builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         title: const Row(
                           children: [
-                            Icon(Icons.check_circle, color: Color(0xFF48C774), size: 28),
+                            Icon(
+                              Icons.check_circle,
+                              color: Color(0xFF48C774),
+                              size: 28,
+                            ),
                             SizedBox(width: 10),
-                            Text('Appel validé !', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(
+                              'Appel validé !',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ],
                         ),
                         content: Text(
@@ -476,9 +522,17 @@ class _AttendanceViewState extends State<AttendanceView> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.forestGreen,
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              child: const Text(
+                                'OK',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -502,7 +556,9 @@ class _AttendanceViewState extends State<AttendanceView> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.forestGreen,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 4,
                 shadowColor: AppTheme.forestGreen.withOpacity(0.4),
               ),
@@ -553,42 +609,70 @@ class _AttendanceViewState extends State<AttendanceView> {
                   radius: 40,
                   backgroundColor: const Color(0xFFF0F4F8),
                   child: student['photo_url'] != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(40),
-                        child: Image.network(student['photo_url'], fit: BoxFit.cover, width: 80, height: 80, errorBuilder: (c, e, s) => Text('${index + 1}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2E3192)))),
-                      )
-                    : Text(
-                        '${index + 1}',
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2E3192)),
-                      ),
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(40),
+                          child: Image.network(
+                            student['photo_url'],
+                            fit: BoxFit.cover,
+                            width: 80,
+                            height: 80,
+                            errorBuilder: (c, e, s) => Text(
+                              '${index + 1}',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E3192),
+                              ),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          '${index + 1}',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E3192),
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 15),
                 Text(
                   student['name'],
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D3748),
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                
-                Builder(builder: (context) {
-                  int? age;
-                  if (student['date_naissance'] != null) {
-                    try {
-                      final dob = DateTime.parse(student['date_naissance']);
-                      final today = DateTime.now();
-                      age = today.year - dob.year;
-                      if (today.month < dob.month || (today.month == dob.month && today.day < dob.day)) {
-                        age--;
-                      }
-                    } catch (_) {}
-                  }
-                  return Text(
-                    'Âge: ${age != null ? "$age ans" : "Inconnu"} | Code Secret: ${student['code_secret']}',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[800], fontWeight: FontWeight.w500),
-                  );
-                }),
+
+                Builder(
+                  builder: (context) {
+                    int? age;
+                    if (student['date_naissance'] != null) {
+                      try {
+                        final dob = DateTime.parse(student['date_naissance']);
+                        final today = DateTime.now();
+                        age = today.year - dob.year;
+                        if (today.month < dob.month ||
+                            (today.month == dob.month && today.day < dob.day)) {
+                          age--;
+                        }
+                      } catch (_) {}
+                    }
+                    return Text(
+                      'Âge: ${age != null ? "$age ans" : "Inconnu"} | Code Secret: ${student['code_secret']}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[800],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    );
+                  },
+                ),
 
                 const SizedBox(height: 15),
-                
+
                 // Bouton Info Parent
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -608,12 +692,17 @@ class _AttendanceViewState extends State<AttendanceView> {
                         );
                       },
                       icon: const Icon(Icons.info_outline, size: 18),
-                      label: const Text('Info Parent', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const Text(
+                        'Info Parent',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.seaBlue.withOpacity(0.1),
                         foregroundColor: AppTheme.seaBlue,
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -628,16 +717,25 @@ class _AttendanceViewState extends State<AttendanceView> {
                     decoration: BoxDecoration(
                       color: AppTheme.sunYellow.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.sunYellow.withOpacity(0.3)),
+                      border: Border.all(
+                        color: AppTheme.sunYellow.withOpacity(0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.warning_amber_rounded, color: AppTheme.sunYellow),
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppTheme.sunYellow,
+                        ),
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
                             'Absences répétées détectées (3 cette semaine). Un contact parent est recommandé.',
-                            style: TextStyle(fontSize: 12, color: AppTheme.textDark, fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textDark,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -648,7 +746,12 @@ class _AttendanceViewState extends State<AttendanceView> {
                 const SizedBox(height: 30),
                 const Text(
                   'MARQUER LA PRÉSENCE',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1.2),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueGrey,
+                    letterSpacing: 1.2,
+                  ),
                 ),
                 const SizedBox(height: 15),
                 // Status Buttons
@@ -661,7 +764,10 @@ class _AttendanceViewState extends State<AttendanceView> {
                           label: 'PRÉSENT',
                           color: const Color(0xFF48C774),
                           icon: Icons.check_circle,
-                          onTap: () => _updateStatusAndClose(index, AttendanceStatus.present),
+                          onTap: () => _updateStatusAndClose(
+                            index,
+                            AttendanceStatus.present,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -670,7 +776,10 @@ class _AttendanceViewState extends State<AttendanceView> {
                           label: 'ABSENT',
                           color: const Color(0xFFF14668),
                           icon: Icons.cancel,
-                          onTap: () => _updateStatusAndClose(index, AttendanceStatus.absent),
+                          onTap: () => _updateStatusAndClose(
+                            index,
+                            AttendanceStatus.absent,
+                          ),
                         ),
                       ),
                     ],
@@ -680,7 +789,9 @@ class _AttendanceViewState extends State<AttendanceView> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _buildModalStatusButton(
-                    label: student['arrivalTime'] != null ? 'RETARD (${student['arrivalTime']})' : 'MARQUER RETARD',
+                    label: student['arrivalTime'] != null
+                        ? 'RETARD (${student['arrivalTime']})'
+                        : 'MARQUER RETARD',
                     color: const Color(0xFFFFDD57),
                     icon: Icons.access_time_filled,
                     textColor: Colors.black87,
@@ -692,7 +803,9 @@ class _AttendanceViewState extends State<AttendanceView> {
                       );
                       if (picked != null) {
                         setState(() {
-                          _students[index]['arrivalTime'] = picked.format(context);
+                          _students[index]['arrivalTime'] = picked.format(
+                            context,
+                          );
                         });
                         _updateStatusAndClose(index, AttendanceStatus.late);
                       }
@@ -700,13 +813,20 @@ class _AttendanceViewState extends State<AttendanceView> {
                   ),
                 ),
 
-                if (student['name'].toString().toLowerCase().contains('junior')) ...[
+                if (student['name'].toString().toLowerCase().contains(
+                  'junior',
+                )) ...[
                   const SizedBox(height: 25),
                   const Divider(),
                   const SizedBox(height: 15),
                   const Text(
                     'COORDONNÉES PARENT',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1.2),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueGrey,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                   const SizedBox(height: 15),
                   Padding(
@@ -724,21 +844,38 @@ class _AttendanceViewState extends State<AttendanceView> {
                             children: [
                               const CircleAvatar(
                                 backgroundColor: AppTheme.seaBlue,
-                                child: Text('PA', style: TextStyle(color: Colors.white)),
+                                child: Text(
+                                  'PA',
+                                  style: TextStyle(color: Colors.white),
+                                ),
                               ),
                               const SizedBox(width: 15),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Parent', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    Text('Contact parent', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                                    const Text(
+                                      'Parent',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Contact parent',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                               const Spacer(),
                               IconButton(
-                                icon: const Icon(Icons.phone, color: AppTheme.forestGreen),
+                                icon: const Icon(
+                                  Icons.phone,
+                                  color: AppTheme.forestGreen,
+                                ),
                                 onPressed: () {},
                               ),
                             ],
@@ -762,7 +899,9 @@ class _AttendanceViewState extends State<AttendanceView> {
                               backgroundColor: AppTheme.seaBlue,
                               foregroundColor: Colors.white,
                               minimumSize: const Size(double.infinity, 45),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             child: const Text('Convoquer le parent'),
                           ),
@@ -775,7 +914,13 @@ class _AttendanceViewState extends State<AttendanceView> {
                 const SizedBox(height: 30),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Fermer', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Fermer',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -809,12 +954,18 @@ class _AttendanceViewState extends State<AttendanceView> {
         icon: Icon(icon, color: textColor),
         label: Text(
           label,
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
         ),
       ),
     );

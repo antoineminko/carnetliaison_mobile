@@ -19,7 +19,10 @@ extension ParentProfileExtension on _ParentHomePageState {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
-                          colors: [AppTheme.seaBlue, AppTheme.seaBlue.withOpacity(0.7)],
+                          colors: [
+                            AppTheme.seaBlue,
+                            AppTheme.seaBlue.withOpacity(0.7),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -35,8 +38,12 @@ extension ParentProfileExtension on _ParentHomePageState {
                       child: Center(
                         child: Text(
                           () {
-                            final f = (_parentFirstName ?? '').isNotEmpty ? _parentFirstName![0].toUpperCase() : '';
-                            final l = (_parentLastName ?? '').isNotEmpty ? _parentLastName![0].toUpperCase() : '';
+                            final f = (_parentFirstName ?? '').isNotEmpty
+                                ? _parentFirstName![0].toUpperCase()
+                                : '';
+                            final l = (_parentLastName ?? '').isNotEmpty
+                                ? _parentLastName![0].toUpperCase()
+                                : '';
                             return '$f$l'.isNotEmpty ? '$f$l' : 'P';
                           }(),
                           style: const TextStyle(
@@ -52,8 +59,11 @@ extension ParentProfileExtension on _ParentHomePageState {
                 ),
                 const SizedBox(height: 15),
                 Text(
-                  '${_parentFirstName ?? ''} ${_parentLastName ?? ''}'.trim().isNotEmpty
-                      ? '${_parentFirstName ?? ''} ${_parentLastName ?? ''}'.trim()
+                  '${_parentFirstName ?? ''} ${_parentLastName ?? ''}'
+                          .trim()
+                          .isNotEmpty
+                      ? '${_parentFirstName ?? ''} ${_parentLastName ?? ''}'
+                            .trim()
                       : 'Votre profil',
                   style: const TextStyle(
                     fontSize: 22,
@@ -94,13 +104,17 @@ extension ParentProfileExtension on _ParentHomePageState {
                 _buildInfoTile(
                   Icons.email_outlined,
                   'EMAIL',
-                  (_parentEmail != null && _parentEmail!.isNotEmpty) ? _parentEmail! : 'Non renseigné',
+                  (_parentEmail != null && _parentEmail!.isNotEmpty)
+                      ? _parentEmail!
+                      : 'Non renseigné',
                 ),
                 const Divider(height: 1, indent: 50),
                 _buildInfoTile(
                   Icons.phone_outlined,
                   'TÉLÉPHONE',
-                  (_parentPhone != null && _parentPhone!.isNotEmpty) ? _parentPhone! : 'Non renseigné',
+                  (_parentPhone != null && _parentPhone!.isNotEmpty)
+                      ? _parentPhone!
+                      : 'Non renseigné',
                 ),
               ],
             ),
@@ -119,7 +133,10 @@ extension ParentProfileExtension on _ParentHomePageState {
                   children: [
                     CircularProgressIndicator(strokeWidth: 2),
                     SizedBox(height: 10),
-                    Text('Chargement...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text(
+                      'Chargement...',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
                   ],
                 ),
               ),
@@ -134,7 +151,9 @@ extension ParentProfileExtension on _ParentHomePageState {
                     : 1,
                 separatorBuilder: (_, __) => const SizedBox(width: 15),
                 itemBuilder: (context, index) {
-                  if (_childrenData.isEmpty || _forceAddChild || index == _childrenData.length) {
+                  if (_childrenData.isEmpty ||
+                      _forceAddChild ||
+                      index == _childrenData.length) {
                     return _buildAddChildCard();
                   }
                   return _buildChildProfileCard(_childrenData[index]);
@@ -163,6 +182,7 @@ extension ParentProfileExtension on _ParentHomePageState {
                   'Notifications Push',
                   Icons.notifications_none,
                   _notifPush,
+                  // ignore: invalid_use_of_protected_member
                   (v) => setState(() => _notifPush = v),
                 ),
                 const Divider(height: 1, indent: 50),
@@ -170,6 +190,7 @@ extension ParentProfileExtension on _ParentHomePageState {
                   'Alertes par SMS',
                   Icons.sms_outlined,
                   _notifSms,
+                  // ignore: invalid_use_of_protected_member
                   (v) => setState(() => _notifSms = v),
                 ),
                 const Divider(height: 1, indent: 50),
@@ -177,6 +198,7 @@ extension ParentProfileExtension on _ParentHomePageState {
                   'Email',
                   Icons.alternate_email,
                   _notifEmail,
+                  // ignore: invalid_use_of_protected_member
                   (v) => setState(() => _notifEmail = v),
                 ),
               ],
@@ -207,7 +229,10 @@ extension ParentProfileExtension on _ParentHomePageState {
                     color: AppTheme.background,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.lock_outline, color: AppTheme.seaBlue),
+                  child: const Icon(
+                    Icons.lock_outline,
+                    color: AppTheme.seaBlue,
+                  ),
                 ),
                 title: const Text(
                   'Changer le mot de passe',
@@ -273,5 +298,4 @@ extension ParentProfileExtension on _ParentHomePageState {
       ),
     );
   }
-
 }

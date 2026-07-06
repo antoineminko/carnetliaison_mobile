@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 import 'package:app_mobile/shared/utils/user_role.dart';
 import 'package:app_mobile/features/auth/parent/pages/create_account_page.dart';
-import 'package:app_mobile/features/parent/accueil/liaison/qr_scan_page.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 
@@ -15,7 +14,8 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -23,20 +23,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   bool _obscurePassword = true;
   final AuthService _authService = AuthService();
   late AnimationController _animationController;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 800));
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
-        .animate(CurvedAnimation(
-            parent: _animationController, curve: Curves.easeOutQuint));
-    _fadeAnimation = CurvedAnimation(
-        parent: _animationController, curve: Curves.easeIn);
-    
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
     // Start animation after a slight delay to let Hero finish
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) _animationController.forward();
@@ -75,35 +70,43 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     }
   }
 
-  void _handleAuthResult(AuthResult result, {bool isScanFlow = false, String? qrCode}) {
+  void _handleAuthResult(
+    AuthResult result, {
+    bool isScanFlow = false,
+    String? qrCode,
+  }) {
     switch (result) {
       case AuthResult.success:
         _navigateHome();
         break;
       case AuthResult.invalidCredentials:
-         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Identifiants incorrects')),
-          );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Identifiants incorrects')),
+        );
         break;
       case AuthResult.userNotFound:
         _showAccountCreationDialog(
-          email: _usernameController.text, 
+          email: _usernameController.text,
           isScanFlow: isScanFlow,
-          qrCode: qrCode
+          qrCode: qrCode,
         );
         break;
     }
   }
 
-  void _showAccountCreationDialog({required String email, required bool isScanFlow, String? qrCode}) {
+  void _showAccountCreationDialog({
+    required String email,
+    required bool isScanFlow,
+    String? qrCode,
+  }) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Compte introuvable'),
         content: Text(
-          isScanFlow 
-          ? 'Aucun compte parent n\'est lié à cet identifiant pour cet enfant. Voulez-vous créer un compte ?'
-          : 'Cet identifiant ne correspond à aucun compte. Voulez-vous le créer ?'
+          isScanFlow
+              ? 'Aucun compte parent n\'est lié à cet identifiant pour cet enfant. Voulez-vous créer un compte ?'
+              : 'Cet identifiant ne correspond à aucun compte. Voulez-vous le créer ?',
         ),
         actions: [
           TextButton(
@@ -114,9 +117,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             onPressed: () {
               Navigator.pop(context);
               Navigator.push(
-                context, 
-                MaterialPageRoute(builder: (_) => 
-                  CreateAccountPage(email: email, childQrCode: qrCode))
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      CreateAccountPage(email: email, childQrCode: qrCode),
+                ),
               );
             },
             child: const Text('Créer un compte'),
@@ -125,7 +130,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       ),
     );
   }
-
 
   void _navigateHome() {
     switch (widget.role) {
@@ -172,8 +176,16 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         color: bgColor,
                         shape: BoxShape.circle,
                         boxShadow: [
-                          const BoxShadow(color: Colors.white, offset: Offset(-5, -5), blurRadius: 10),
-                          BoxShadow(color: Colors.black.withOpacity(0.1), offset: const Offset(5, 5), blurRadius: 10),
+                          const BoxShadow(
+                            color: Colors.white,
+                            offset: Offset(-5, -5),
+                            blurRadius: 10,
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            offset: const Offset(5, 5),
+                            blurRadius: 10,
+                          ),
                         ],
                       ),
                       child: Icon(widget.role.icon, size: 50, color: darkText),
@@ -183,21 +195,42 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                   Center(
                     child: Text(
                       widget.role.label,
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: darkText, letterSpacing: 0.5),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: darkText,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 40),
                   Padding(
                     padding: const EdgeInsets.only(left: 12, bottom: 8),
-                    child: Text('Identifiant', style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500)),
+                    child: Text(
+                      'Identifiant',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                   Container(
                     decoration: BoxDecoration(
                       color: inputFill,
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
-                        const BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 5),
-                        BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(2, 2), blurRadius: 5, blurStyle: BlurStyle.inner),
+                        const BoxShadow(
+                          color: Colors.white,
+                          offset: Offset(-2, -2),
+                          blurRadius: 5,
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          offset: const Offset(2, 2),
+                          blurRadius: 5,
+                          blurStyle: BlurStyle.inner,
+                        ),
                       ],
                     ),
                     child: TextFormField(
@@ -207,7 +240,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         hintText: 'Email ou numéro de téléphone',
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
                         prefixIcon: Icon(Icons.person, color: Colors.grey[500]),
                       ),
                     ),
@@ -215,15 +251,31 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                   const SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.only(left: 12, bottom: 8),
-                    child: Text('Mot de passe', style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500)),
+                    child: Text(
+                      'Mot de passe',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                   Container(
                     decoration: BoxDecoration(
                       color: inputFill,
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
-                        const BoxShadow(color: Colors.white, offset: Offset(-2, -2), blurRadius: 5),
-                        BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(2, 2), blurRadius: 5, blurStyle: BlurStyle.inner),
+                        const BoxShadow(
+                          color: Colors.white,
+                          offset: Offset(-2, -2),
+                          blurRadius: 5,
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          offset: const Offset(2, 2),
+                          blurRadius: 5,
+                          blurStyle: BlurStyle.inner,
+                        ),
                       ],
                     ),
                     child: TextFormField(
@@ -234,11 +286,16 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         hintText: '••••••••',
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
                         prefixIcon: Icon(Icons.lock, color: Colors.grey[500]),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             color: Colors.grey[500],
                           ),
                           onPressed: () {
@@ -255,7 +312,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
-                        BoxShadow(color: buttonColor.withOpacity(0.4), offset: const Offset(0, 10), blurRadius: 20),
+                        BoxShadow(
+                          color: buttonColor.withOpacity(0.4),
+                          offset: const Offset(0, 10),
+                          blurRadius: 20,
+                        ),
                       ],
                     ),
                     child: ElevatedButton(
@@ -265,11 +326,27 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
                       child: _isLoading
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Se connecter', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Se connecter',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 20),

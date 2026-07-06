@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 import 'package:app_mobile/features/parent/services/parent_service.dart';
 
-enum ScanPageStatus {
-  scanning,
-  connecting,
-  success,
-  failure
-}
+enum ScanPageStatus { scanning, connecting, success, failure }
 
 class QrScanPage extends StatefulWidget {
   final bool isFromLogin;
@@ -25,7 +19,7 @@ class QrScanPage extends StatefulWidget {
 class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
   ScanPageStatus _status = ScanPageStatus.scanning;
   bool _isProcessing = false;
-  
+
   late AnimationController _laserController;
   late Animation<double> _laserAnimation;
   late AnimationController _chevronController;
@@ -112,11 +106,38 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
         return;
       }
 
-      final response = await ApiClient.instance.post(
+      int targetParentId = parentId;
+      final dio = ApiClient.getInstanceForCode(code);
+
+      // Si le code pointe vers un serveur différent, on doit s'authentifier silencieusement !
+      if (dio.options.baseUrl != ApiClient.defaultServerUrl) {
+        final prefs = await SharedPreferences.getInstance();
+        final parentEmail = prefs.getString('parent_email');
+        final parentPassword = prefs.getString('parent_password');
+        
+        if (parentEmail != null && parentPassword != null) {
+          final loginResponse = await dio.post(
+            ApiEndpoints.login,
+            data: {
+              'identifier': parentEmail,
+              'password': parentPassword,
+            },
+          );
+          if (loginResponse.statusCode == 200 && loginResponse.data['success']) {
+            targetParentId = loginResponse.data['parent']['id'];
+          } else {
+            throw Exception("Connexion au second serveur impossible.");
+          }
+        } else {
+          throw Exception("Veuillez vous reconnecter pour lier un enfant d'une autre école.");
+        }
+      }
+
+      final response = await dio.post(
         ApiEndpoints.linkQrCode,
         data: {
           'qr_code': code,
-          'parent_id': parentId,
+          'parent_id': targetParentId,
         },
       );
 
@@ -189,7 +210,7 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                 color: Colors.black.withOpacity(0.05),
                 blurRadius: 10,
                 spreadRadius: 2,
-              )
+              ),
             ],
           ),
           child: Row(
@@ -210,11 +231,7 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-              Container(
-                width: 1,
-                height: 30,
-                color: Colors.grey[300],
-              ),
+              Container(width: 1, height: 30, color: Colors.grey[300]),
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -283,7 +300,11 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                           color: Colors.green,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.check, color: Colors.white, size: 48),
+                        child: const Icon(
+                          Icons.check,
+                          color: Colors.white,
+                          size: 48,
+                        ),
                       ),
                     ],
                   ),
@@ -300,10 +321,7 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   const Text(
                     'Vous êtes maintenant lié à cet enfant.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 15, color: Colors.grey),
                   ),
                 ],
               ),
@@ -351,7 +369,11 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                             color: Colors.red,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.clear, color: Colors.white, size: 48),
+                          child: const Icon(
+                            Icons.clear,
+                            color: Colors.white,
+                            size: 48,
+                          ),
                         ),
                       ],
                     ),
@@ -368,10 +390,7 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                     const Text(
                       "Vous n'êtes pas reconnu(e) comme parent de cet enfant.",
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 15, color: Colors.grey),
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -395,12 +414,21 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2596be),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 16,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
                       ),
-                      child: const Text('Réessayer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Réessayer',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -412,7 +440,9 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
       );
     }
 
-    final Color currentBorderColor = _status == ScanPageStatus.connecting ? Colors.green : const Color(0xFF2596be);
+    final Color currentBorderColor = _status == ScanPageStatus.connecting
+        ? Colors.green
+        : const Color(0xFF2596be);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -439,7 +469,7 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
               }
             },
           ),
-          
+
           // Overlay blanc avec découpe pour le scanner
           CustomPaint(
             painter: QrOverlayPainter(
@@ -472,8 +502,12 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: _status == ScanPageStatus.connecting ? Colors.blue : Colors.grey[600],
-                    fontWeight: _status == ScanPageStatus.connecting ? FontWeight.bold : FontWeight.normal,
+                    color: _status == ScanPageStatus.connecting
+                        ? Colors.blue
+                        : Colors.grey[600],
+                    fontWeight: _status == ScanPageStatus.connecting
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ],
@@ -489,7 +523,9 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                 return Positioned(
                   left: scanWindow.left + 8,
                   right: scanWindow.right - 8,
-                  top: scanWindow.top + (scanWindow.height * _laserAnimation.value),
+                  top:
+                      scanWindow.top +
+                      (scanWindow.height * _laserAnimation.value),
                   child: Container(
                     height: 3,
                     decoration: BoxDecoration(
@@ -499,14 +535,14 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                           color: const Color(0xFF2596be).withOpacity(0.8),
                           blurRadius: 10,
                           spreadRadius: 2,
-                        )
+                        ),
                       ],
                     ),
                   ),
                 );
               },
             ),
-            
+
             // Doubles flèches animées haut/bas
             AnimatedBuilder(
               animation: _chevronAnimation,
@@ -524,7 +560,10 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                       ),
                     ),
                     Positioned(
-                      top: scanWindow.bottom + 15 - (_chevronAnimation.value * 10),
+                      top:
+                          scanWindow.bottom +
+                          15 -
+                          (_chevronAnimation.value * 10),
                       left: 0,
                       right: 0,
                       child: const Icon(
@@ -564,7 +603,11 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                           color: Colors.green.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.face, color: Colors.green[600], size: 24),
+                        child: Icon(
+                          Icons.face,
+                          color: Colors.green[600],
+                          size: 24,
+                        ),
                       ),
                       Expanded(
                         child: Padding(
@@ -603,7 +646,11 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
                           color: Colors.blue.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.person, color: Colors.blue[600], size: 24),
+                        child: Icon(
+                          Icons.person,
+                          color: Colors.blue[600],
+                          size: 24,
+                        ),
                       ),
                     ],
                   ),
@@ -639,7 +686,9 @@ class QrOverlayPainter extends CustomPainter {
 
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..addRRect(RRect.fromRectAndRadius(scanWindow, Radius.circular(borderRadius)))
+      ..addRRect(
+        RRect.fromRectAndRadius(scanWindow, Radius.circular(borderRadius)),
+      )
       ..fillType = PathFillType.evenOdd;
 
     canvas.drawPath(path, backgroundPaint);
@@ -704,6 +753,7 @@ class QrOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant QrOverlayPainter oldDelegate) {
-    return oldDelegate.borderColor != borderColor || oldDelegate.scanWindow != scanWindow;
+    return oldDelegate.borderColor != borderColor ||
+        oldDelegate.scanWindow != scanWindow;
   }
 }

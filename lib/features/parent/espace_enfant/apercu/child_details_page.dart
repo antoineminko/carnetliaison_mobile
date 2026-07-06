@@ -4,7 +4,6 @@ import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dar
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:flutter/material.dart';
 
 class ChildDetailsPage extends StatefulWidget {
   final Map<String, dynamic> child;
@@ -15,7 +14,8 @@ class ChildDetailsPage extends StatefulWidget {
   State<ChildDetailsPage> createState() => _ChildDetailsPageState();
 }
 
-class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerProviderStateMixin {
+class _ChildDetailsPageState extends State<ChildDetailsPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -39,7 +39,11 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -58,12 +62,20 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
                       Flexible(
                         child: Text(
                           widget.child['name'],
-                          style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(Icons.keyboard_arrow_down, color: Colors.black, size: 18),
+                      const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Colors.black,
+                        size: 18,
+                      ),
                     ],
                   ),
                   Text(
@@ -97,11 +109,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _buildOverviewTab(),
-          _buildNewsTab(),
-          _buildHomeworksTab(),
-        ],
+        children: [_buildOverviewTab(), _buildNewsTab(), _buildHomeworksTab()],
       ),
     );
   }
@@ -109,10 +117,10 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
   Widget _buildOverviewTab() {
     final now = DateTime.now();
     final formattedDate = DateFormat('d MMMM yyyy', 'fr_FR').format(now);
-    
+
     // Fallback dynamique
     final String status = widget.child['attendance_status'] ?? 'non_marque';
-    
+
     String rawArrivalTime = widget.child['arrival_time'] ?? '';
     String arrivalTime = '--:--';
     if (rawArrivalTime.isNotEmpty && rawArrivalTime.length >= 16) {
@@ -121,12 +129,12 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
     } else if (rawArrivalTime.isNotEmpty) {
       arrivalTime = rawArrivalTime;
     }
-    
+
     Color statusColor;
     Color statusBgColor;
     IconData statusIcon;
     String displayStatus;
-    
+
     if (status.toLowerCase() == 'absent') {
       statusColor = const Color(0xFFC62828); // Red
       statusBgColor = const Color(0xFFFFEBEE);
@@ -157,8 +165,18 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Présence du jour', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text(formattedDate, style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+              const Text(
+                'Présence du jour',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                formattedDate,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 15),
@@ -179,11 +197,24 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
                         children: [
                           Icon(statusIcon, color: statusColor, size: 16),
                           const SizedBox(width: 6),
-                          Text('Statut', style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
+                          Text(
+                            'Statut',
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(displayStatus, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: statusColor)),
+                      Text(
+                        displayStatus,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -203,18 +234,35 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
                       children: [
                         Row(
                           children: const [
-                            Icon(Icons.access_time_filled, color: Color(0xFF1565C0), size: 16),
+                            Icon(
+                              Icons.access_time_filled,
+                              color: Color(0xFF1565C0),
+                              size: 16,
+                            ),
                             SizedBox(width: 6),
-                            Text('Arrivée', style: TextStyle(color: Color(0xFF1565C0), fontWeight: FontWeight.bold)),
+                            Text(
+                              'Arrivée',
+                              style: TextStyle(
+                                color: Color(0xFF1565C0),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(arrivalTime, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1))),
+                        Text(
+                          arrivalTime,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0D47A1),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
-              ]
+              ],
             ],
           ),
 
@@ -258,14 +306,26 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Rendez-vous avec les profs',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                        Text('Demander ou consulter vos RDV',
-                            style: TextStyle(color: Colors.white70, fontSize: 11)),
+                        Text(
+                          'Rendez-vous avec les profs',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          'Demander ou consulter vos RDV',
+                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                        ),
                       ],
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 14),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white70,
+                    size: 14,
+                  ),
                 ],
               ),
             ),
@@ -275,31 +335,44 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Devoirs à venir', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Devoirs à venir',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               TextButton(
                 onPressed: () {
                   Navigator.push(
-                    context, 
-                    MaterialPageRoute(builder: (context) => CalendarPage(
-                      childName: widget.child['name'],
-                      initialDate: widget.child['calendarDate'],
-                      incidents: widget.child['incidents'] != null 
-                          ? List<Map<String, dynamic>>.from(widget.child['incidents']) 
-                          : null,
-                    ))
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CalendarPage(
+                        childName: widget.child['name'],
+                        initialDate: widget.child['calendarDate'],
+                        incidents: widget.child['incidents'] != null
+                            ? List<Map<String, dynamic>>.from(
+                                widget.child['incidents'],
+                              )
+                            : null,
+                      ),
+                    ),
                   );
                 },
-                child: const Text('Voir Calendrier', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Voir Calendrier',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
-          
+
           _buildHomeworksList(),
 
           const SizedBox(height: 30),
-          const Text('Actualités de l\'école', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Actualités de l\'école',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 15),
-          
+
           // Les actualités seront chargées dynamiquement depuis l'API
           const Center(
             child: Text(
@@ -316,25 +389,52 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.purple[50], borderRadius: BorderRadius.circular(12)),
-                     child: const Icon(Icons.campaign, color: Colors.purple),
+                    decoration: BoxDecoration(
+                      color: Colors.purple[50],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.campaign, color: Colors.purple),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Nouvelle note publiée : Quiz de Science', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const Text(
+                          'Nouvelle note publiée : Quiz de Science',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text('M. Okoro vient de mettre à jour le cahier de texte numérique.', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                        Text(
+                          'M. Okoro vient de mettre à jour le cahier de texte numérique.',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text('Voir le résultat', style: TextStyle(color: Colors.blue[600], fontWeight: FontWeight.bold, fontSize: 12)),
+                        Text(
+                          'Voir le résultat',
+                          style: TextStyle(
+                            color: Colors.blue[600],
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -350,12 +450,20 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
 
   Widget _buildHomeworksList() {
     final homeworks = widget.child['homeworks'] as List<Map<String, dynamic>>?;
-    
+
     if (homeworks == null || homeworks.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-        child: const Center(child: Text('Aucun devoir prévu', style: TextStyle(color: Colors.grey))),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: Text(
+            'Aucun devoir prévu',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
       );
     }
 
@@ -366,15 +474,32 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
           child: ExpansionTile(
             backgroundColor: Colors.white,
             collapsedBackgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            collapsedShape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             leading: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: (hw['color'] as Color).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: (hw['color'] as Color).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Icon(Icons.menu_book, color: hw['color']),
             ),
-            title: Text(hw['subject'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            subtitle: Text(hw['topic'], style: TextStyle(color: Colors.blue[600], fontSize: 13, fontWeight: FontWeight.w500)),
+            title: Text(
+              hw['subject'],
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            subtitle: Text(
+              hw['topic'],
+              style: TextStyle(
+                color: Colors.blue[600],
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             children: [
               Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -382,10 +507,13 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
                   children: [
                     const Icon(Icons.access_time, size: 16, color: Colors.grey),
                     const SizedBox(width: 8),
-                    Text('Horaire prévu : ${hw['time']}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                      'Horaire prévu : ${hw['time']}',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         );
@@ -400,11 +528,17 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
         children: [
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: const Center(
               child: Text(
                 'Aucune actualité pour le moment.',
-                style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
           ),
@@ -419,7 +553,10 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> with SingleTickerPr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Tous les devoirs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Tous les devoirs',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 15),
           _buildHomeworksList(),
         ],

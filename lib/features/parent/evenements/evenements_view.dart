@@ -8,28 +8,32 @@ extension EvenementsViewExtension on _ParentHomePageState {
 
     final filters = ['Tous', 'En attente', 'Accepté', 'À venir'];
     final now = DateTime.now();
-    
+
     // Filtrer les événements
     List<Map<String, dynamic>> filteredAppointments = _appointments;
-    
+
     if (_selectedEventFilter != 'Tous') {
       filteredAppointments = _appointments.where((rdv) {
         final status = rdv['statut'] ?? 'en_attente';
         final dateStr = rdv['date_heure']?.toString() ?? '';
         DateTime? date;
         if (dateStr.isNotEmpty) {
-           try {
-             if (dateStr.contains('/')) {
-                final parts = dateStr.split(' ')[0].split('/');
-                if (parts.length >= 3) {
-                   date = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
-                }
-             } else {
-                date = DateTime.parse(dateStr);
-             }
-           } catch (_) {}
+          try {
+            if (dateStr.contains('/')) {
+              final parts = dateStr.split(' ')[0].split('/');
+              if (parts.length >= 3) {
+                date = DateTime(
+                  int.parse(parts[2]),
+                  int.parse(parts[1]),
+                  int.parse(parts[0]),
+                );
+              }
+            } else {
+              date = DateTime.parse(dateStr);
+            }
+          } catch (_) {}
         }
-        
+
         switch (_selectedEventFilter) {
           case 'En attente':
             return status == 'en_attente';
@@ -37,7 +41,8 @@ extension EvenementsViewExtension on _ParentHomePageState {
             return status == 'accepted' || status == 'accepte';
           case 'À venir':
             if (date == null) return false;
-            return date.isAfter(now.subtract(const Duration(days: 1))) && status != 'rejected';
+            return date.isAfter(now.subtract(const Duration(days: 1))) &&
+                status != 'rejected';
           default:
             return true;
         }
@@ -61,7 +66,7 @@ extension EvenementsViewExtension on _ParentHomePageState {
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Chips de filtre
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -73,21 +78,29 @@ extension EvenementsViewExtension on _ParentHomePageState {
                   padding: const EdgeInsets.only(right: 8.0),
                   child: GestureDetector(
                     onTap: () {
+                      // ignore: invalid_use_of_protected_member
                       setState(() {
                         _selectedEventFilter = filter;
                       });
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF1377b5) : Colors.grey[200],
+                        color: isSelected
+                            ? const Color(0xFF1377b5)
+                            : Colors.grey[200],
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         filter,
                         style: TextStyle(
                           color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
                           fontSize: 13,
                         ),
                       ),
@@ -102,7 +115,10 @@ extension EvenementsViewExtension on _ParentHomePageState {
           if (filteredAppointments.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text("Aucun événement pour ce filtre.", style: TextStyle(color: Colors.grey)),
+              child: Text(
+                "Aucun événement pour ce filtre.",
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
 
           if (filteredAppointments.isNotEmpty) ...[
@@ -120,11 +136,15 @@ extension EvenementsViewExtension on _ParentHomePageState {
             ),
             const SizedBox(height: 15),
             ...filteredAppointments.map((rdv) {
-              final childName = '${rdv['eleve_prenom'] ?? ''} ${rdv['eleve_nom'] ?? ''}'.trim();
+              final childName =
+                  '${rdv['eleve_prenom'] ?? ''} ${rdv['eleve_nom'] ?? ''}'
+                      .trim();
               return Padding(
                 padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
                 child: _buildRdvCard(
-                  teacherName: '${rdv['enseignant_prenom'] ?? ''} ${rdv['enseignant_nom'] ?? ''}'.trim(),
+                  teacherName:
+                      '${rdv['enseignant_prenom'] ?? ''} ${rdv['enseignant_nom'] ?? ''}'
+                          .trim(),
                   subject: rdv['enseignant_matiere'] ?? 'Enseignant',
                   meetingType: rdv['type'] ?? 'Rendez-vous',
                   childName: childName,
@@ -148,117 +168,6 @@ extension EvenementsViewExtension on _ParentHomePageState {
     );
   }
 
-  Widget _buildConversationRequestCard(Map<String, dynamic> req) {
-    String teacherName = '${req['enseignant_prenom'] ?? ''} ${req['enseignant_nom'] ?? ''}'.trim();
-    String subject = req['enseignant_matiere'] ?? req['subject'] ?? 'Messagerie';
-    
-    // Contexte de l'élève
-    String eleveNom = req['eleve_nom'] ?? '';
-    String elevePrenom = req['eleve_prenom'] ?? '';
-    String childContext = elevePrenom.isNotEmpty ? 'Pour $elevePrenom $eleveNom' : '';
-    
-    String status = req['status'] ?? 'pending';
-    String statusText = 'Nouvelle discussion';
-    Color statusColor = Colors.orange;
-    if (status == 'accepted') {
-      statusText = 'Discussion acceptée';
-      statusColor = Colors.green;
-    } else if (status == 'rejected') {
-      statusText = 'Discussion refusée';
-      statusColor = Colors.red;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: statusColor.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: statusColor,
-                radius: 20,
-                child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      statusText,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: statusColor),
-                    ),
-                    Text(
-                      '$teacherName ($subject)',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                    ),
-                    if (childContext.isNotEmpty)
-                      Text(
-                        childContext,
-                        style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (req['ecole_nom'] != null)
-            Text('École: ${req['ecole_nom']}', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
-          const SizedBox(height: 12),
-          if (status == 'pending')
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChatPage(conversation: req),
-                    ),
-                  ).then((_) => _fetchEvents());
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: statusColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Ouvrir la discussion'),
-              ),
-            )
-          else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  status == 'accepted' ? 'Vous avez accepté cette discussion' : 'Vous avez refusé cette discussion',
-                  style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRdvCard({
     required String teacherName,
     required String subject,
@@ -273,9 +182,9 @@ extension EvenementsViewExtension on _ParentHomePageState {
     String requester = 'parent',
     bool isPending = false,
   }) {
+    bool showMotif = false;
     return StatefulBuilder(
       builder: (context, setCardState) {
-        bool showMotif = false;
         return Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -444,11 +353,14 @@ extension EvenementsViewExtension on _ParentHomePageState {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => _updateAppointmentStatus(id, 'refuse'),
+                          onPressed: () =>
+                              _updateAppointmentStatus(id, 'refuse'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             side: const BorderSide(color: Colors.red),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           child: const Text('Refuser'),
                         ),
@@ -456,11 +368,14 @@ extension EvenementsViewExtension on _ParentHomePageState {
                       const SizedBox(width: 10),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () => _updateAppointmentStatus(id, 'accepte'),
+                          onPressed: () =>
+                              _updateAppointmentStatus(id, 'accepte'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           child: const Text('Accepter'),
                         ),
@@ -477,90 +392,28 @@ extension EvenementsViewExtension on _ParentHomePageState {
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
+                        Icon(
+                          Icons.hourglass_empty,
+                          color: Colors.orange,
+                          size: 16,
+                        ),
                         SizedBox(width: 8),
-                        Text('En attente d\'acceptation par l\'enseignant', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                        Text(
+                          'En attente d\'acceptation par l\'enseignant',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-              ]
+              ],
             ],
           ),
         );
       },
     );
   }
-
-  Widget _buildEventSmallCard({
-    required String title,
-    required String date,
-    required String location,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[100]!),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 12,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      date,
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                    const SizedBox(width: 10),
-                    Icon(
-                      Icons.location_on_outlined,
-                      size: 12,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(
-                        location,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
 }

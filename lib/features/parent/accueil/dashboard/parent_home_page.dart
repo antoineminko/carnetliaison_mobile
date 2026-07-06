@@ -2,12 +2,9 @@ import 'package:app_mobile/features/parent/accueil/dashboard/child_card_widget.d
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:app_mobile/shared/theme/app_theme.dart';
-import 'package:app_mobile/features/parent/evenements/calendar_page.dart';
-import 'package:app_mobile/features/parent/espace_enfant/apercu/child_details_page.dart';
 import 'package:app_mobile/features/parent/accueil/publicite/promo_banner_widget.dart';
 import 'package:app_mobile/features/parent/espace_enfant/devoirs/textbook_page.dart';
 import 'package:app_mobile/features/parent/espace_enfant/apercu/child_details_view.dart';
-import 'package:app_mobile/shared/config/school_config.dart';
 import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 import 'package:app_mobile/features/parent/accueil/liaison/qr_scan_page.dart';
 import 'package:app_mobile/features/parent/accueil/liaison/link_child_page.dart';
@@ -30,13 +27,6 @@ part '../../messages/messages_view.dart';
 part '../../evenements/evenements_view.dart';
 part '../../profil/parent_profile_page.dart';
 
-
-
-
-
-
-
-
 class ParentHomePage extends StatefulWidget {
   final Map<String, dynamic>? arguments;
   const ParentHomePage({super.key, this.arguments});
@@ -44,9 +34,8 @@ class ParentHomePage extends StatefulWidget {
   @override
   State<ParentHomePage> createState() => _ParentHomePageState();
 }
+
 class _ParentHomePageState extends State<ParentHomePage> {
-  static const String _apiBaseUrl =
-      'https://sirh.alwaysdata.net/api_carnet_liaison';
   int? _selectedChildIndex;
   Map<String, dynamic>? _selectedChild;
   bool _isEmptyState = true;
@@ -55,10 +44,6 @@ class _ParentHomePageState extends State<ParentHomePage> {
   int _currentIndex = 0;
   int _childInitialTab = 0;
 
-
-
-
- 
   bool _notifPush = true;
   bool _notifSms = false;
   bool _notifEmail = true;
@@ -66,7 +51,6 @@ class _ParentHomePageState extends State<ParentHomePage> {
   final List<Map<String, dynamic>> _childrenData = [];
 
   List<Map<String, dynamic>> _appointments = [];
-  List<Map<String, dynamic>> _conversationRequests = [];
   List<Map<String, dynamic>> _apiNotifications = [];
   List<Map<String, dynamic>> _adminConversations = [];
   List<Map<String, dynamic>> _teacherConversationsAll = [];
@@ -80,14 +64,15 @@ class _ParentHomePageState extends State<ParentHomePage> {
   Map<String, dynamic>? _notificationPayload;
   String? _parentFirstName;
   String? _parentLastName;
-  String? _parentAvatarUrl;
   String? _parentEmail;
   String? _parentPhone;
   int _unreadNotificationsCount = 0;
 
   void _selectChildByName(String childName, int initialTab) {
-    final idx = _childrenData.indexWhere((c) =>
-        (c['name'] as String).toLowerCase().contains(childName.toLowerCase()));
+    final idx = _childrenData.indexWhere(
+      (c) =>
+          (c['name'] as String).toLowerCase().contains(childName.toLowerCase()),
+    );
     if (idx != -1) {
       setState(() {
         _childInitialTab = initialTab;
@@ -102,7 +87,6 @@ class _ParentHomePageState extends State<ParentHomePage> {
     setState(() {
       _parentFirstName = prefs.getString('parent_prenom');
       _parentLastName = prefs.getString('parent_nom');
-      _parentAvatarUrl = prefs.getString('parent_avatar_url');
       _parentEmail = prefs.getString('parent_email');
       _parentPhone = prefs.getString('parent_telephone');
     });
@@ -134,11 +118,15 @@ class _ParentHomePageState extends State<ParentHomePage> {
       }
       if (widget.arguments!['openNotifications'] == true) {
         _notificationPayload = widget.arguments!['notificationPayload'];
-        print('📥 [ParentHomePage] openNotifications=true, payload: $_notificationPayload');
+        print(
+          '📥 [ParentHomePage] openNotifications=true, payload: $_notificationPayload',
+        );
         WidgetsBinding.instance.addPostFrameCallback((_) {
           print('📥 [ParentHomePage] Ouverture modal notifications');
           _showNotificationsModal(
-            incidentPayload: _notificationPayload?.containsKey('type') == true && _notificationPayload!['type'] == 'incident'
+            incidentPayload:
+                _notificationPayload?.containsKey('type') == true &&
+                    _notificationPayload!['type'] == 'incident'
                 ? _notificationPayload
                 : null,
           );
@@ -149,7 +137,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
       if (widget.arguments!['openAppointments'] == true) {
         final int? appointmentId = widget.arguments!['highlightAppointmentId'];
         final bool isPostponed = widget.arguments!['isPostponed'] == true;
-        print('📥 [ParentHomePage] openAppointments=true, appointmentId: $appointmentId, isPostponed: $isPostponed');
+        print(
+          '📥 [ParentHomePage] openAppointments=true, appointmentId: $appointmentId, isPostponed: $isPostponed',
+        );
 
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           final parentId = await AuthService.getParentId();
@@ -171,12 +161,16 @@ class _ParentHomePageState extends State<ParentHomePage> {
       // Gérer les notifications de messagerie
       if (widget.arguments!['openConversationId'] != null) {
         final String? conversationId = widget.arguments!['openConversationId'];
-        final bool showValidation = widget.arguments!['showConversationValidation'] == true;
-        final String? conversationStatus = widget.arguments!['conversationStatus'];
+        final bool showValidation =
+            widget.arguments!['showConversationValidation'] == true;
+        final String? conversationStatus =
+            widget.arguments!['conversationStatus'];
         final String? enseignantNom = widget.arguments!['enseignant_nom'];
         final String? subject = widget.arguments!['subject'];
 
-        print('📥 [ParentHomePage] openConversationId=$conversationId, showValidation=$showValidation');
+        print(
+          '📥 [ParentHomePage] openConversationId=$conversationId, showValidation=$showValidation',
+        );
 
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (mounted && conversationId != null) {
@@ -224,7 +218,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
     _fetchNotifications();
     _fetchConversations();
     _loadUnreadNotificationsCount();
-    
+
     // Enregistrer le callback pour les nouvelles notifications
     NotificationsService().setOnNotificationReceived(() {
       _loadUnreadNotificationsCount();
@@ -235,7 +229,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
     // Compter les notifications push locales non lues (Firebase)
     final localCount = await NotificationStorage.getUnreadCount();
     // Compter les notifications API non lues (serveur)
-    final apiCount = _apiNotifications.where((n) => n['is_read'] != true && n['is_read'] != 1).length;
+    final apiCount = _apiNotifications
+        .where((n) => n['is_read'] != true && n['is_read'] != 1)
+        .length;
     if (mounted) {
       setState(() {
         _unreadNotificationsCount = localCount + apiCount;
@@ -256,18 +252,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   @override
   void dispose() {
-
-
     super.dispose();
-  }
-
-  Future<void> _refreshDashboard() async {
-    await Future.wait([
-      _loadLinkedChildren(),
-      _fetchEvents(),
-      _fetchNotifications(),
-      _fetchConversations(),
-    ]);
   }
 
   Future<void> _loadLinkedChildren() async {
@@ -298,7 +283,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
             if (isVerified) {
               final idRaw = child['id'];
               if (idRaw != null) {
-                final childId = idRaw is int ? idRaw : int.tryParse(idRaw.toString());
+                final childId = idRaw is int
+                    ? idRaw
+                    : int.tryParse(idRaw.toString());
                 if (childId != null) {
                   await ParentService.addLocallyVerifiedChild(childId);
                   print('[MIGRATION] Enfant $childId synchronisé localement');
@@ -341,7 +328,10 @@ class _ParentHomePageState extends State<ParentHomePage> {
       });
 
       if (_pendingSelectChildName != null && _childrenData.isNotEmpty) {
-        _selectChildByName(_pendingSelectChildName!, _pendingChildInitialTab ?? 0);
+        _selectChildByName(
+          _pendingSelectChildName!,
+          _pendingChildInitialTab ?? 0,
+        );
         _pendingSelectChildName = null;
         _pendingChildInitialTab = null;
       }
@@ -357,7 +347,9 @@ class _ParentHomePageState extends State<ParentHomePage> {
       // Afficher un message sans déconnecter (peut être juste un problème réseau temporaire)
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Impossible de charger les enfants. Vérifiez votre connexion.'),
+          content: Text(
+            'Impossible de charger les enfants. Vérifiez votre connexion.',
+          ),
           duration: Duration(seconds: 4),
         ),
       );
@@ -368,11 +360,15 @@ class _ParentHomePageState extends State<ParentHomePage> {
     final parentId = await AuthService.getParentId();
     if (parentId == null) return;
     try {
-      final response = await ApiClient.instance.get(ApiEndpoints.userNotifications('parent', parentId));
+      final response = await ApiClient.instance.get(
+        ApiEndpoints.userNotifications('parent', parentId),
+      );
       if (response.data != null && response.data['success']) {
         if (!mounted) return;
         setState(() {
-          _apiNotifications = List<Map<String, dynamic>>.from(response.data['notifications'] ?? []);
+          _apiNotifications = List<Map<String, dynamic>>.from(
+            response.data['notifications'] ?? [],
+          );
         });
         // Mettre à jour le badge après chargement des notifs API
         _loadUnreadNotificationsCount();
@@ -386,19 +382,30 @@ class _ParentHomePageState extends State<ParentHomePage> {
     final parentId = await AuthService.getParentId();
     if (parentId == null) return;
     try {
-      final response = await ApiClient.instance.get(ApiEndpoints.parentConversations(parentId));
+      final response = await ApiClient.instance.get(
+        ApiEndpoints.parentConversations(parentId),
+      );
       if (response.data != null && response.data['success']) {
-        final List<Map<String, dynamic>> all = List<Map<String, dynamic>>.from(response.data['conversations'] ?? []);
+        final List<Map<String, dynamic>> all = List<Map<String, dynamic>>.from(
+          response.data['conversations'] ?? [],
+        );
         if (!mounted) return;
         setState(() {
-         
-          _adminConversations = all.where((c) => c['enseignant_id'] == null).toList();
-          
-          _teacherConversationsAll = all.where((c) => c['enseignant_id'] != null && (c['status'] == 'accepted' || c['status'] == 'pending')).toList();
+          _adminConversations = all
+              .where((c) => c['enseignant_id'] == null)
+              .toList();
+
+          _teacherConversationsAll = all
+              .where(
+                (c) =>
+                    c['enseignant_id'] != null &&
+                    (c['status'] == 'accepted' || c['status'] == 'pending'),
+              )
+              .toList();
         });
 
-       
-        if (widget.arguments != null && widget.arguments!['openConversationId'] != null) {
+        if (widget.arguments != null &&
+            widget.arguments!['openConversationId'] != null) {
           final convId = widget.arguments!['openConversationId'].toString();
           final convToOpen = all.firstWhere(
             (c) => c['id'].toString() == convId,
@@ -406,11 +413,12 @@ class _ParentHomePageState extends State<ParentHomePage> {
           );
 
           if (convToOpen.isNotEmpty) {
-            
             widget.arguments!.remove('openConversationId');
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => ChatPage(conversation: convToOpen)),
+              MaterialPageRoute(
+                builder: (_) => ChatPage(conversation: convToOpen),
+              ),
             );
           }
         }
@@ -426,15 +434,17 @@ class _ParentHomePageState extends State<ParentHomePage> {
       setState(() => _isLoadingEvents = false);
       return;
     }
-    
+
     try {
-      final response = await ApiClient.instance.get('/parents/$parentId/events');
+      final response = await ApiClient.instance.get(
+        '/parents/$parentId/events',
+      );
       if (response.data != null && response.data['success']) {
         if (!mounted) return;
         setState(() {
-          _appointments = List<Map<String, dynamic>>.from(response.data['appointments'] ?? []);
-          final allConversations = List<Map<String, dynamic>>.from(response.data['conversations'] ?? []);
-          _conversationRequests = allConversations.where((c) => c['enseignant_id'] != null).toList();
+          _appointments = List<Map<String, dynamic>>.from(
+            response.data['appointments'] ?? [],
+          );
           _isLoadingEvents = false;
         });
       }
@@ -446,22 +456,34 @@ class _ParentHomePageState extends State<ParentHomePage> {
   Future<void> _updateAppointmentStatus(int? id, String status) async {
     if (id == null) return;
     try {
-      await ApiClient.instance.put('/appointments/$id/status', data: {'statut': status});
+      await ApiClient.instance.put(
+        '/appointments/$id/status',
+        data: {'statut': status},
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(status == 'accepte' ? 'Rendez-vous accepté' : 'Rendez-vous refusé'),
-          backgroundColor: status == 'accepte' ? AppTheme.forestGreen : Colors.red,
+          content: Text(
+            status == 'accepte' ? 'Rendez-vous accepté' : 'Rendez-vous refusé',
+          ),
+          backgroundColor: status == 'accepte'
+              ? AppTheme.forestGreen
+              : Colors.red,
         ),
       );
-      _fetchEvents(); 
+      _fetchEvents();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
     }
   }
 
-  Map<String, dynamic> _mapApiChild(Map<String, dynamic> child, List<int> localVerifiedIds) {
+  Map<String, dynamic> _mapApiChild(
+    Map<String, dynamic> child,
+    List<int> localVerifiedIds,
+  ) {
     final imageUrl = child['photo_url']?.toString().isNotEmpty == true
         ? child['photo_url'].toString()
         : null;
@@ -487,17 +509,25 @@ class _ParentHomePageState extends State<ParentHomePage> {
     if (child['arrival_time'] != null) {
       try {
         final dt = DateTime.parse(child['arrival_time']);
-        arrivalTime = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        arrivalTime =
+            '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       } catch (_) {}
     }
 
     final childIdRaw = child['id'];
-    final childId = childIdRaw is int ? childIdRaw : int.tryParse(childIdRaw?.toString() ?? '') ?? -1;
+    final childId = childIdRaw is int
+        ? childIdRaw
+        : int.tryParse(childIdRaw?.toString() ?? '') ?? -1;
 
-    final isApiVerified = child['is_verified'] == 1 || child['is_verified'] == true || child['is_verified'] == '1';
+    final isApiVerified =
+        child['is_verified'] == 1 ||
+        child['is_verified'] == true ||
+        child['is_verified'] == '1';
     final isLocalVerified = localVerifiedIds.contains(childId);
 
-    print('[DEBUG] child $childId: isApiVerified=$isApiVerified, isLocalVerified=$isLocalVerified, localIds=$localVerifiedIds');
+    print(
+      '[DEBUG] child $childId: isApiVerified=$isApiVerified, isLocalVerified=$isLocalVerified, localIds=$localVerifiedIds',
+    );
 
     return {
       'fromApi': true,
@@ -515,7 +545,11 @@ class _ParentHomePageState extends State<ParentHomePage> {
       if (arrivalTime != null) 'arrivalTime': arrivalTime,
       'arrival_time': child['arrival_time'],
       'attendance_status': child['attendance_status'],
-      'code_secret': child['code_secret'] ?? child['codeSecret'] ?? child['code'] ?? 'DEBUG_NULL',
+      'code_secret':
+          child['code_secret'] ??
+          child['codeSecret'] ??
+          child['code'] ??
+          'DEBUG_NULL',
       'is_verified': isApiVerified,
       // Verrouillé si pas encore vérifié localement sur CE téléphone
       'local_verified': isLocalVerified,
@@ -551,7 +585,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
       // Bloquer le pop système si un enfant est sélectionné
       canPop: _selectedChild == null,
       onPopInvokedWithResult: (didPop, result) {
-          if (!didPop && _selectedChild != null) {
+        if (!didPop && _selectedChild != null) {
           setState(() {
             _selectedChild = null;
             _selectedChildIndex = null;
@@ -562,119 +596,117 @@ class _ParentHomePageState extends State<ParentHomePage> {
       child: Scaffold(
         backgroundColor: AppTheme.background,
         body: BackgroundWrapper(child: SafeArea(child: _buildBody())),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: hasFullTabs
-            ? _currentIndex
-            : (_currentIndex == 3 ? 1 : 0),
-        onTap: (index) {
-          setState(() {
-            if (hasFullTabs) {
-              _currentIndex = index;
-            } else {
-              _currentIndex = index == 0 ? 0 : 3;
-            }
-            // Quand on tape Accueil, revenir à la liste des enfants
-            if (index == 0) {
-              _selectedChild = null;
-              _selectedChildIndex = null;
-              _childInitialTab = 0;
-            }
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.seaBlue,
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Accueil',
-          ),
-          if (hasFullTabs)
-            BottomNavigationBarItem(
-              icon: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    _selectedChild == null
-                        ? Icons.message
-                        : Icons.menu_book,
-                  ),
-                  if (_selectedChild == null && _totalUnreadMessages > 0)
-                    Positioned(
-                      right: -4,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 14,
-                          minHeight: 14,
-                        ),
-                        child: Text(
-                          '$_totalUnreadMessages',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: hasFullTabs
+              ? _currentIndex
+              : (_currentIndex == 3 ? 1 : 0),
+          onTap: (index) {
+            setState(() {
+              if (hasFullTabs) {
+                _currentIndex = index;
+              } else {
+                _currentIndex = index == 0 ? 0 : 3;
+              }
+              // Quand on tape Accueil, revenir à la liste des enfants
+              if (index == 0) {
+                _selectedChild = null;
+                _selectedChildIndex = null;
+                _childInitialTab = 0;
+              }
+            });
+          },
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: AppTheme.seaBlue,
+          unselectedItemColor: Colors.grey,
+          showUnselectedLabels: true,
+          items: [
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: 'Accueil',
+            ),
+            if (hasFullTabs)
+              BottomNavigationBarItem(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      _selectedChild == null ? Icons.message : Icons.menu_book,
+                    ),
+                    if (_selectedChild == null && _totalUnreadMessages > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          textAlign: TextAlign.center,
+                          constraints: const BoxConstraints(
+                            minWidth: 14,
+                            minHeight: 14,
+                          ),
+                          child: Text(
+                            '$_totalUnreadMessages',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
+                label: _selectedChild == null ? 'Messages' : 'Cahier',
               ),
-              label: _selectedChild == null ? 'Messages' : 'Cahier',
-            ),
-          if (hasFullTabs)
-            BottomNavigationBarItem(
-              icon: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    _selectedChild == null
-                        ? Icons.calendar_today
-                        : Icons.notifications_active,
-                  ),
-                  // Badge pour les RDV en attente
-                  if (_selectedChild == null && _pendingAppointmentsCount > 0)
-                    Positioned(
-                      right: -4,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 14,
-                          minHeight: 14,
-                        ),
-                        child: Text(
-                          '$_pendingAppointmentsCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
+            if (hasFullTabs)
+              BottomNavigationBarItem(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      _selectedChild == null
+                          ? Icons.calendar_today
+                          : Icons.notifications_active,
+                    ),
+                    // Badge pour les RDV en attente
+                    if (_selectedChild == null && _pendingAppointmentsCount > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          textAlign: TextAlign.center,
+                          constraints: const BoxConstraints(
+                            minWidth: 14,
+                            minHeight: 14,
+                          ),
+                          child: Text(
+                            '$_pendingAppointmentsCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
+                label: _selectedChild == null ? 'Événements' : 'Alertes',
               ),
-              label: _selectedChild == null ? 'Événements' : 'Alertes',
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              label: 'Profil',
             ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profil',
-          ),
-        ],
-      ),
+          ],
+        ),
       ), // fin Scaffold
     ); // fin PopScope
   }
@@ -766,19 +798,6 @@ class _ParentHomePageState extends State<ParentHomePage> {
     );
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
   void _onChildSelected(int index) {
     setState(() {
       _selectedChildIndex = index;
@@ -789,7 +808,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
       final currentChild = index < _childrenData.length
           ? _childrenData[index]
           : null;
-          
+
       if (currentChild != null) {
         if (currentChild['local_verified'] != true) {
           // Si l'enfant n'est pas vérifié localement, afficher la popup de vérification au lieu de le sélectionner
@@ -811,9 +830,15 @@ class _ParentHomePageState extends State<ParentHomePage> {
           'schoolIcon': null,
           'newsTitle': 'Aucune actualité',
           'newsContent': 'Rien à signaler pour le moment.',
-          'status': currentChild['status'] ?? currentChild['attendance_status'] ?? 'En attente',
+          'status':
+              currentChild['status'] ??
+              currentChild['attendance_status'] ??
+              'En attente',
           'statusColor': currentChild['statusColor'] ?? Colors.grey,
-          'arrivalTime': currentChild['arrival_time'] ?? currentChild['arrivalTime'] ?? '--:--',
+          'arrivalTime':
+              currentChild['arrival_time'] ??
+              currentChild['arrivalTime'] ??
+              '--:--',
           'attendance_status': currentChild['attendance_status'],
           'arrival_time': currentChild['arrival_time'],
           'code_secret': currentChild['code_secret'],
@@ -839,199 +864,22 @@ class _ParentHomePageState extends State<ParentHomePage> {
   /// → remet le notif_count à 0 côté serveur (admin_informations.is_read = true)
   Future<void> _markAllChildNotificationsRead(dynamic childId) async {
     try {
-      final eleveId = childId is int ? childId : int.tryParse(childId.toString());
+      final eleveId = childId is int
+          ? childId
+          : int.tryParse(childId.toString());
       if (eleveId == null) return;
       final parentId = await AuthService.getParentId();
       await ApiClient.instance.put(
         ApiEndpoints.markAllNotificationsReadForChild(eleveId),
         data: parentId != null ? {'parent_id': parentId} : null,
       );
-      debugPrint('[Notifications] Toutes les notifs de l\'enfant $eleveId marquées comme lues');
+      debugPrint(
+        '[Notifications] Toutes les notifs de l\'enfant $eleveId marquées comme lues',
+      );
     } catch (e) {
       debugPrint('[Notifications] Erreur markAllChildNotificationsRead: $e');
     }
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-  void _openChat(BuildContext context, Map<String, dynamic> data) {
-    final rawChat = data['chatMessages'];
-    final chatMessages = rawChat is List
-        ? rawChat.map((e) => e as Map<String, dynamic>).toList()
-        : <Map<String, dynamic>>[];
-    final Color color = data['color'] as Color;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          backgroundColor: const Color(0xFFECF2FD),
-          appBar: AppBar(
-            backgroundColor: AppTheme.seaBlue,
-            foregroundColor: Colors.white,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data['name'],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  '${data['childName']} • ${data['school']}',
-                  style: const TextStyle(fontSize: 11, color: Colors.white70),
-                ),
-              ],
-            ),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-          body: Column(
-            children: [
-              // Chip contexte
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 16,
-                ),
-                color: Colors.white,
-                child: Text(
-                  data['role'],
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: chatMessages.length,
-                  itemBuilder: (context, index) {
-                    final msg = chatMessages[index];
-                    final isProf = msg['sender'] == 'prof';
-                    return Align(
-                      alignment: isProf
-                          ? Alignment.centerLeft
-                          : Alignment.centerRight,
-                      child: Container(
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.72,
-                        ),
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isProf ? Colors.white : color,
-                          borderRadius: BorderRadius.only(
-                            topLeft: const Radius.circular(18),
-                            topRight: const Radius.circular(18),
-                            bottomLeft: isProf
-                                ? Radius.zero
-                                : const Radius.circular(18),
-                            bottomRight: isProf
-                                ? const Radius.circular(18)
-                                : Radius.zero,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: isProf
-                              ? CrossAxisAlignment.start
-                              : CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              msg['text'],
-                              style: TextStyle(
-                                color: isProf ? Colors.black87 : Colors.white,
-                                fontSize: 14,
-                                height: 1.4,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              msg['time'],
-                              style: TextStyle(
-                                color: isProf
-                                    ? Colors.grey[400]
-                                    : Colors.white70,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                decoration: const BoxDecoration(color: Colors.white),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: const Text(
-                          'Écrire un message...',
-                          style: TextStyle(color: Colors.grey, fontSize: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-
 
   Color _getChildColor(String childName) {
     if (childName.isEmpty) return AppTheme.seaBlue;
@@ -1043,7 +891,4 @@ class _ParentHomePageState extends State<ParentHomePage> {
     }
     return AppTheme.seaBlue;
   }
-
-
-
 }

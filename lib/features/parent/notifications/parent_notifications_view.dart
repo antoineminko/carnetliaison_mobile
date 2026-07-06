@@ -1,10 +1,15 @@
 part of '../accueil/dashboard/parent_home_page.dart';
 
 extension ParentNotificationsViewExtension on _ParentHomePageState {
-  void _showNotificationsModal({String? filterChildName, Map<String, dynamic>? incidentPayload}) async {
-    print('📥 [ParentHomePage] _showNotificationsModal - incidentPayload: $incidentPayload');
+  void _showNotificationsModal({
+    String? filterChildName,
+    Map<String, dynamic>? incidentPayload,
+  }) async {
+    print(
+      '📥 [ParentHomePage] _showNotificationsModal - incidentPayload: $incidentPayload',
+    );
     final List<Map<String, dynamic>> allNotifications = [];
-    
+
     // Charger les notifications locales (push notifications)
     final localNotifications = await NotificationStorage.getNotifications();
     for (var n in localNotifications) {
@@ -14,26 +19,33 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
         'child': n['data']?['child_name'] ?? '',
         'school': '',
         'sender': n['data']?['enseignant_nom'] ?? '',
-        'time': n['timestamp'] != null 
-            ? DateTime.parse(n['timestamp']).toString().substring(0, 16).replaceFirst('T', ' ')
+        'time': n['timestamp'] != null
+            ? DateTime.parse(
+                n['timestamp'],
+              ).toString().substring(0, 16).replaceFirst('T', ' ')
             : 'Récemment',
         'color': n['data']?['type'] == 'incident' ? Colors.red : Colors.blue,
-        'icon': n['data']?['type'] == 'incident' ? Icons.warning : Icons.notifications,
+        'icon': n['data']?['type'] == 'incident'
+            ? Icons.warning
+            : Icons.notifications,
         'message': n['body'] ?? n['message'] ?? '',
         'source': 'local',
         'data': n['data'],
         'isLocal': true,
       });
     }
-    
+
     for (var rdv in _appointments) {
       if (rdv['statut'] == 'en_attente') {
         allNotifications.add({
           'title': 'Demande de rendez-vous',
           'type': 'RDV',
-          'child': '${rdv['eleve_prenom'] ?? ''} ${rdv['eleve_nom'] ?? ''}'.trim(),
+          'child': '${rdv['eleve_prenom'] ?? ''} ${rdv['eleve_nom'] ?? ''}'
+              .trim(),
           'school': '',
-          'sender': '${rdv['enseignant_prenom'] ?? ''} ${rdv['enseignant_nom'] ?? ''}'.trim(),
+          'sender':
+              '${rdv['enseignant_prenom'] ?? ''} ${rdv['enseignant_nom'] ?? ''}'
+                  .trim(),
           'time': rdv['date_rdv'] ?? 'À définir',
           'color': AppTheme.seaBlue,
           'icon': Icons.calendar_today,
@@ -81,7 +93,9 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
         'child': childName,
         'school': '',
         'sender': dataMap?['matiere'] ?? '',
-        'time': n['created_at'] != null ? n['created_at'].toString().substring(0, 10) : 'Récemment',
+        'time': n['created_at'] != null
+            ? n['created_at'].toString().substring(0, 10)
+            : 'Récemment',
         'color': color,
         'icon': icon,
         'message': n['message'] ?? '',
@@ -142,8 +156,10 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                   final childName = incidentPayload['child_name'];
                   if (childName != null) {
                     _selectChildByName(childName, 5); // Onglet Infos (index 5)
+                    // ignore: invalid_use_of_protected_member
                     setState(() {
-                      _pendingHighlightIncidentId = incidentPayload['incident_id']?.toString();
+                      _pendingHighlightIncidentId =
+                          incidentPayload['incident_id']?.toString();
                     });
                   }
                 },
@@ -232,13 +248,20 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.notifications_off_outlined, size: 60, color: Colors.grey[300]),
+                          Icon(
+                            Icons.notifications_off_outlined,
+                            size: 60,
+                            color: Colors.grey[300],
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             filterChildName != null
                                 ? 'Aucune notification pour $filterChildName'
                                 : 'Aucune notification',
-                            style: TextStyle(color: Colors.grey[500], fontSize: 15),
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 15,
+                            ),
                           ),
                         ],
                       ),
@@ -254,32 +277,49 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                             final notificationId = n['notificationId'];
 
                             // Navigation pour les notifications locales (incidents)
-                            if (n['source'] == 'local' && data is Map<String, dynamic>) {
+                            if (n['source'] == 'local' &&
+                                data is Map<String, dynamic>) {
                               if (data['type'] == 'incident') {
                                 final childName = data['child_name'];
                                 if (childName != null) {
                                   Navigator.pop(context);
-                                  _selectChildByName(childName, 5); // Onglet Infos
+                                  _selectChildByName(
+                                    childName,
+                                    5,
+                                  ); // Onglet Infos
+                                  // ignore: invalid_use_of_protected_member
                                   setState(() {
-                                    _pendingHighlightIncidentId = data['incident_id']?.toString();
+                                    _pendingHighlightIncidentId =
+                                        data['incident_id']?.toString();
                                   });
                                   return;
                                 }
                               }
                             }
 
-                            if (n['source'] == 'api' && data is Map<String, dynamic>) {
-                              if ((data['type'] == 'admin_info' || data['type'] == 'new_homework') && data['eleve_id'] != null) {
-                                final eleveId = int.tryParse(data['eleve_id'].toString());
+                            if (n['source'] == 'api' &&
+                                data is Map<String, dynamic>) {
+                              if ((data['type'] == 'admin_info' ||
+                                      data['type'] == 'new_homework') &&
+                                  data['eleve_id'] != null) {
+                                final eleveId = int.tryParse(
+                                  data['eleve_id'].toString(),
+                                );
                                 if (eleveId != null) {
-                                  final childIndex = _childrenData.indexWhere((c) {
+                                  final childIndex = _childrenData.indexWhere((
+                                    c,
+                                  ) {
                                     if (c['fromApi'] == true) {
-                                      final raw = c['raw'] as Map<String, dynamic>?;
+                                      final raw =
+                                          c['raw'] as Map<String, dynamic>?;
                                       final cid = c['id'];
                                       if (cid is int && cid == eleveId) {
                                         return true;
                                       }
-                                      if (raw != null && raw['id'] != null && int.tryParse(raw['id'].toString()) == eleveId) {
+                                      if (raw != null &&
+                                          raw['id'] != null &&
+                                          int.tryParse(raw['id'].toString()) ==
+                                              eleveId) {
                                         return true;
                                       }
                                     }
@@ -288,14 +328,20 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
 
                                   if (childIndex != -1) {
                                     Navigator.pop(context);
+                                    // ignore: invalid_use_of_protected_member
                                     setState(() {
-                                      _childInitialTab = data['type'] == 'new_homework' ? 2 : 5; // 2 = Devoirs, 5 = Infos
+                                      _childInitialTab =
+                                          data['type'] == 'new_homework'
+                                          ? 2
+                                          : 5; // 2 = Devoirs, 5 = Infos
                                       _currentIndex = 0;
                                       if (childIndex < _childrenData.length) {
                                         _childrenData[childIndex]['notif'] = 0;
                                       }
-                                      if (data['type'] == 'new_homework' && data['devoir_id'] != null) {
-                                        _pendingHighlightHomeworkId = data['devoir_id']?.toString();
+                                      if (data['type'] == 'new_homework' &&
+                                          data['devoir_id'] != null) {
+                                        _pendingHighlightHomeworkId =
+                                            data['devoir_id']?.toString();
                                       }
                                     });
                                     _onChildSelected(childIndex);
@@ -303,7 +349,9 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
 
                                   if (notificationId != null) {
                                     ApiClient.instance.put(
-                                      ApiEndpoints.markNotificationRead(notificationId),
+                                      ApiEndpoints.markNotificationRead(
+                                        notificationId,
+                                      ),
                                     );
                                   }
                                   return;
@@ -311,12 +359,20 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                               }
                             }
 
-                            if (n['type'] == 'INFO' || n['type'] == 'RDV' || n['type'] == 'ABSENCE') {
-                              final childName = n['child']?.toString().split(' ')[0];
+                            if (n['type'] == 'INFO' ||
+                                n['type'] == 'RDV' ||
+                                n['type'] == 'ABSENCE') {
+                              final childName = n['child']?.toString().split(
+                                ' ',
+                              )[0];
                               if (childName != null && childName.isNotEmpty) {
-                                final childIndex = _childrenData.indexWhere((c) => (c['name'] as String).contains(childName));
+                                final childIndex = _childrenData.indexWhere(
+                                  (c) =>
+                                      (c['name'] as String).contains(childName),
+                                );
                                 if (childIndex != -1) {
                                   Navigator.pop(context);
+                                  // ignore: invalid_use_of_protected_member
                                   setState(() {
                                     _childInitialTab = 5;
                                     _currentIndex = 0;
@@ -333,7 +389,9 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                             school: n['school'],
                             sender: n['sender'],
                             time: n['time'],
-                            color: n['isAlert'] == true ? Colors.red : n['color'],
+                            color: n['isAlert'] == true
+                                ? Colors.red
+                                : n['color'],
                             icon: n['icon'],
                             showJustify: n['showJustify'] ?? false,
                             isAppointmentRequest:
@@ -595,5 +653,4 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
       ),
     );
   }
-
 }

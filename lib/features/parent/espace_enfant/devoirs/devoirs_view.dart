@@ -14,31 +14,37 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
 
     if (source == null) return [];
 
-    return source
-        .whereType<Map>()
-        .map((dynamic hw) {
-          final map = Map<String, dynamic>.from(hw as Map);
+    return source.whereType<Map>().map((dynamic hw) {
+      final map = Map<String, dynamic>.from(hw as Map);
 
-          map['titre'] ??= map['topic'] ?? map['title'] ?? 'Devoir';
-          map['matiere'] ??= map['subject'] ?? 'Matière';
-          map['description'] ??= map['description_longue'] ?? map['details'];
-          map['type'] = (map['type'] ?? map['category'] ?? 'maison').toString().toLowerCase();
+      map['titre'] ??= map['topic'] ?? map['title'] ?? 'Devoir';
+      map['matiere'] ??= map['subject'] ?? 'Matière';
+      map['description'] ??= map['description_longue'] ?? map['details'];
+      map['type'] = (map['type'] ?? map['category'] ?? 'maison')
+          .toString()
+          .toLowerCase();
 
-          if (map['date_remise'] == null) {
-            final rawDue = map['dueDate'] ?? map['deadline'];
-            if (rawDue is String && rawDue.isNotEmpty) {
-              map['date_remise'] = rawDue;
-            } else {
-              map['date_remise'] = DateTime.now().add(const Duration(days: 2)).toIso8601String();
-            }
-          }
+      if (map['date_remise'] == null) {
+        final rawDue = map['dueDate'] ?? map['deadline'];
+        if (rawDue is String && rawDue.isNotEmpty) {
+          map['date_remise'] = rawDue;
+        } else {
+          map['date_remise'] = DateTime.now()
+              .add(const Duration(days: 2))
+              .toIso8601String();
+        }
+      }
 
-          map['created_at'] ??= map['createdAt'] ?? map['date'] ?? DateTime.now().toIso8601String();
-          map['is_targeted'] = map['is_targeted'] ?? map['ciblage'] ?? (map['ciblage_eleve_id'] != null) ?? false;
+      map['created_at'] ??=
+          map['createdAt'] ?? map['date'] ?? DateTime.now().toIso8601String();
+      map['is_targeted'] =
+          map['is_targeted'] ??
+          map['ciblage'] ??
+          (map['ciblage_eleve_id'] != null) ??
+          false;
 
-          return map;
-        })
-        .toList();
+      return map;
+    }).toList();
   }
 
   Widget _buildHomeworkSummary() {
@@ -63,7 +69,11 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
@@ -77,7 +87,10 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                     color: _getHomeworkTypeColor(type).withOpacity(0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(_getHomeworkTypeIcon(type), color: _getHomeworkTypeColor(type)),
+                  child: Icon(
+                    _getHomeworkTypeIcon(type),
+                    color: _getHomeworkTypeColor(type),
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -86,12 +99,19 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                     children: [
                       Text(
                         _getHomeworkTypeLabel(type),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _getHomeworkTypeColor(type)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: _getHomeworkTypeColor(type),
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         title,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -105,17 +125,36 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
               children: [
                 const Icon(Icons.class_, size: 16, color: AppTheme.textGrey),
                 const SizedBox(width: 6),
-                Text(matiere, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                Text(
+                  matiere,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const Spacer(),
-                const Icon(Icons.calendar_today, size: 16, color: AppTheme.textGrey),
+                const Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: AppTheme.textGrey,
+                ),
                 const SizedBox(width: 6),
-                Text(dueDate, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                Text(
+                  dueDate,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             if (isTargeted) ...[
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
@@ -125,7 +164,14 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                   children: const [
                     Icon(Icons.push_pin, size: 14, color: Colors.orange),
                     SizedBox(width: 6),
-                    Text('Devoir ciblé pour votre enfant', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange)),
+                    Text(
+                      'Devoir ciblé pour votre enfant',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -134,9 +180,20 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: const [
-                Text('Voir les détails', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.seaBlue)),
+                Text(
+                  'Voir les détails',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.seaBlue,
+                  ),
+                ),
                 SizedBox(width: 4),
-                Icon(Icons.arrow_forward_ios, size: 12, color: AppTheme.seaBlue),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: AppTheme.seaBlue,
+                ),
               ],
             ),
           ],
@@ -156,14 +213,16 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
         // 'date_remise' might be a string in ISO format or a short string, handle parsing safely
         DateTime? dueDate;
         if (hw['date_remise'] != null) {
-           dueDate = DateTime.tryParse(hw['date_remise'].toString());
-           if (dueDate == null && hw['date_remise'].toString().length == 10) {
-              // format dd/MM/yyyy to yyyy-MM-dd
-              final parts = hw['date_remise'].toString().split('/');
-              if (parts.length == 3) {
-                 dueDate = DateTime.tryParse('${parts[2]}-${parts[1]}-${parts[0]}');
-              }
-           }
+          dueDate = DateTime.tryParse(hw['date_remise'].toString());
+          if (dueDate == null && hw['date_remise'].toString().length == 10) {
+            // format dd/MM/yyyy to yyyy-MM-dd
+            final parts = hw['date_remise'].toString().split('/');
+            if (parts.length == 3) {
+              dueDate = DateTime.tryParse(
+                '${parts[2]}-${parts[1]}-${parts[0]}',
+              );
+            }
+          }
         }
 
         switch (_selectedDevoirFilter) {
@@ -199,20 +258,30 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
         final createdAt = _formatHomeworkDate(hw['created_at']);
         final isTargeted = hw['is_targeted'] == true;
         final hwId = hw['id']?.toString();
-        final isHighlighted = widget.highlightHomeworkId != null && widget.highlightHomeworkId == hwId;
+        final isHighlighted =
+            widget.highlightHomeworkId != null &&
+            widget.highlightHomeworkId == hwId;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: ExpansionTile(
-            backgroundColor: isHighlighted ? AppTheme.seaBlue.withOpacity(0.05) : Colors.white,
-            collapsedBackgroundColor: isHighlighted ? AppTheme.seaBlue.withOpacity(0.05) : Colors.white,
+            backgroundColor: isHighlighted
+                ? AppTheme.seaBlue.withOpacity(0.05)
+                : Colors.white,
+            collapsedBackgroundColor: isHighlighted
+                ? AppTheme.seaBlue.withOpacity(0.05)
+                : Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: isHighlighted ? BorderSide(color: AppTheme.seaBlue, width: 2) : BorderSide.none,
+              side: isHighlighted
+                  ? BorderSide(color: AppTheme.seaBlue, width: 2)
+                  : BorderSide.none,
             ),
             collapsedShape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: isHighlighted ? BorderSide(color: AppTheme.seaBlue, width: 2) : BorderSide.none,
+              side: isHighlighted
+                  ? BorderSide(color: AppTheme.seaBlue, width: 2)
+                  : BorderSide.none,
             ),
             leading: Container(
               padding: const EdgeInsets.all(12),
@@ -220,7 +289,10 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                 color: _getHomeworkTypeColor(type).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(_getHomeworkTypeIcon(type), color: _getHomeworkTypeColor(type)),
+              child: Icon(
+                _getHomeworkTypeIcon(type),
+                color: _getHomeworkTypeColor(type),
+              ),
             ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +310,10 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: _getHomeworkTypeColor(type).withOpacity(0.12),
                         borderRadius: BorderRadius.circular(8),
@@ -254,7 +329,8 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                     ),
                   ],
                 ),
-                if (hw['enseignant_nom'] != null && hw['enseignant_nom'].toString().trim().isNotEmpty)
+                if (hw['enseignant_nom'] != null &&
+                    hw['enseignant_nom'].toString().trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4.0),
                     child: Row(
@@ -262,7 +338,11 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                       children: [
                         const Padding(
                           padding: EdgeInsets.only(top: 2.0),
-                          child: Icon(Icons.person, size: 12, color: AppTheme.textGrey),
+                          child: Icon(
+                            Icons.person,
+                            size: 12,
+                            color: AppTheme.textGrey,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -300,17 +380,31 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.calendar_month, size: 14, color: AppTheme.textGrey),
+                          const Icon(
+                            Icons.calendar_month,
+                            size: 14,
+                            color: AppTheme.textGrey,
+                          ),
                           const SizedBox(width: 4),
-                          Text('À rendre le $dueDate', style: const TextStyle(fontSize: 12)),
+                          Text(
+                            'À rendre le $dueDate',
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ],
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.schedule, size: 14, color: AppTheme.textGrey),
+                          const Icon(
+                            Icons.schedule,
+                            size: 14,
+                            color: AppTheme.textGrey,
+                          ),
                           const SizedBox(width: 4),
-                          Text('Publié $createdAt', style: const TextStyle(fontSize: 12)),
+                          Text(
+                            'Publié $createdAt',
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ],
                       ),
                     ],
@@ -323,7 +417,14 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                       children: const [
                         Icon(Icons.push_pin, size: 14, color: Colors.orange),
                         SizedBox(width: 4),
-                        Text('Ciblé pour votre enfant', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange)),
+                        Text(
+                          'Ciblé pour votre enfant',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -376,10 +477,7 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Center(
-        child: Text(
-          'Aucun devoir prévu',
-          style: TextStyle(color: Colors.grey),
-        ),
+        child: Text('Aucun devoir prévu', style: TextStyle(color: Colors.grey)),
       ),
     );
   }
@@ -431,7 +529,14 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
   }
 
   Widget _buildHomeworksTab() {
-    final filters = ['Tous', 'Maison', 'Classe', 'Exercice', 'À venir', 'Passé'];
+    final filters = [
+      'Tous',
+      'Maison',
+      'Classe',
+      'Exercice',
+      'À venir',
+      'Passé',
+    ];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -448,21 +553,29 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
                   padding: const EdgeInsets.only(right: 8.0),
                   child: GestureDetector(
                     onTap: () {
+                      // ignore: invalid_use_of_protected_member
                       setState(() {
                         _selectedDevoirFilter = filter;
                       });
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF1377b5) : Colors.grey[200],
+                        color: isSelected
+                            ? const Color(0xFF1377b5)
+                            : Colors.grey[200],
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         filter,
                         style: TextStyle(
                           color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
                           fontSize: 13,
                         ),
                       ),
@@ -481,5 +594,4 @@ extension DevoirsViewExtension on _ChildDetailsViewState {
       ),
     );
   }
-
 }

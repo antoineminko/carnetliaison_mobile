@@ -5,6 +5,7 @@ class ApiClient {
   // Dictionnaire des serveurs selon le préfixe
   static final Map<String, String> schoolServers = {
     'LYIMA': 'https://sirh.alwaysdata.net/api_carnet_liaison/api',
+    'LYIMM': 'https://sirh.alwaysdata.net/api_carnet_liaison/api',
     'LYNDQ': 'https://sirh.alwaysdata.net/api_carnetliaison2/api',
   };
 

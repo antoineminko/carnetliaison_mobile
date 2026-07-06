@@ -90,10 +90,20 @@ class ParentService {
     }
   }
 
-  static Future<bool> verifyChildAccess(int parentId, int eleveId, String code) async {
+  static Future<bool> verifyChildAccess(int parentId, int eleveId, String code, {String? schoolPrefix}) async {
     try {
-      final response = await ApiClient.instance.post(
-        '/parents/$parentId/children/$eleveId/verify',
+      final dio = schoolPrefix != null && ApiClient.schoolServers.containsKey(schoolPrefix)
+          ? ApiClient.getInstanceForUrl(ApiClient.schoolServers[schoolPrefix]!)
+          : ApiClient.instance;
+
+      int targetParentId = parentId;
+      if (dio.options.baseUrl != ApiClient.defaultServerUrl && schoolPrefix != null) {
+        final prefs = await SharedPreferences.getInstance();
+        targetParentId = prefs.getInt('parent_id_$schoolPrefix') ?? parentId;
+      }
+
+      final response = await dio.post(
+        '/parents/$targetParentId/children/$eleveId/verify',
         data: {'code': code},
       );
       if (response.statusCode == 200 && response.data['success'] == true) {

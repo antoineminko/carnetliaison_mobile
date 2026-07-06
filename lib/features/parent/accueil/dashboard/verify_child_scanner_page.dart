@@ -78,6 +78,7 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage>
       parentId,
       widget.child['id'] ?? widget.child['raw_id'],
       code,
+      schoolPrefix: widget.child['_school_prefix']?.toString(),
     );
 
     if (!mounted) return;
@@ -194,6 +195,7 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage>
                                       widget.child['id'] ??
                                           widget.child['raw_id'],
                                       code,
+                                      schoolPrefix: widget.child['_school_prefix']?.toString(),
                                     );
 
                                 if (!mounted) return;

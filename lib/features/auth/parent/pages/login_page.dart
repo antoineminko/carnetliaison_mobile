@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 import 'package:app_mobile/shared/utils/user_role.dart';
 import 'package:app_mobile/features/auth/parent/pages/create_account_page.dart';
@@ -20,6 +20,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
   final AuthService _authService = AuthService();
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
@@ -227,7 +228,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                     ),
                     child: TextFormField(
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       style: TextStyle(color: darkText),
                       decoration: InputDecoration(
                         hintText: '••••••••',
@@ -235,6 +236,17 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                         prefixIcon: Icon(Icons.lock, color: Colors.grey[500]),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.grey[500],
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
                       ),
                     ),
                   ),

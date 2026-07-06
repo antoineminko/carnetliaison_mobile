@@ -20,7 +20,7 @@ class AppTheme {
     borderRadius: BorderRadius.circular(20),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.04),
+        color: Colors.black.withValues(alpha: 0.04),
         blurRadius: 15,
         offset: const Offset(0, 8),
       ),
@@ -32,7 +32,7 @@ class AppTheme {
     backgroundColor: forestGreen,
     foregroundColor: Colors.white,
     elevation: 2,
-    shadowColor: forestGreen.withOpacity(0.3),
+    shadowColor: forestGreen.withValues(alpha: 0.3),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
     padding: const EdgeInsets.symmetric(vertical: 16),
   );
@@ -42,7 +42,7 @@ class AppTheme {
     backgroundColor: seaBlue,
     foregroundColor: Colors.white,
     elevation: 2,
-    shadowColor: seaBlue.withOpacity(0.3),
+    shadowColor: seaBlue.withValues(alpha: 0.3),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
     padding: const EdgeInsets.symmetric(vertical: 16),
   );

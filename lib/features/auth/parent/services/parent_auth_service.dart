@@ -1,4 +1,5 @@
 import 'package:app_mobile/shared/utils/user_role.dart';
+import 'package:flutter/foundation.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -98,11 +99,11 @@ class AuthService {
             'platform': 'android',
           },
         );
-        print('✅ [AuthService] FCM Token enregistré pour parent #$parentId');
+        debugPrint('✅ [AuthService] FCM Token enregistré pour parent #$parentId');
       }
     } catch (e) {
       // Non bloquant : le login réussit même si l'enregistrement du token échoue
-      print('⚠️ [AuthService] Impossible d\'enregistrer le FCM token : $e');
+      debugPrint('⚠️ [AuthService] Impossible d\'enregistrer le FCM token : $e');
     }
   }
 

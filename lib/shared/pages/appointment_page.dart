@@ -97,7 +97,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
             TextField(
               controller: _objetController,
               decoration: InputDecoration(
-                hintText: 'Ex: Suivi trimestriel de ${widget.studentName ?? "l\'élève"}',
+                hintText: 'Ex: Suivi trimestriel de ${widget.studentName ?? "l'élève"}',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -243,9 +243,9 @@ class _AppointmentPageState extends State<AppointmentPage> {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: AppTheme.seaBlue.withOpacity(0.05),
+        color: AppTheme.seaBlue.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppTheme.seaBlue.withOpacity(0.1)),
+        border: Border.all(color: AppTheme.seaBlue.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -298,7 +298,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
             border: Border.all(color: isSelected ? AppTheme.seaBlue : Colors.grey[200]!, width: 2),
-            boxShadow: isSelected ? [BoxShadow(color: AppTheme.seaBlue.withOpacity(0.1), blurRadius: 10)] : [],
+            boxShadow: isSelected ? [BoxShadow(color: AppTheme.seaBlue.withValues(alpha: 0.1), blurRadius: 10)] : [],
           ),
           child: Column(
             children: [
@@ -350,11 +350,6 @@ class _AppointmentPageState extends State<AppointmentPage> {
         ),
       ),
     );
-  }
-
-  String _getWeekDay(int day) {
-    const days = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
-    return days[day - 1];
   }
 
   void _showSuccessDialog() {

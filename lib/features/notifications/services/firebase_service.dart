@@ -1,19 +1,19 @@
-Ôªøimport 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'local_notification_service.dart';
 import 'notification_storage.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
-import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/features/calls/pages/incoming_call_screen.dart';
 
-// Cl√© de navigation globale pour naviguer depuis les notifications
+// ClÈ de navigation globale pour naviguer depuis les notifications
 import 'package:flutter/material.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('üîî [FirebaseService] Notification background re√ßue : ${message.messageId}');
+  print('?? [FirebaseService] Notification background reÁue : ${message.messageId}');
   
 
   await NotificationStorage.saveNotification({
@@ -39,7 +39,7 @@ class FirebaseService {
 
   
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      print('üîî [FirebaseService] Notification foreground : ${message.notification?.title}');
+      print('?? [FirebaseService] Notification foreground : ${message.notification?.title}');
       _localNotificationService.showNotification(message);
       
       // Sauvegarder la notification
@@ -53,25 +53,25 @@ class FirebaseService {
       onNotificationReceived?.call();
     });
 
-    // 4. Clic sur notification quand l'app est en arri√®re-plan
+    // 4. Clic sur notification quand l'app est en arriËre-plan
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('üîî [FirebaseService] Clic sur notification background : ${message.notification?.title}');
-      print('üì¶ [FirebaseService] Data re√ßue: ${message.data}');
-      print('üì¶ [FirebaseService] Type: ${message.data['type']}');
+      print('?? [FirebaseService] Clic sur notification background : ${message.notification?.title}');
+      print('?? [FirebaseService] Data reÁue: ${message.data}');
+      print('?? [FirebaseService] Type: ${message.data['type']}');
       _handleNotificationTap(message.data);
     });
 
-    // 5. App ouverte depuis une notification (√©tat termin√©)
+    // 5. App ouverte depuis une notification (Ètat terminÈ)
     RemoteMessage? initialMessage = await _firebaseMessaging.getInitialMessage();
     if (initialMessage != null) {
-      print('‚úÖ [FirebaseService] App ouverte via notification (Terminated)');
-      // D√©lai pour laisser le splash screen (2500ms) se terminer avant de naviguer
+      print('? [FirebaseService] App ouverte via notification (Terminated)');
+      // DÈlai pour laisser le splash screen (2500ms) se terminer avant de naviguer
       Future.delayed(const Duration(milliseconds: 3000), () {
         _handleNotificationTap(initialMessage.data);
       });
     }
 
-    // 6. Token FCM (sera r√©-enregistr√© apr√®s le login de toute fa√ßon)
+    // 6. Token FCM (sera rÈ-enregistrÈ aprËs le login de toute faÁon)
     await getFCMToken();
   }
 
@@ -91,7 +91,7 @@ class FirebaseService {
           arguments: {'openNotifications': true},
         );
         break;
-      case 'attendance_alert': // Appel pr√©sence/absence enseignant
+      case 'attendance_alert': // Appel prÈsence/absence enseignant
       case 'absence': // alias legacy
       case 'retard':
         final String? childName = data['child_name'];
@@ -101,7 +101,7 @@ class FirebaseService {
           arguments: {
             'initialTab': 0, // Accueil / Mes enfants
             'selectChildName': childName,
-            'childInitialTab': 0, // Onglet Aper√ßu dans ChildDetailsView
+            'childInitialTab': 0, // Onglet AperÁu dans ChildDetailsView
           },
         );
         break;
@@ -110,7 +110,7 @@ class FirebaseService {
       case 'appointment_refused':
       case 'appointment_postponed':
       case 'appointment_cancelled':
-        // Rediriger vers la page des √©v√©nements avec l'ID du rendez-vous
+        // Rediriger vers la page des ÈvÈnements avec l'ID du rendez-vous
         final String? appointmentId = data['appointment_id'];
         final String? statut = data['statut'];
         final bool isPostponed = data['type'] == 'appointment_postponed' || statut == 'reporte';
@@ -128,7 +128,7 @@ class FirebaseService {
         );
         break;
       case 'new_homework':
-        // Nouveau devoir publi√© par un enseignant
+        // Nouveau devoir publiÈ par un enseignant
         // Naviguer directement vers l'enfant et l'onglet Devoirs
         final String? childName = data['eleve_nom'];
         final String? devoirId = data['devoir_id'];
@@ -182,7 +182,7 @@ class FirebaseService {
         );
         break;
       case 'chat_accepted':
-        // Conversation accept√©e - rediriger vers le chat
+        // Conversation acceptÈe - rediriger vers le chat
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/parent/home',
           (route) => false,
@@ -194,7 +194,7 @@ class FirebaseService {
         );
         break;
       case 'chat_rejected':
-        // Conversation refus√©e - afficher une notification/banni√®re
+        // Conversation refusÈe - afficher une notification/banniËre
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/parent/home',
           (route) => false,
@@ -206,13 +206,13 @@ class FirebaseService {
         );
         break;
       case 'incoming_call':
-        // Appel entrant - afficher l'√©cran d'appel entrant
+        // Appel entrant - afficher l'Ècran d'appel entrant
         final String? callId = data['call_id'];
         final String? callType = data['call_type'] ?? 'audio';
         final String? conversationId = data['conversation_id'];
         final String callerName = data['caller_name'] ?? 'Appel entrant';
 
-        print('üìû [FirebaseService] Appel entrant - callId: $callId, type: $callType');
+        print('?? [FirebaseService] Appel entrant - callId: $callId, type: $callType');
 
         if (callId != null && navigatorKey.currentContext != null) {
           Navigator.push(
@@ -230,45 +230,45 @@ class FirebaseService {
         }
         break;
       case 'call_rejected':
-        // Appel rejet√© - afficher notification
+        // Appel rejetÈ - afficher notification
         if (navigatorKey.currentContext != null) {
           ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
             const SnackBar(
-              content: Text('‚ùå Appel rejet√©'),
+              content: Text('? Appel rejetÈ'),
               backgroundColor: Colors.red,
             ),
           );
         }
         break;
       case 'call_missed':
-        // Appel manqu√© - afficher notification
+        // Appel manquÈ - afficher notification
         if (navigatorKey.currentContext != null) {
           ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
             const SnackBar(
-              content: Text('üìû Appel manqu√©'),
+              content: Text('?? Appel manquÈ'),
               backgroundColor: Colors.orange,
             ),
           );
         }
         break;
       case 'incident':
-        // Incident signal√© par un enseignant
+        // Incident signalÈ par un enseignant
         // 1. Ouvrir l'accueil avec la modal des notifications
-        // 2. Le parent verra une banni√®re dans les notifications
-        // 3. En cliquant sur la banni√®re, il ira dans Infos de l'enfant
+        // 2. Le parent verra une banniËre dans les notifications
+        // 3. En cliquant sur la banniËre, il ira dans Infos de l'enfant
         final String? childName = data['child_name'];
         final String? incidentType = data['incident_type'];
         final String? incidentId = data['incident_id'];
         final String? enseignantNom = data['enseignant_nom'];
         final String? matiere = data['matiere'];
         
-        // Construire le body pour la banni√®re
+        // Construire le body pour la banniËre
         final String bodyText = childName != null && incidentType != null
             ? '$childName - ${incidentType.toUpperCase()}'
-            : 'Nouvel incident signal√©';
+            : 'Nouvel incident signalÈ';
         
-        print('üö® [FirebaseService] Navigation incident - childName: $childName, incidentType: $incidentType');
-        print('üö® [FirebaseService] Body text: $bodyText');
+        print('?? [FirebaseService] Navigation incident - childName: $childName, incidentType: $incidentType');
+        print('?? [FirebaseService] Body text: $bodyText');
         
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/parent/home',
@@ -278,7 +278,7 @@ class FirebaseService {
             'openNotifications': true, // Ouvrir la modal notifications
             'notificationPayload': {
               'type': 'incident',
-              'title': 'Incident signal√©',
+              'title': 'Incident signalÈ',
               'body': bodyText,
               'child_name': childName,
               'incident_id': incidentId,
@@ -307,13 +307,13 @@ class FirebaseService {
       provisional: false,
       sound: true,
     );
-    print('üîî [FirebaseService] Statut permission : ${settings.authorizationStatus}');
+    print('?? [FirebaseService] Statut permission : ${settings.authorizationStatus}');
   }
 
   Future<String?> getFCMToken() async {
     try {
       String? token = await _firebaseMessaging.getToken();
-      print('üîë [FirebaseService] FCM Token : $token');
+      print('?? [FirebaseService] FCM Token : $token');
 
       if (token != null) {
         final parentId = await AuthService.getParentId();
@@ -323,14 +323,15 @@ class FirebaseService {
             'token': token,
             'platform': 'android',
           });
-          print('‚úÖ [FirebaseService] Token enregistr√© pour parent #$parentId');
+          print('? [FirebaseService] Token enregistrÈ pour parent #$parentId');
         }
       }
 
       return token;
     } catch (e) {
-      print('‚ùå [FirebaseService] Erreur r√©cup√©ration Token : $e');
+      print('? [FirebaseService] Erreur rÈcupÈration Token : $e');
       return null;
     }
   }
 }
+

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
-import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/features/parent/services/parent_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -221,3 +221,4 @@ class _LinkChildPageState extends State<LinkChildPage> {
     );
   }
 }
+

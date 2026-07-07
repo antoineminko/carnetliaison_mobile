@@ -1,11 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:app_mobile/features/splash/pages/splash_screen_page.dart';
-import 'package:app_mobile/features/auth/parent/pages/login_page.dart';
-import 'package:app_mobile/features/auth/welcome/pages/welcome_page.dart';
+import 'package:app_mobile/features/auth/parent/login_page.dart';
+import 'package:app_mobile/features/auth/welcome/page.dart';
 import 'package:app_mobile/shared/utils/user_role.dart';
 import 'package:app_mobile/features/parent/accueil/dashboard/parent_home_page.dart';
-import 'package:app_mobile/features/teacher/pages/teacher_home.dart';
-import 'package:app_mobile/features/student/pages/student_main_page.dart';
+import 'package:app_mobile/features/teacher/accueil/accueil_page.dart';
 import 'package:app_mobile/features/parent/accueil/liaison/qr_scan_page.dart';
 
 class AppRouter {
@@ -27,8 +26,6 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const QrScanPage(isFromLogin: true));
       case '/teacher/home':
         return MaterialPageRoute(builder: (_) => const TeacherHomePage());
-      case '/student/home':
-        return MaterialPageRoute(builder: (_) => const StudentMainPage());
       default:
         return MaterialPageRoute(
             builder: (_) => Scaffold(
@@ -38,3 +35,4 @@ class AppRouter {
     }
   }
 }
+

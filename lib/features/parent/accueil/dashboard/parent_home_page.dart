@@ -9,7 +9,7 @@ import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 import 'package:app_mobile/features/parent/accueil/liaison/qr_scan_page.dart';
 import 'package:app_mobile/features/parent/accueil/liaison/link_child_page.dart';
 import 'package:app_mobile/features/parent/accueil/dashboard/verify_child_scanner_page.dart';
-import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/features/parent/services/parent_service.dart';
 import 'package:app_mobile/features/parent/messages/chat_page.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
@@ -906,3 +906,4 @@ class _ParentHomePageState extends State<ParentHomePage> {
     return AppTheme.seaBlue;
   }
 }
+

@@ -3,7 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
-import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/features/parent/services/parent_service.dart';
 
 enum ScanPageStatus { scanning, connecting, success, failure }
@@ -744,3 +744,4 @@ class QrOverlayPainter extends CustomPainter {
         oldDelegate.scanWindow != scanWindow;
   }
 }
+

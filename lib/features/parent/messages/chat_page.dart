@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
-import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/features/calls/pages/call_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -767,3 +767,4 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 }
+

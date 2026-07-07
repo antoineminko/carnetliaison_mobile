@@ -1,6 +1,6 @@
-ï»¿import 'package:app_mobile/features/parent/evenements/calendar_page.dart';
+import 'package:app_mobile/features/parent/evenements/calendar_page.dart';
 import 'package:app_mobile/features/appointments/pages/appointments_list_page.dart';
-import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -34,7 +34,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Gris trÃ¨s clair pour le fond
+      backgroundColor: const Color(0xFFF5F7FA), // Gris très clair pour le fond
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -79,7 +79,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
                     ],
                   ),
                   Text(
-                    '${widget.child['school'] ?? 'Ã‰cole'} â€¢ ${widget.child['grade']}',
+                    '${widget.child['school'] ?? 'École'} • ${widget.child['grade']}',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -101,8 +101,8 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
           indicatorColor: Colors.blue[800],
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           tabs: const [
-            Tab(text: 'AperÃ§u'),
-            Tab(text: 'ActualitÃ©s'),
+            Tab(text: 'Aperçu'),
+            Tab(text: 'Actualités'),
             Tab(text: 'Devoirs'),
           ],
         ),
@@ -149,12 +149,12 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
       statusColor = const Color(0xFF1B5E20); // Green
       statusBgColor = const Color(0xFFE8F5E9);
       statusIcon = Icons.check_circle;
-      displayStatus = 'PrÃ©sent';
+      displayStatus = 'Présent';
     } else {
       statusColor = Colors.grey[700]!; // Grey
       statusBgColor = Colors.grey[200]!;
       statusIcon = Icons.help_outline;
-      displayStatus = 'Non marquÃ©';
+      displayStatus = 'Non marqué';
     }
 
     return SingleChildScrollView(
@@ -166,7 +166,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'PrÃ©sence du jour',
+                'Présence du jour',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               Text(
@@ -241,7 +241,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
                             ),
                             SizedBox(width: 6),
                             Text(
-                              'ArrivÃ©e',
+                              'Arrivée',
                               style: TextStyle(
                                 color: Color(0xFF1565C0),
                                 fontWeight: FontWeight.bold,
@@ -336,7 +336,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Devoirs Ã  venir',
+                'Devoirs à venir',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               TextButton(
@@ -368,15 +368,15 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
 
           const SizedBox(height: 30),
           const Text(
-            'ActualitÃ©s de l\'Ã©cole',
+            'Actualités de l\'école',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 15),
 
-          // Les actualitÃ©s seront chargÃ©es dynamiquement depuis l'API
+          // Les actualités seront chargées dynamiquement depuis l'API
           const Center(
             child: Text(
-              'Aucune actualitÃ© rÃ©cente',
+              'Aucune actualité récente',
               style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
             ),
           ),
@@ -412,7 +412,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Nouvelle note publiÃ©e : Quiz de Science',
+                          'Nouvelle note publiée : Quiz de Science',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -420,7 +420,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'M. Okoro vient de mettre Ã  jour le cahier de texte numÃ©rique.',
+                          'M. Okoro vient de mettre à jour le cahier de texte numérique.',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 12,
@@ -428,7 +428,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Voir le rÃ©sultat',
+                          'Voir le résultat',
                           style: TextStyle(
                             color: Colors.blue[600],
                             fontWeight: FontWeight.bold,
@@ -460,7 +460,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
         ),
         child: const Center(
           child: Text(
-            'Aucun devoir prÃ©vu',
+            'Aucun devoir prévu',
             style: TextStyle(color: Colors.grey),
           ),
         ),
@@ -508,7 +508,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
                     const Icon(Icons.access_time, size: 16, color: Colors.grey),
                     const SizedBox(width: 8),
                     Text(
-                      'Horaire prÃ©vu : ${hw['time']}',
+                      'Horaire prévu : ${hw['time']}',
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                   ],
@@ -534,7 +534,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
             ),
             child: const Center(
               child: Text(
-                'Aucune actualitÃ© pour le moment.',
+                'Aucune actualité pour le moment.',
                 style: TextStyle(
                   color: Colors.grey,
                   fontStyle: FontStyle.italic,
@@ -564,3 +564,4 @@ class _ChildDetailsPageState extends State<ChildDetailsPage>
     );
   }
 }
+

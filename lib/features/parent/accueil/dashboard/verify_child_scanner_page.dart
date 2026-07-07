@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/features/parent/services/parent_service.dart';
-import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 
 class VerifyChildScannerPage extends StatefulWidget {
   final Map<String, dynamic> child;
@@ -571,3 +571,4 @@ class _VerifyChildScannerPageState extends State<VerifyChildScannerPage>
     );
   }
 }
+

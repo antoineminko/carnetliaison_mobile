@@ -470,9 +470,8 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                                   _onChildSelected(childIndex);
                                 }
                               }
-                            }
-                          },
-                          child: _buildNotificationItem(
+                            },
+                            child: _buildNotificationItem(
                             title: n['title'],
                             type: n['type'] ?? 'INFO',
                             child: n['child'],

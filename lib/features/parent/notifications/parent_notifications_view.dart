@@ -43,7 +43,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
 
       allNotifications.add({
         'title': displayTitle,
-        'type': dataType == 'incident' ? 'INCIDENT' : 'INFO',
+        'type': dataType == 'incident' ? 'INCIDENT' : (dataType == 'teacher_message' || dataType == 'admin_message' ? 'MESSAGE' : 'INFO'),
         'child': childName,
         'school': schoolName,
         'sender': displaySender,
@@ -86,9 +86,6 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
     // _conversationRequests retirés des notifications selon la demande de l'utilisateur
 
     for (var n in _apiNotifications) {
-      if (n['type'] == 'teacher_message' || n['type'] == 'admin_message') {
-        continue; // Ne pas afficher les messages textuels dans les notifications
-      }
 
       // Extraire les métadonnées de la notification (type fonctionnel, classe, etc.)
       Map<String, dynamic>? dataMap;
@@ -140,9 +137,14 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
         color = n['is_read'] == true ? Colors.grey : Colors.deepPurple;
       }
 
+      if (dataType == 'teacher_message' || dataType == 'admin_message') {
+        icon = Icons.message;
+        color = n['is_read'] == true ? Colors.grey : AppTheme.seaBlue;
+      }
+
       allNotifications.add({
         'title': displayTitle,
-        'type': 'INFO',
+        'type': (dataType == 'teacher_message' || dataType == 'admin_message') ? 'MESSAGE' : 'INFO',
         'child': childName,
         'school': schoolName,
         'sender': displaySender,
@@ -416,8 +418,31 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                               }
                             }
 
+                            if (n['type'] == 'MESSAGE') {
+                              Navigator.pop(context);
+                              // ignore: invalid_use_of_protected_member
+                              setState(() {
+                                _selectedChild = null;
+                                _selectedChildIndex = null;
+                                _childInitialTab = 0;
+                                _currentIndex = 1; // 1 = Messages when selectedChild is null
+                              });
+                              return;
+                            }
+
+                            if (n['type'] == 'RDV' || (n['data'] != null && n['data']['type'] == 'evenement')) {
+                              Navigator.pop(context);
+                              // ignore: invalid_use_of_protected_member
+                              setState(() {
+                                _selectedChild = null;
+                                _selectedChildIndex = null;
+                                _childInitialTab = 0;
+                                _currentIndex = 2; // 2 = Événements when selectedChild is null
+                              });
+                              return;
+                            }
+
                             if (n['type'] == 'INFO' ||
-                                n['type'] == 'RDV' ||
                                 n['type'] == 'ABSENCE') {
                               int childIndex = -1;
                               final eleveId = n['data']?['eleve_id'];

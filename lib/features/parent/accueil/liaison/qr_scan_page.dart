@@ -109,27 +109,14 @@ class _QrScanPageState extends State<QrScanPage> with TickerProviderStateMixin {
       int targetParentId = parentId;
       final dio = ApiClient.getInstanceForCode(code);
 
-      // Si le code pointe vers un serveur différent, on doit s'authentifier silencieusement !
-      if (dio.options.baseUrl != ApiClient.defaultServerUrl) {
-        final prefs = await SharedPreferences.getInstance();
-        final parentEmail = prefs.getString('parent_email');
-        final parentPassword = prefs.getString('parent_password');
-        
-        if (parentEmail != null && parentPassword != null) {
-          final loginResponse = await dio.post(
-            ApiEndpoints.login,
-            data: {
-              'identifier': parentEmail,
-              'password': parentPassword,
-            },
-          );
-          if (loginResponse.statusCode == 200 && loginResponse.data['success']) {
-            targetParentId = loginResponse.data['parent']['id'];
-          } else {
-            throw Exception("Connexion au second serveur impossible.");
-          }
+      // Si le code pointe vers un serveur différent, on utilise la méthode centralisée
+      if (dio.options.baseUrl != ApiClient.defaultServerUrl && code.contains('-')) {
+        final prefix = code.split('-')[0].toUpperCase();
+        final serverParentId = await AuthService.getParentIdForSchool(prefix);
+        if (serverParentId != null) {
+          targetParentId = serverParentId;
         } else {
-          throw Exception("Veuillez vous reconnecter pour lier un enfant d'une autre école.");
+          throw Exception("Connexion au second serveur impossible ou compte introuvable.");
         }
       }
 

@@ -120,6 +120,44 @@ class AuthService {
     return prefs.getInt('parent_id');
   }
 
+  /// Gets the parent ID specifically for a given school prefix.
+  /// If it hasn't been cached yet, it performs a silent login to fetch and save it.
+  static Future<int?> getParentIdForSchool(String? schoolPrefix) async {
+    final prefs = await SharedPreferences.getInstance();
+    int? defaultParentId = prefs.getInt('parent_id');
+    
+    if (schoolPrefix == null || !ApiClient.schoolServers.containsKey(schoolPrefix)) {
+      return defaultParentId;
+    }
+
+    // Check if already cached
+    int? cachedId = prefs.getInt('parent_id_$schoolPrefix');
+    if (cachedId != null) return cachedId;
+
+    // Perform silent login
+    final email = prefs.getString('parent_email');
+    final password = prefs.getString('parent_password');
+    if (email != null && password != null) {
+      try {
+        final dio = ApiClient.getInstanceForUrl(ApiClient.schoolServers[schoolPrefix]!);
+        final loginResp = await dio.post(
+          ApiEndpoints.login, 
+          data: {'identifier': email, 'password': password}
+        );
+        if (loginResp.statusCode == 200 && loginResp.data['success']) {
+          final targetId = loginResp.data['parent']['id'];
+          await prefs.setInt('parent_id_$schoolPrefix', targetId);
+          return targetId;
+        }
+      } catch (e) {
+        debugPrint('⚠️ [AuthService] Silent login failed for $schoolPrefix: $e');
+      }
+    }
+    
+    // Fallback if silent login fails
+    return null;
+  }
+
   static Future<int?> getTeacherId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt('teacher_id');

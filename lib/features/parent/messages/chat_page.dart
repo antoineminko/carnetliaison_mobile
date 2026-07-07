@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
@@ -40,8 +41,17 @@ class _ChatPageState extends State<ChatPage> {
     _initRolesAndFetch();
   }
 
+  Dio get _dio {
+    final prefix = widget.conversation['_school_prefix']?.toString();
+    if (prefix != null && ApiClient.schoolServers.containsKey(prefix)) {
+      return ApiClient.getInstanceForUrl(ApiClient.schoolServers[prefix]!);
+    }
+    return ApiClient.instance;
+  }
+
   Future<void> _initRolesAndFetch() async {
-    final parentId = await AuthService.getParentId();
+    final prefix = widget.conversation['_school_prefix']?.toString();
+    final parentId = await AuthService.getParentIdForSchool(prefix);
     final teacherId = await AuthService.getTeacherId();
     
     if (parentId != null) {
@@ -74,7 +84,7 @@ class _ChatPageState extends State<ChatPage> {
         queryParams['conversation_id'] = convId;
       }
 
-      final response = await ApiClient.instance.get(
+      final response = await _dio.get(
         ApiEndpoints.getConversation,
         queryParameters: queryParams,
       );
@@ -103,7 +113,7 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _updateStatus(String status) async {
     if (_conversationId == null) return;
     try {
-      await ApiClient.instance.put(
+      await _dio.put(
         '/messages/conversation/$_conversationId/status',
         data: {'status': status},
       );
@@ -149,7 +159,7 @@ class _ChatPageState extends State<ChatPage> {
         final enseignantId = widget.conversation['enseignant_id'] ?? (_myRole == 'enseignant' ? _myId : 0);
         final targetParentId = widget.conversation['parent_id'] ?? (_myRole == 'parent' ? _myId : 0);
 
-        final response = await ApiClient.instance.post('/messages/conversation/initiate', data: {
+        final response = await _dio.post('/messages/conversation/initiate', data: {
           'enseignant_id': enseignantId,
           'parent_id': targetParentId,
           'subject': widget.conversation['subject'] ?? 'Discussion',
@@ -165,7 +175,7 @@ class _ChatPageState extends State<ChatPage> {
         }
       } else {
         // Envoyer message existant
-        await ApiClient.instance.post(
+        await _dio.post(
           ApiEndpoints.sendMessage,
           data: {
             'conversation_id': _conversationId,
@@ -477,7 +487,7 @@ class _ChatPageState extends State<ChatPage> {
     if (_conversationId == null) return;
 
     try {
-      final response = await ApiClient.instance.post('/calls', data: {
+      final response = await _dio.post('/calls', data: {
         'conversation_id': _conversationId,
         'caller_id': _myId,
         'caller_type': _myRole,
@@ -726,7 +736,7 @@ class _ChatPageState extends State<ChatPage> {
         reportedType = 'parent';
       }
 
-      await ApiClient.instance.post('/reports', data: {
+      await _dio.post('/reports', data: {
         'conversation_id': _conversationId,
         'reporter_id': _myId,
         'reporter_type': _myRole,

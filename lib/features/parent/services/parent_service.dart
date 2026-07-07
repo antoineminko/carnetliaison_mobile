@@ -1,5 +1,6 @@
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
+import 'package:app_mobile/features/auth/parent/services/parent_auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ParentService {
@@ -12,20 +13,7 @@ class ParentService {
       int targetParentId = defaultParentId;
 
       if (dio.options.baseUrl != ApiClient.defaultServerUrl) {
-        targetParentId = prefs.getInt('parent_id_$prefix') ?? -1;
-        if (targetParentId == -1) {
-          final email = prefs.getString('parent_email');
-          final password = prefs.getString('parent_password');
-          if (email != null && password != null) {
-            try {
-              final loginResp = await dio.post(ApiEndpoints.login, data: {'identifier': email, 'password': password});
-              if (loginResp.statusCode == 200 && loginResp.data['success']) {
-                targetParentId = loginResp.data['parent']['id'];
-                await prefs.setInt('parent_id_$prefix', targetParentId);
-              }
-            } catch (_) {}
-          }
-        }
+        targetParentId = await AuthService.getParentIdForSchool(prefix) ?? -1;
       }
 
       if (targetParentId != -1) {
@@ -49,28 +37,60 @@ class ParentService {
     return allChildren;
   }
 
-  static Future<List<Map<String, dynamic>>> getConversations(int parentId) async {
-    final response = await ApiClient.instance.get(
-      ApiEndpoints.parentConversations(parentId),
-    );
+  static Future<List<Map<String, dynamic>>> getConversations(int defaultParentId) async {
+    List<Map<String, dynamic>> allConversations = [];
+    
+    for (final prefix in ApiClient.schoolServers.keys) {
+      final dio = ApiClient.getInstanceForUrl(ApiClient.schoolServers[prefix]!);
+      int targetParentId = defaultParentId;
 
-    final data = response.data;
-    if (data != null && data['conversations'] is List) {
-      return (data['conversations'] as List)
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList();
+      if (dio.options.baseUrl != ApiClient.defaultServerUrl) {
+        targetParentId = await AuthService.getParentIdForSchool(prefix) ?? -1;
+      }
+
+      if (targetParentId != -1) {
+        try {
+          final response = await dio.get(ApiEndpoints.parentConversations(targetParentId));
+          final data = response.data;
+          if (data != null && data['conversations'] is List) {
+            for (var item in data['conversations']) {
+              final convMap = Map<String, dynamic>.from(item);
+              convMap['_school_prefix'] = prefix;
+              allConversations.add(convMap);
+            }
+          }
+        } catch (_) {}
+      }
     }
-
-    return [];
+    return allConversations;
   }
 
-  static Future<List<Map<String, dynamic>>> getEvents(int parentId) async {
-    final response = await ApiClient.instance.get('/parents/$parentId/events');
-    final data = response.data;
-    if (data != null && data['appointments'] is List) {
-      return (data['appointments'] as List).map((item) => Map<String, dynamic>.from(item)).toList();
+  static Future<List<Map<String, dynamic>>> getEvents(int defaultParentId) async {
+    List<Map<String, dynamic>> allEvents = [];
+    
+    for (final prefix in ApiClient.schoolServers.keys) {
+      final dio = ApiClient.getInstanceForUrl(ApiClient.schoolServers[prefix]!);
+      int targetParentId = defaultParentId;
+
+      if (dio.options.baseUrl != ApiClient.defaultServerUrl) {
+        targetParentId = await AuthService.getParentIdForSchool(prefix) ?? -1;
+      }
+
+      if (targetParentId != -1) {
+        try {
+          final response = await dio.get('/parents/$targetParentId/events');
+          final data = response.data;
+          if (data != null && data['appointments'] is List) {
+            for (var item in data['appointments']) {
+              final evtMap = Map<String, dynamic>.from(item);
+              evtMap['_school_prefix'] = prefix;
+              allEvents.add(evtMap);
+            }
+          }
+        } catch (_) {}
+      }
     }
-    return [];
+    return allEvents;
   }
 
   static const String _verifiedChildrenKey = 'locally_verified_children';
@@ -98,8 +118,7 @@ class ParentService {
 
       int targetParentId = parentId;
       if (dio.options.baseUrl != ApiClient.defaultServerUrl && schoolPrefix != null) {
-        final prefs = await SharedPreferences.getInstance();
-        targetParentId = prefs.getInt('parent_id_$schoolPrefix') ?? parentId;
+        targetParentId = await AuthService.getParentIdForSchool(schoolPrefix) ?? parentId;
       }
 
       final response = await dio.post(

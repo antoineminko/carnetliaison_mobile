@@ -4,6 +4,7 @@ extension InformationsViewExtension on _ChildDetailsViewState {
   Widget _buildInfosTab() {
     return DefaultTabController(
       length: 2,
+      initialIndex: widget.initialInfosSubTab,
       child: Column(
         children: [
           // Sous-onglets internes

@@ -4,12 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiClient {
   // Dictionnaire des serveurs selon le préfixe
   static final Map<String, String> schoolServers = {
-    'LYIMA': 'https://sirh.alwaysdata.net/api_carnet_liaison/api',
-    'LYIMM': 'https://sirh.alwaysdata.net/api_carnet_liaison/api',
-    'LYNDQ': 'https://sirh.alwaysdata.net/api_carnetliaison2/api',
+    'LYIMM': 'https://sirh.alwaysdata.net/api_carnetliaison2/api',
+    'LYNDQ': 'https://sirh.alwaysdata.net/api_carnet_liaison/api',
   };
 
-  // Serveur par défaut (Colbert) si on ne connaît pas le préfixe
+  // Serveur par défaut si on ne connaît pas le préfixe
   static const String defaultServerUrl = 'https://sirh.alwaysdata.net/api_carnet_liaison/api';
 
   // Cache des instances Dio pour ne pas les recréer à chaque fois
@@ -25,6 +24,15 @@ class ApiClient {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+    ));
+
+    dio.interceptors.add(LogInterceptor(
+      request: true,
+      requestHeader: true,
+      requestBody: true,
+      responseHeader: true,
+      responseBody: true,
+      error: true,
     ));
 
     dio.interceptors.add(InterceptorsWrapper(

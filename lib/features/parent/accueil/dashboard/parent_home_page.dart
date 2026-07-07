@@ -43,6 +43,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
   bool _isLoadingChildren = true;
   int _currentIndex = 0;
   int _childInitialTab = 0;
+  int _childInitialInfosSubTab = 0;
 
   bool _notifPush = true;
   bool _notifSms = false;
@@ -68,7 +69,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
   String? _parentPhone;
   int _unreadNotificationsCount = 0;
 
-  void _selectChildByName(String childName, int initialTab) {
+  void _selectChildByName(String childName, int initialTab, [int initialInfosSubTab = 0]) {
     final idx = _childrenData.indexWhere(
       (c) =>
           (c['name'] as String).toLowerCase().contains(childName.toLowerCase()),
@@ -76,6 +77,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
     if (idx != -1) {
       setState(() {
         _childInitialTab = initialTab;
+        _childInitialInfosSubTab = initialInfosSubTab;
       });
       _onChildSelected(idx);
     }
@@ -382,45 +384,38 @@ class _ParentHomePageState extends State<ParentHomePage> {
     final parentId = await AuthService.getParentId();
     if (parentId == null) return;
     try {
-      final response = await ApiClient.instance.get(
-        ApiEndpoints.parentConversations(parentId),
-      );
-      if (response.data != null && response.data['success']) {
-        final List<Map<String, dynamic>> all = List<Map<String, dynamic>>.from(
-          response.data['conversations'] ?? [],
+      final all = await ParentService.getConversations(parentId);
+      if (!mounted) return;
+      setState(() {
+        _adminConversations = all
+            .where((c) => c['enseignant_id'] == null)
+            .toList();
+
+        _teacherConversationsAll = all
+            .where(
+              (c) =>
+                  c['enseignant_id'] != null &&
+                  (c['status'] == 'accepted' || c['status'] == 'pending'),
+            )
+            .toList();
+      });
+
+      if (widget.arguments != null &&
+          widget.arguments!['openConversationId'] != null) {
+        final convId = widget.arguments!['openConversationId'].toString();
+        final convToOpen = all.firstWhere(
+          (c) => c['id'].toString() == convId,
+          orElse: () => <String, dynamic>{},
         );
-        if (!mounted) return;
-        setState(() {
-          _adminConversations = all
-              .where((c) => c['enseignant_id'] == null)
-              .toList();
 
-          _teacherConversationsAll = all
-              .where(
-                (c) =>
-                    c['enseignant_id'] != null &&
-                    (c['status'] == 'accepted' || c['status'] == 'pending'),
-              )
-              .toList();
-        });
-
-        if (widget.arguments != null &&
-            widget.arguments!['openConversationId'] != null) {
-          final convId = widget.arguments!['openConversationId'].toString();
-          final convToOpen = all.firstWhere(
-            (c) => c['id'].toString() == convId,
-            orElse: () => <String, dynamic>{},
+        if (convToOpen.isNotEmpty) {
+          widget.arguments!.remove('openConversationId');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatPage(conversation: convToOpen),
+            ),
           );
-
-          if (convToOpen.isNotEmpty) {
-            widget.arguments!.remove('openConversationId');
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ChatPage(conversation: convToOpen),
-              ),
-            );
-          }
         }
       }
     } catch (e) {
@@ -436,18 +431,12 @@ class _ParentHomePageState extends State<ParentHomePage> {
     }
 
     try {
-      final response = await ApiClient.instance.get(
-        '/parents/$parentId/events',
-      );
-      if (response.data != null && response.data['success']) {
-        if (!mounted) return;
-        setState(() {
-          _appointments = List<Map<String, dynamic>>.from(
-            response.data['appointments'] ?? [],
-          );
-          _isLoadingEvents = false;
-        });
-      }
+      final allEvents = await ParentService.getEvents(parentId);
+      if (!mounted) return;
+      setState(() {
+        _appointments = allEvents;
+        _isLoadingEvents = false;
+      });
     } catch (e) {
       if (mounted) setState(() => _isLoadingEvents = false);
     }
@@ -484,9 +473,26 @@ class _ParentHomePageState extends State<ParentHomePage> {
     Map<String, dynamic> child,
     List<int> localVerifiedIds,
   ) {
-    final imageUrl = child['photo_url']?.toString().isNotEmpty == true
+    String? imageUrl = child['photo_url']?.toString().isNotEmpty == true
         ? child['photo_url'].toString()
         : null;
+
+    // FIX SERVER BUG: Corriger dynamiquement l'URL de l'image si elle vient du mauvais serveur
+    final prefix = child['_school_prefix'];
+    if (imageUrl != null && prefix != null) {
+      final correctBaseUrl = ApiClient.schoolServers[prefix];
+      if (correctBaseUrl != null) {
+        final baseWithoutApi = correctBaseUrl.endsWith('/api') 
+            ? correctBaseUrl.substring(0, correctBaseUrl.length - 4) 
+            : correctBaseUrl;
+        final uri = Uri.tryParse(imageUrl);
+        if (uri != null && uri.pathSegments.contains('storage')) {
+          final storageIndex = uri.pathSegments.indexOf('storage');
+          final relativePath = uri.pathSegments.sublist(storageIndex).join('/');
+          imageUrl = '$baseWithoutApi/$relativePath';
+        }
+      }
+    }
 
     String status = child['status'] ?? 'Présent';
     Color statusColor = AppTheme.forestGreen;
@@ -553,6 +559,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
       'is_verified': isApiVerified,
       // Verrouillé si pas encore vérifié localement sur CE téléphone
       'local_verified': isLocalVerified,
+      '_school_prefix': child['_school_prefix'],
       'raw': child,
     };
   }
@@ -722,12 +729,14 @@ class _ParentHomePageState extends State<ParentHomePage> {
           return ChildDetailsView(
             child: _selectedChild!,
             initialTab: _childInitialTab,
+            initialInfosSubTab: _childInitialInfosSubTab,
             highlightIncidentId: highlightIncidentId,
             highlightHomeworkId: highlightHomeworkId,
             onBack: () => setState(() {
               _selectedChild = null;
               _selectedChildIndex = null;
               _childInitialTab = 0;
+              _childInitialInfosSubTab = 0;
             }),
             onGoToCalendar: () => setState(() => _currentIndex = 2),
             onShowNotifications: () => _showNotificationsModal(
@@ -765,6 +774,11 @@ class _ParentHomePageState extends State<ParentHomePage> {
   }
 
   Widget _buildGlobalDashboard() {
+    if (_isLoadingChildren) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppTheme.seaBlue),
+      );
+    }
     if (_isEmptyState) {
       return RefreshIndicator(
         onRefresh: _loadLinkedChildren,

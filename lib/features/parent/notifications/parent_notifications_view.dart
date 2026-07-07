@@ -13,12 +13,40 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
     // Charger les notifications locales (push notifications)
     final localNotifications = await NotificationStorage.getNotifications();
     for (var n in localNotifications) {
+      String childName = n['data']?['child_name'] ?? '';
+      String schoolName = '';
+      final eleveIdRaw = n['data']?['eleve_id'];
+      if (eleveIdRaw != null && childName.isEmpty) {
+        final childIndex = _childrenData.indexWhere((c) => c['id'].toString() == eleveIdRaw.toString());
+        if (childIndex != -1) {
+          childName = _childrenData[childIndex]['name'] ?? '';
+          schoolName = _childrenData[childIndex]['school'] ?? '';
+        }
+      }
+
+      String dataType = n['data']?['type']?.toString() ?? '';
+      String displayTitle = n['title'] ?? 'Notification';
+      String displaySender = n['data']?['enseignant_nom'] ?? '';
+
+      if (dataType == 'admin_info') {
+        if (displayTitle.toLowerCase().contains('financière') || displayTitle.toLowerCase().contains('finance')) {
+          displayTitle = 'Nouvelle information financière';
+          displaySender = "Comptabilité de l'école";
+        } else {
+          displayTitle = "Nouvelle information de l'administration";
+          displaySender = "Administration";
+        }
+      } else if (dataType == 'admin_message') {
+        displayTitle = "Nouveau message de l'administration";
+        displaySender = "Administration";
+      }
+
       allNotifications.add({
-        'title': n['title'] ?? 'Notification',
-        'type': n['data']?['type'] == 'incident' ? 'INCIDENT' : 'INFO',
-        'child': n['data']?['child_name'] ?? '',
-        'school': '',
-        'sender': n['data']?['enseignant_nom'] ?? '',
+        'title': displayTitle,
+        'type': dataType == 'incident' ? 'INCIDENT' : 'INFO',
+        'child': childName,
+        'school': schoolName,
+        'sender': displaySender,
         'time': n['timestamp'] != null
             ? DateTime.parse(
                 n['timestamp'],
@@ -77,8 +105,33 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
 
       // Extraire le nom de l'enfant si disponible
       String childName = '';
+      String schoolName = '';
       if (dataMap != null && dataMap['eleve_nom'] != null) {
         childName = dataMap['eleve_nom'].toString();
+      }
+      final eleveIdRaw = dataMap?['eleve_id'];
+      if (eleveIdRaw != null && childName.isEmpty) {
+        final childIndex = _childrenData.indexWhere((c) => c['id'].toString() == eleveIdRaw.toString());
+        if (childIndex != -1) {
+          childName = _childrenData[childIndex]['name'] ?? '';
+          schoolName = _childrenData[childIndex]['school'] ?? '';
+        }
+      }
+
+      String displayTitle = n['title'] ?? 'Notification';
+      String displaySender = dataMap?['matiere'] ?? '';
+
+      if (dataType == 'admin_info') {
+        if (displayTitle.toLowerCase().contains('financière') || displayTitle.toLowerCase().contains('finance')) {
+          displayTitle = 'Nouvelle information financière';
+          displaySender = "Comptabilité de l'école";
+        } else {
+          displayTitle = "Nouvelle information de l'administration";
+          displaySender = "Administration";
+        }
+      } else if (dataType == 'admin_message') {
+        displayTitle = "Nouveau message de l'administration";
+        displaySender = "Administration";
       }
 
       // Style spécifique pour un nouveau devoir
@@ -88,11 +141,11 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
       }
 
       allNotifications.add({
-        'title': n['title'] ?? 'Notification',
+        'title': displayTitle,
         'type': 'INFO',
         'child': childName,
-        'school': '',
-        'sender': dataMap?['matiere'] ?? '',
+        'school': schoolName,
+        'sender': displaySender,
         'time': n['created_at'] != null
             ? n['created_at'].toString().substring(0, 10)
             : 'Récemment',
@@ -286,7 +339,8 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                                   _selectChildByName(
                                     childName,
                                     5,
-                                  ); // Onglet Infos
+                                    0,
+                                  ); // Onglet Infos, Sous-onglet Signalements
                                   // ignore: invalid_use_of_protected_member
                                   setState(() {
                                     _pendingHighlightIncidentId =
@@ -334,6 +388,9 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                                           data['type'] == 'new_homework'
                                           ? 2
                                           : 5; // 2 = Devoirs, 5 = Infos
+                                      if (data['type'] == 'admin_info') {
+                                        _childInitialInfosSubTab = n['title']?.toString().toLowerCase().contains('financière') == true ? 0 : 1;
+                                      }
                                       _currentIndex = 0;
                                       if (childIndex < _childrenData.length) {
                                         _childrenData[childIndex]['notif'] = 0;
@@ -362,19 +419,27 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                             if (n['type'] == 'INFO' ||
                                 n['type'] == 'RDV' ||
                                 n['type'] == 'ABSENCE') {
-                              final childName = n['child']?.toString().split(
-                                ' ',
-                              )[0];
-                              if (childName != null && childName.isNotEmpty) {
-                                final childIndex = _childrenData.indexWhere(
-                                  (c) =>
-                                      (c['name'] as String).contains(childName),
+                              int childIndex = -1;
+                              final eleveId = n['data']?['eleve_id'];
+                              if (eleveId != null) {
+                                childIndex = _childrenData.indexWhere(
+                                  (c) => c['id'].toString() == eleveId.toString(),
                                 );
-                                if (childIndex != -1) {
+                              } else {
+                                final childName = n['child']?.toString().split(' ')[0];
+                                if (childName != null && childName.isNotEmpty) {
+                                  childIndex = _childrenData.indexWhere(
+                                    (c) => (c['name'] as String).contains(childName),
+                                  );
+                                }
+                              }
+
+                              if (childIndex != -1) {
                                   Navigator.pop(context);
                                   // ignore: invalid_use_of_protected_member
                                   setState(() {
                                     _childInitialTab = 5;
+                                    _childInitialInfosSubTab = n['title']?.toString().toLowerCase().contains('financière') == true ? 0 : 1;
                                     _currentIndex = 0;
                                   });
                                   _onChildSelected(childIndex);
@@ -514,7 +579,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                           fontSize: 12,
                         ),
                         children: [
-                          const TextSpan(text: 'Détails: '),
+                          const TextSpan(text: 'Adressé au parent de : '),
                           TextSpan(
                             text: child,
                             style: const TextStyle(

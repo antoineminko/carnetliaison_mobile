@@ -22,6 +22,7 @@ class ChildDetailsView extends StatefulWidget {
   final int initialTab;
   final String? highlightIncidentId;
   final String? highlightHomeworkId;
+  final int initialInfosSubTab;
 
   const ChildDetailsView({
     super.key,
@@ -32,6 +33,7 @@ class ChildDetailsView extends StatefulWidget {
     this.initialTab = 0,
     this.highlightIncidentId,
     this.highlightHomeworkId,
+    this.initialInfosSubTab = 0,
   });
 
   @override

@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' hide Border;
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:app_mobile/features/teacher/services/teacher_student_service.dart';
@@ -17,14 +17,14 @@ class GradesEntryView extends StatefulWidget {
 
 class _GradesEntryViewState extends State<GradesEntryView> {
   String selectedTrimester = '1er Trimestre';
-  String selectedAssignmentNum = '1er Devoir';
+  String selectedAssignmentNum = 'Interrogation 1';
   String selectedType = 'Devoir Maison';
   String selectedSubject = 'Philosophie';
   DateTime? evaluationDate = DateTime.now();
   final TextEditingController titleController = TextEditingController();
 
   final List<String> trimesters = ['1er Trimestre', '2ème Trimestre', '3ème Trimestre'];
-  final List<String> assignmentNums = ['1er Devoir', '2ème Devoir', '3ème Devoir', '4ème Devoir', '5ème Devoir'];
+  final List<String> assignmentNums = ['Interrogation 1', 'Interrogation 2', 'Interrogation 3', 'Interrogation 4'];
   final List<String> types = ['Devoir Maison', 'Interrogation en Classe', 'Contrôle Continu', 'Examen Blanc'];
   final List<String> subjects = [
     'Philosophie',
@@ -56,7 +56,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
       
       setState(() {
         students = data.map((e) => {
-          'id': e['matricule'] ?? e['id'].toString(), // Use matricule as ID if available
+          'id': e['code_secret'] ?? e['matricule'] ?? e['id'].toString(), // Use code_secret as ID if available
           'name': '${e['nom']} ${e['prenom']}',
           'grade': '',
           'raw_id': e['id'], // Real database ID
@@ -81,7 +81,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
 
   Future<void> _importExcelData() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['xlsx', 'xls'],
       );
@@ -99,7 +99,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
           var sheet = excel.tables[table];
           if (sheet == null) continue;
 
-          // Skip header row
+       
           for (int i = 1; i < sheet.maxRows; i++) {
             var row = sheet.row(i);
             if (row.length >= 2) {
@@ -159,7 +159,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
         ),
         content: const Text(
           'Le fichier Excel (.xlsx) doit comporter deux colonnes :\n\n'
-          'Colonne A : Matricule de l\'élève (ex: MAT-1234)\n'
+          'Colonne A : Code secret ou Matricule de l\'élève\n'
           'Colonne B : Note sur 20 (ex: 15.5)\n\n'
           'Veuillez inclure l\'en-tête sur la première ligne.',
         ),
@@ -308,12 +308,13 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               value: selectedTrimester,
+                              isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Trimestre',
                                 border: OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               ),
-                              items: trimesters.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
+                              items: trimesters.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))).toList(),
                               onChanged: (val) => setState(() => selectedTrimester = val!),
                             ),
                           ),
@@ -321,12 +322,13 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               value: selectedAssignmentNum,
+                              isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'N° Évaluation',
                                 border: OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               ),
-                              items: assignmentNums.map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 13)))).toList(),
+                              items: assignmentNums.map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))).toList(),
                               onChanged: (val) => setState(() => selectedAssignmentNum = val!),
                             ),
                           ),
@@ -341,13 +343,14 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                             flex: 3,
                             child: DropdownButtonFormField<String>(
                               value: selectedSubject,
+                              isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Matière',
                                 prefixIcon: Icon(Icons.book_outlined, size: 18),
                                 border: OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               ),
-                              items: subjects.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12)))).toList(),
+                              items: subjects.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))).toList(),
                               onChanged: (val) => setState(() => selectedSubject = val!),
                             ),
                           ),
@@ -356,12 +359,13 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                             flex: 3,
                             child: DropdownButtonFormField<String>(
                               value: selectedType,
+                              isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Type',
                                 border: OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               ),
-                              items: types.map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 12)))).toList(),
+                              items: types.map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))).toList(),
                               onChanged: (val) => setState(() => selectedType = val!),
                             ),
                           ),

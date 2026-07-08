@@ -1,4 +1,4 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
+ï»¿import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'local_notification_service.dart';
 import 'notification_storage.dart';
@@ -6,14 +6,14 @@ import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/features/calls/pages/incoming_call_screen.dart';
 
-// Clé de navigation globale pour naviguer depuis les notifications
+// ClÃ© de navigation globale pour naviguer depuis les notifications
 import 'package:flutter/material.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('?? [FirebaseService] Notification background reçue : ${message.messageId}');
+  print('?? [FirebaseService] Notification background reÃ§ue : ${message.messageId}');
   
 
   await NotificationStorage.saveNotification({
@@ -53,25 +53,25 @@ class FirebaseService {
       onNotificationReceived?.call();
     });
 
-    // 4. Clic sur notification quand l'app est en arrière-plan
+    // 4. Clic sur notification quand l'app est en arriÃ¨re-plan
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('?? [FirebaseService] Clic sur notification background : ${message.notification?.title}');
-      print('?? [FirebaseService] Data reçue: ${message.data}');
+      print('?? [FirebaseService] Data reÃ§ue: ${message.data}');
       print('?? [FirebaseService] Type: ${message.data['type']}');
       _handleNotificationTap(message.data);
     });
 
-    // 5. App ouverte depuis une notification (état terminé)
+    // 5. App ouverte depuis une notification (Ã©tat terminÃ©)
     RemoteMessage? initialMessage = await _firebaseMessaging.getInitialMessage();
     if (initialMessage != null) {
       print('? [FirebaseService] App ouverte via notification (Terminated)');
-      // Délai pour laisser le splash screen (2500ms) se terminer avant de naviguer
+      // DÃ©lai pour laisser le splash screen (2500ms) se terminer avant de naviguer
       Future.delayed(const Duration(milliseconds: 3000), () {
         _handleNotificationTap(initialMessage.data);
       });
     }
 
-    // 6. Token FCM (sera ré-enregistré après le login de toute façon)
+    // 6. Token FCM (sera rÃ©-enregistrÃ© aprÃ¨s le login de toute faÃ§on)
     await getFCMToken();
   }
 
@@ -91,7 +91,7 @@ class FirebaseService {
           arguments: {'openNotifications': true},
         );
         break;
-      case 'attendance_alert': // Appel présence/absence enseignant
+      case 'attendance_alert': // Appel prÃ©sence/absence enseignant
       case 'absence': // alias legacy
       case 'retard':
         final String? childName = data['child_name'];
@@ -101,7 +101,7 @@ class FirebaseService {
           arguments: {
             'initialTab': 0, // Accueil / Mes enfants
             'selectChildName': childName,
-            'childInitialTab': 0, // Onglet Aperçu dans ChildDetailsView
+            'childInitialTab': 0, // Onglet AperÃ§u dans ChildDetailsView
           },
         );
         break;
@@ -110,7 +110,7 @@ class FirebaseService {
       case 'appointment_refused':
       case 'appointment_postponed':
       case 'appointment_cancelled':
-        // Rediriger vers la page des événements avec l'ID du rendez-vous
+        // Rediriger vers la page des Ã©vÃ©nements avec l'ID du rendez-vous
         final String? appointmentId = data['appointment_id'];
         final String? statut = data['statut'];
         final bool isPostponed = data['type'] == 'appointment_postponed' || statut == 'reporte';
@@ -128,18 +128,28 @@ class FirebaseService {
         );
         break;
       case 'new_homework':
-        // Nouveau devoir publié par un enseignant
-        // Naviguer directement vers l'enfant et l'onglet Devoirs
         final String? childName = data['eleve_nom'];
         final String? devoirId = data['devoir_id'];
+        final String? enseignantNom = data['enseignant_nom'];
+        final String? matiere = data['matiere'];
+        final String? typeDevoir = data['type_devoir'] ?? data['type'];
+
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/parent/home',
           (route) => false,
           arguments: {
             'initialTab': 0, // Accueil / Mes enfants
-            'selectChildName': childName,
-            'childInitialTab': 2, // Onglet Devoirs (index 2)
-            'highlightHomeworkId': devoirId,
+            'openNotifications': true, // Ouvrir la modal notifications
+            'notificationPayload': {
+              'type': 'new_homework',
+              'title': 'Nouvelle Ã©valuation',
+              'body': 'Une nouvelle note ou un nouveau devoir a Ã©tÃ© publiÃ©.',
+              'child_name': childName,
+              'devoir_id': devoirId,
+              'enseignant_nom': enseignantNom,
+              'matiere': matiere,
+              'type_devoir': typeDevoir,
+            },
           },
         );
         break;
@@ -182,7 +192,7 @@ class FirebaseService {
         );
         break;
       case 'chat_accepted':
-        // Conversation acceptée - rediriger vers le chat
+        // Conversation acceptÃ©e - rediriger vers le chat
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/parent/home',
           (route) => false,
@@ -194,7 +204,7 @@ class FirebaseService {
         );
         break;
       case 'chat_rejected':
-        // Conversation refusée - afficher une notification/bannière
+        // Conversation refusÃ©e - afficher une notification/banniÃ¨re
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/parent/home',
           (route) => false,
@@ -206,7 +216,7 @@ class FirebaseService {
         );
         break;
       case 'incoming_call':
-        // Appel entrant - afficher l'écran d'appel entrant
+        // Appel entrant - afficher l'Ã©cran d'appel entrant
         final String? callId = data['call_id'];
         final String? callType = data['call_type'] ?? 'audio';
         final String? conversationId = data['conversation_id'];
@@ -230,42 +240,42 @@ class FirebaseService {
         }
         break;
       case 'call_rejected':
-        // Appel rejeté - afficher notification
+        // Appel rejetÃ© - afficher notification
         if (navigatorKey.currentContext != null) {
           ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
             const SnackBar(
-              content: Text('? Appel rejeté'),
+              content: Text('? Appel rejetÃ©'),
               backgroundColor: Colors.red,
             ),
           );
         }
         break;
       case 'call_missed':
-        // Appel manqué - afficher notification
+        // Appel manquÃ© - afficher notification
         if (navigatorKey.currentContext != null) {
           ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
             const SnackBar(
-              content: Text('?? Appel manqué'),
+              content: Text('?? Appel manquÃ©'),
               backgroundColor: Colors.orange,
             ),
           );
         }
         break;
       case 'incident':
-        // Incident signalé par un enseignant
+        // Incident signalÃ© par un enseignant
         // 1. Ouvrir l'accueil avec la modal des notifications
-        // 2. Le parent verra une bannière dans les notifications
-        // 3. En cliquant sur la bannière, il ira dans Infos de l'enfant
+        // 2. Le parent verra une banniÃ¨re dans les notifications
+        // 3. En cliquant sur la banniÃ¨re, il ira dans Infos de l'enfant
         final String? childName = data['child_name'];
         final String? incidentType = data['incident_type'];
         final String? incidentId = data['incident_id'];
         final String? enseignantNom = data['enseignant_nom'];
         final String? matiere = data['matiere'];
         
-        // Construire le body pour la bannière
+        // Construire le body pour la banniÃ¨re
         final String bodyText = childName != null && incidentType != null
             ? '$childName - ${incidentType.toUpperCase()}'
-            : 'Nouvel incident signalé';
+            : 'Nouvel incident signalÃ©';
         
         print('?? [FirebaseService] Navigation incident - childName: $childName, incidentType: $incidentType');
         print('?? [FirebaseService] Body text: $bodyText');
@@ -278,7 +288,7 @@ class FirebaseService {
             'openNotifications': true, // Ouvrir la modal notifications
             'notificationPayload': {
               'type': 'incident',
-              'title': 'Incident signalé',
+              'title': 'Incident signalÃ©',
               'body': bodyText,
               'child_name': childName,
               'incident_id': incidentId,
@@ -323,13 +333,13 @@ class FirebaseService {
             'token': token,
             'platform': 'android',
           });
-          print('? [FirebaseService] Token enregistré pour parent #$parentId');
+          print('? [FirebaseService] Token enregistrÃ© pour parent #$parentId');
         }
       }
 
       return token;
     } catch (e) {
-      print('? [FirebaseService] Erreur récupération Token : $e');
+      print('? [FirebaseService] Erreur rÃ©cupÃ©ration Token : $e');
       return null;
     }
   }

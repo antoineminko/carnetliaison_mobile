@@ -128,7 +128,9 @@ class FirebaseService {
         );
         break;
       case 'new_homework':
+      case 'new_grade':
         final String? childName = data['eleve_nom'];
+        final String? eleveId = data['eleve_id'];
         final String? devoirId = data['devoir_id'];
         final String? enseignantNom = data['enseignant_nom'];
         final String? matiere = data['matiere'];
@@ -145,6 +147,7 @@ class FirebaseService {
               'title': 'Nouvelle évaluation',
               'body': 'Une nouvelle note ou un nouveau devoir a été publié.',
               'child_name': childName,
+              'eleve_id': eleveId,
               'devoir_id': devoirId,
               'enseignant_nom': enseignantNom,
               'matiere': matiere,

@@ -1,4 +1,4 @@
-part of '../accueil/dashboard/parent_home_page.dart';
+﻿part of '../accueil/dashboard/parent_home_page.dart';
 
 extension ParentNotificationsViewExtension on _ParentHomePageState {
   void _showNotificationsModal({
@@ -6,7 +6,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
     Map<String, dynamic>? incidentPayload,
   }) async {
     print(
-      'ðŸ“¥ [ParentHomePage] _showNotificationsModal - incidentPayload: $incidentPayload',
+      'Ã°Å¸â€œÂ¥ [ParentHomePage] _showNotificationsModal - incidentPayload: $incidentPayload',
     );
     final List<Map<String, dynamic>> allNotifications = [];
 
@@ -29,9 +29,9 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
       String displaySender = n['data']?['enseignant_nom'] ?? '';
 
       if (dataType == 'admin_info') {
-        if (displayTitle.toLowerCase().contains('financiÃ¨re') || displayTitle.toLowerCase().contains('finance')) {
-          displayTitle = 'Nouvelle information financiÃ¨re';
-          displaySender = "ComptabilitÃ© de l'Ã©cole";
+        if (displayTitle.toLowerCase().contains('financiÃƒÂ¨re') || displayTitle.toLowerCase().contains('finance')) {
+          displayTitle = 'Nouvelle information financiÃƒÂ¨re';
+          displaySender = "ComptabilitÃƒÂ© de l'ÃƒÂ©cole";
         } else {
           displayTitle = "Nouvelle information de l'administration";
           displaySender = "Administration";
@@ -51,7 +51,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
             ? DateTime.parse(
                 n['timestamp'],
               ).toString().substring(0, 16).replaceFirst('T', ' ')
-            : 'RÃ©cemment',
+            : 'RÃƒÂ©cemment',
         'color': n['data']?['type'] == 'incident' ? Colors.red : Colors.blue,
         'icon': n['data']?['type'] == 'incident'
             ? Icons.warning
@@ -74,7 +74,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
           'sender':
               '${rdv['enseignant_prenom'] ?? ''} ${rdv['enseignant_nom'] ?? ''}'
                   .trim(),
-          'time': rdv['date_rdv'] ?? 'Ã€ dÃ©finir',
+          'time': rdv['date_rdv'] ?? 'Ãƒâ‚¬ dÃƒÂ©finir',
           'color': AppTheme.seaBlue,
           'icon': Icons.calendar_today,
           'isAppointmentRequest': true,
@@ -83,11 +83,11 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
       }
     }
 
-    // _conversationRequests retirÃ©s des notifications selon la demande de l'utilisateur
+    // _conversationRequests retirÃƒÂ©s des notifications selon la demande de l'utilisateur
 
     for (var n in _apiNotifications) {
 
-      // Extraire les mÃ©tadonnÃ©es de la notification (type fonctionnel, classe, etc.)
+      // Extraire les mÃƒÂ©tadonnÃƒÂ©es de la notification (type fonctionnel, classe, etc.)
       Map<String, dynamic>? dataMap;
       final dynamic rawData = n['data'];
       if (rawData is Map<String, dynamic>) {
@@ -96,7 +96,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
 
       final String dataType = dataMap?['type']?.toString() ?? '';
 
-      // IcÃ´ne et couleur par dÃ©faut
+      // IcÃƒÂ´ne et couleur par dÃƒÂ©faut
       IconData icon = Icons.notifications;
       Color color = n['is_read'] == true ? Colors.grey : Colors.blue;
 
@@ -119,9 +119,9 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
       String displaySender = dataMap?['matiere'] ?? '';
 
       if (dataType == 'admin_info') {
-        if (displayTitle.toLowerCase().contains('financiÃ¨re') || displayTitle.toLowerCase().contains('finance')) {
-          displayTitle = 'Nouvelle information financiÃ¨re';
-          displaySender = "ComptabilitÃ© de l'Ã©cole";
+        if (displayTitle.toLowerCase().contains('financiÃƒÂ¨re') || displayTitle.toLowerCase().contains('finance')) {
+          displayTitle = 'Nouvelle information financiÃƒÂ¨re';
+          displaySender = "ComptabilitÃƒÂ© de l'ÃƒÂ©cole";
         } else {
           displayTitle = "Nouvelle information de l'administration";
           displaySender = "Administration";
@@ -131,8 +131,8 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
         displaySender = "Administration";
       }
 
-      // Style spÃ©cifique pour un nouveau devoir
-      if (dataType == 'new_homework') {
+      // Style spÃƒÂ©cifique pour un nouveau devoir
+      if (dataType == 'new_homework' || dataType == 'new_grade') {
         icon = Icons.menu_book;
         color = n['is_read'] == true ? Colors.grey : Colors.deepPurple;
       }
@@ -150,7 +150,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
         'sender': displaySender,
         'time': n['created_at'] != null
             ? n['created_at'].toString().substring(0, 10)
-            : 'RÃ©cemment',
+            : 'RÃƒÂ©cemment',
         'color': color,
         'icon': icon,
         'message': n['message'] ?? '',
@@ -161,7 +161,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
       });
     }
 
-    // Filtrer si nÃ©cessaire (on compare avec le prÃ©nom pour la dÃ©mo)
+    // Filtrer si nÃƒÂ©cessaire (on compare avec le prÃƒÂ©nom pour la dÃƒÂ©mo)
     final filteredNotifications = filterChildName == null
         ? allNotifications
         : allNotifications
@@ -202,7 +202,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                 color: AppTheme.seaBlue,
               ),
             ),
-            // BanniÃ¨re d'incident si prÃ©sente dans le payload
+            // BanniÃƒÂ¨re d'incident si prÃƒÂ©sente dans le payload
             if (incidentPayload != null) ...[
               const SizedBox(height: 15),
               if (incidentPayload['type'] == 'incident') ...[
@@ -257,7 +257,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Incident signalé',
+                                    'Incident signalÃ©',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
@@ -296,7 +296,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                     ),
                   ),
                 ),
-              ] else if (incidentPayload['type'] == 'new_homework') ...[
+              ] else if (incidentPayload['type'] == 'new_homework' || incidentPayload['type'] == 'new_grade') ...[
                 GestureDetector(
                   onTap: () {
                     Navigator.pop(context);
@@ -357,7 +357,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    incidentPayload['body'] ?? 'Une nouvelle évaluation a été publiée',
+                                    incidentPayload['body'] ?? 'Une nouvelle Ã©valuation a Ã©tÃ© publiÃ©e',
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Colors.grey[700],
@@ -484,7 +484,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                                           ? 2
                                           : 5; // 2 = Devoirs, 5 = Infos
                                       if (data['type'] == 'admin_info') {
-                                        _childInitialInfosSubTab = n['title']?.toString().toLowerCase().contains('financiÃ¨re') == true ? 0 : 1;
+                                        _childInitialInfosSubTab = n['title']?.toString().toLowerCase().contains('financiÃƒÂ¨re') == true ? 0 : 1;
                                       }
                                       _currentIndex = 0;
                                       if (childIndex < _childrenData.length) {
@@ -530,7 +530,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                                 _selectedChild = null;
                                 _selectedChildIndex = null;
                                 _childInitialTab = 0;
-                                _currentIndex = 2; // 2 = Ã‰vÃ©nements when selectedChild is null
+                                _currentIndex = 2; // 2 = Ãƒâ€°vÃƒÂ©nements when selectedChild is null
                               });
                               return;
                             }
@@ -557,7 +557,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                                   // ignore: invalid_use_of_protected_member
                                   setState(() {
                                     _childInitialTab = 5;
-                                    _childInitialInfosSubTab = n['title']?.toString().toLowerCase().contains('financiÃ¨re') == true ? 0 : 1;
+                                    _childInitialInfosSubTab = n['title']?.toString().toLowerCase().contains('financiÃƒÂ¨re') == true ? 0 : 1;
                                     _currentIndex = 0;
                                   });
                                   _onChildSelected(childIndex);
@@ -696,7 +696,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                           fontSize: 12,
                         ),
                         children: [
-                          const TextSpan(text: 'AdressÃ© au parent de : '),
+                          const TextSpan(text: 'AdressÃƒÂ© au parent de : '),
                           TextSpan(
                             text: child,
                             style: const TextStyle(
@@ -705,7 +705,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                             ),
                           ),
                           TextSpan(
-                            text: ' â€¢ $school',
+                            text: ' Ã¢â‚¬Â¢ $school',
                             style: const TextStyle(color: AppTheme.textGrey),
                           ),
                         ],
@@ -713,7 +713,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Ã‰metteur: $sender',
+                      'Ãƒâ€°metteur: $sender',
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 11,
@@ -742,7 +742,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                               SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  'RDV acceptÃ© ! Il a Ã©tÃ© ajoutÃ© Ã  vos Ã©vÃ©nements.',
+                                  'RDV acceptÃƒÂ© ! Il a ÃƒÂ©tÃƒÂ© ajoutÃƒÂ© ÃƒÂ  vos ÃƒÂ©vÃƒÂ©nements.',
                                 ),
                               ),
                             ],
@@ -801,7 +801,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                   child: TextButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      // On simule l'ouverture du modal d'absence dÃ©jÃ  existant dans ChildDetailsView
+                      // On simule l'ouverture du modal d'absence dÃƒÂ©jÃƒÂ  existant dans ChildDetailsView
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(

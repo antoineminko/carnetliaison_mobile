@@ -1,4 +1,4 @@
-﻿part of '../accueil/dashboard/parent_home_page.dart';
+part of '../accueil/dashboard/parent_home_page.dart';
 
 extension ParentNotificationsViewExtension on _ParentHomePageState {
   void _showNotificationsModal({
@@ -285,7 +285,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                         if (incidentPayload['enseignant_nom'] != null) ...[
                           const SizedBox(height: 8),
                           Text(
-                            'Par ${incidentPayload['enseignant_nom']}${incidentPayload['matiere'] != null ? ' - ${incidentPayload['matiere']}' : '}',
+                            'Par ${incidentPayload['enseignant_nom']}${incidentPayload['matiere'] != null ? ' - ' + incidentPayload['matiere'] : ''}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
@@ -376,7 +376,7 @@ extension ParentNotificationsViewExtension on _ParentHomePageState {
                         if (incidentPayload['enseignant_nom'] != null) ...[
                           const SizedBox(height: 8),
                           Text(
-                            'Par ${incidentPayload['enseignant_nom']}${incidentPayload['matiere'] != null ? ' - ${incidentPayload['matiere']}' : '}',
+                            'Par ${incidentPayload['enseignant_nom']}${incidentPayload['matiere'] != null ? ' - ' + incidentPayload['matiere'] : ''}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],

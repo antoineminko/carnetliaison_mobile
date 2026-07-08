@@ -7,13 +7,11 @@ import 'app.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase
+  
   await Firebase.initializeApp();
   
-  // Initialize date formatting for French locale
   await initializeDateFormatting('fr_FR', null);
   
-  // Initialize notifications
   await NotificationsService().init();
 
   runApp(const App());

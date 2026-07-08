@@ -10,7 +10,7 @@ class App extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'School Platform',
-      navigatorKey: navigatorKey, // ✅ Clé de navigation globale pour les notifications
+      navigatorKey: navigatorKey, 
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,

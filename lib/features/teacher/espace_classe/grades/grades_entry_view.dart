@@ -1,9 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:app_mobile/features/teacher/services/teacher_student_service.dart';
+import 'package:app_mobile/features/teacher/services/teacher_grades_service.dart';
 
 class GradesEntryView extends StatefulWidget {
-  const GradesEntryView({super.key});
+  final int classId;
+  const GradesEntryView({super.key, required this.classId});
 
   @override
   State<GradesEntryView> createState() => _GradesEntryViewState();
@@ -33,15 +39,39 @@ class _GradesEntryViewState extends State<GradesEntryView> {
   
   bool isExcelImported = false;
   bool isUploading = false;
+  bool isLoadingStudents = true;
 
-  // Mock student list
-  final List<Map<String, dynamic>> students = [
-    {'id': 'STU-001', 'name': 'Yannick MPIGA', 'grade': ''},
-    {'id': 'STU-002', 'name': 'Awa NDIAYE', 'grade': ''},
-    {'id': 'STU-003', 'name': 'Jean-Marc ONDO', 'grade': ''},
-    {'id': 'STU-004', 'name': 'Marie-Claire EYI', 'grade': ''},
-    {'id': 'STU-005', 'name': 'Kévin MVE', 'grade': ''},
-  ];
+  List<Map<String, dynamic>> students = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStudents();
+  }
+
+  Future<void> _fetchStudents() async {
+    try {
+      final response = await TeacherStudentService.instance.getStudentsByClassId(widget.classId);
+      final data = response.data as List;
+      
+      setState(() {
+        students = data.map((e) => {
+          'id': e['matricule'] ?? e['id'].toString(), // Use matricule as ID if available
+          'name': '${e['nom']} ${e['prenom']}',
+          'grade': '',
+          'raw_id': e['id'], // Real database ID
+        }).toList();
+        isLoadingStudents = false;
+      });
+    } catch (e) {
+      setState(() => isLoadingStudents = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors du chargement des élèves : $e')),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -49,27 +79,71 @@ class _GradesEntryViewState extends State<GradesEntryView> {
     super.dispose();
   }
 
-  Future<void> _simulateExcelImport() async {
-    setState(() => isUploading = true);
-    
-    // Simulate loading
-    await Future.delayed(const Duration(seconds: 2));
+  Future<void> _importExcelData() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+      );
 
-    setState(() {
-      isUploading = false;
-      isExcelImported = true;
-      for (var student in students) {
-        student['grade'] = (10 + (students.indexOf(student) % 10)).toStringAsFixed(1);
+      if (result != null) {
+        setState(() => isUploading = true);
+        
+        File file = File(result.files.single.path!);
+        var bytes = file.readAsBytesSync();
+        var excel = Excel.decodeBytes(bytes);
+
+        int matchedCount = 0;
+
+        for (var table in excel.tables.keys) {
+          var sheet = excel.tables[table];
+          if (sheet == null) continue;
+
+          // Skip header row
+          for (int i = 1; i < sheet.maxRows; i++) {
+            var row = sheet.row(i);
+            if (row.length >= 2) {
+              var matricule = row[0]?.value?.toString().trim();
+              var grade = row[1]?.value?.toString().trim();
+
+              if (matricule != null && grade != null) {
+                // Find student by matricule/id
+                for (var student in students) {
+                  if (student['id'] == matricule) {
+                    setState(() {
+                      student['grade'] = grade;
+                    });
+                    matchedCount++;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        setState(() {
+          isUploading = false;
+          isExcelImported = true;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Succès : Notes importées et associées pour $matchedCount élèves.'),
+              backgroundColor: AppTheme.forestGreen,
+            ),
+          );
+        }
       }
-    });
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Succès : Notes importées pour ${students.length} élèves via Excel.'),
-        backgroundColor: AppTheme.forestGreen,
-      ),
-    );
+    } catch (e) {
+      setState(() => isUploading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de la lecture du fichier Excel : $e')),
+        );
+      }
+    }
   }
 
   void _showExcelFormatInfo() {
@@ -84,8 +158,8 @@ class _GradesEntryViewState extends State<GradesEntryView> {
           ],
         ),
         content: const Text(
-          'Le fichier Excel doit comporter deux colonnes :\n\n'
-          'Colonne A : Matricule de l\'élève (ex: STU-001)\n'
+          'Le fichier Excel (.xlsx) doit comporter deux colonnes :\n\n'
+          'Colonne A : Matricule de l\'élève (ex: MAT-1234)\n'
           'Colonne B : Note sur 20 (ex: 15.5)\n\n'
           'Veuillez inclure l\'en-tête sur la première ligne.',
         ),
@@ -125,8 +199,70 @@ class _GradesEntryViewState extends State<GradesEntryView> {
     }
   }
 
+  Future<void> _publishGrades() async {
+    if (titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez entrer un titre pour l\'évaluation.')),
+      );
+      return;
+    }
+
+    // Collect grades
+    List<Map<String, dynamic>> notesData = [];
+    for (var student in students) {
+      if (student['grade'] != null && student['grade'].toString().isNotEmpty) {
+        notesData.add({
+          'eleve_id': student['raw_id'],
+          'note': student['grade'],
+        });
+      }
+    }
+
+    if (notesData.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez saisir au moins une note.')),
+      );
+      return;
+    }
+
+    try {
+      final payload = {
+        'classe_id': widget.classId,
+        'trimestre': selectedTrimester,
+        'numero': selectedAssignmentNum,
+        'type': selectedType,
+        'matiere': selectedSubject,
+        'titre': titleController.text.trim(),
+        'date': evaluationDate != null ? DateFormat('yyyy-MM-dd').format(evaluationDate!) : null,
+        'notes': notesData,
+      };
+
+      await TeacherGradesService.instance.saveGrades(payload);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Notes transmises et notifications envoyées !'),
+            backgroundColor: AppTheme.forestGreen,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur de sauvegarde : $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (isLoadingStudents) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Column(
       children: [
         Expanded(
@@ -157,7 +293,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                                   child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.forestGreen),
                                 )
                               : TextButton.icon(
-                                  onPressed: _simulateExcelImport,
+                                  onPressed: _importExcelData,
                                   icon: const Icon(Icons.upload_file, size: 18, color: AppTheme.forestGreen),
                                   label: const Text('Importer', style: TextStyle(color: AppTheme.forestGreen, fontWeight: FontWeight.bold, fontSize: 12)),
                                   style: TextButton.styleFrom(backgroundColor: AppTheme.forestGreen.withOpacity(0.1)),
@@ -240,11 +376,11 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                             flex: 2,
                             child: TextField(
                               controller: titleController,
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 labelText: 'Titre du devoir',
                                 hintText: 'ex: Contrôle sur les vecteurs',
-                                border: const OutlineInputBorder(),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               ),
                             ),
                           ),
@@ -352,15 +488,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Notes transmises et notifications envoyées !'),
-                        backgroundColor: AppTheme.forestGreen,
-                      ),
-                    );
-                    Navigator.pop(context);
-                  },
+                  onPressed: _publishGrades,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.seaBlue,
                     foregroundColor: Colors.white,

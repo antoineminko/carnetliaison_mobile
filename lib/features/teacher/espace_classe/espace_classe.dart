@@ -170,7 +170,7 @@ class _EspaceClassePageState extends State<EspaceClassePage> {
                         color: AppTheme.seaBlue,
                         onTap: () => _navigateToPage(
                           'Saisie des Notes',
-                          const GradesEntryView(),
+                          GradesEntryView(classId: widget.classId),
                         ),
                       ),
                       _buildShortcutCard(

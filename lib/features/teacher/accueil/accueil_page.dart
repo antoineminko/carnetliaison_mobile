@@ -178,14 +178,20 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildSchoolChip(SchoolConfigs.sainteTherese, true),
-                          const SizedBox(width: 8),
-                          _buildSchoolChip(SchoolConfigs.notreDame, false),
-                        ],
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.seaBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        premierClasse != null ? (premierClasse['ecole_nom'] ?? 'Établissement') : 'Vos classes',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.seaBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -211,151 +217,110 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
           ),
 
           const SizedBox(height: 25),
-          // 2. NEXT CLASS CARD (Linked to a school)
-          const SizedBox(height: 25), // 2. NEXT CLASS CARD (Linked to a school)
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EspaceClassePage(
-                    classId: premierClasse?['id'] ?? 1,
-                    className: premierClasse?['classe_nom'] ?? '3ème B',
-                    subject: teacher['matiere'] ?? 'Mathématiques',
-                    session: 'Matin',
-                    teacherId: _teacherId ?? 1,
-                    studentCount: premierClasse?['students_count'] ?? 30,
-                    schoolName: premierClasse?['ecole_nom'] ?? 'Aucune école',
-                  ),
-                ),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppTheme.seaBlue, AppTheme.seaBlue.withOpacity(0.8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.seaBlue.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.access_time_filled,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+          // 2. CLASSES SLIDER
+          if (classes.isEmpty)
+            const Center(child: Text('Aucune classe assignée'))
+          else
+            SizedBox(
+              height: 180,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: classes.length,
+                itemBuilder: (context, index) {
+                  final classe = classes[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EspaceClassePage(
+                            classId: classe['id'] ?? 1,
+                            className: classe['classe_nom'] ?? 'Classe',
+                            subject: matiere,
+                            session: 'Matin',
+                            teacherId: _teacherId ?? 1,
+                            studentCount: classe['students_count'] ?? 0,
+                            schoolName: classe['ecole_nom'] ?? '',
                           ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'VOTRE CLASSE',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.0,
-                            ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 280,
+                      margin: const EdgeInsets.only(right: 15),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.seaBlue,
+                            AppTheme.seaBlue.withOpacity(0.8)
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.seaBlue.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          premierClasse?['ecole_nom'] ?? 'ÉCOLE',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    premierClasse?['classe_nom'] ?? 'Aucune classe',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.location_on,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          SizedBox(width: 5),
-                          Text(
-                            'Sur place',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.blueAccent.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Text(
-                              '08:00 - 12:00',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.class_,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
                               ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  '${classe['students_count'] ?? 0} élèves',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Text(
+                            classe['classe_nom'] ?? 'Classe',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  );
+                },
               ),
             ),
-          ),
 
           const SizedBox(height: 30),
 
@@ -380,31 +345,6 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
             childAspectRatio: 1.1,
             children: [
               _buildPriorityCard(
-                title: 'Faire l\'appel',
-                subtitle: premierClasse?['classe_nom'] ?? 'Aucune classe',
-                icon: Icons.how_to_reg,
-                color: AppTheme.forestGreen, // Forest Green
-                isUrgent: true,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EspaceClassePage(
-                        classId: premierClasse?['id'] ?? 1,
-                        className:
-                            premierClasse?['classe_nom'] ?? 'Aucune classe',
-                        subject: teacher['matiere'] ?? 'Mathématiques',
-                        session: 'Matin',
-                        teacherId: _teacherId ?? 1,
-                        studentCount: premierClasse?['students_count'] ?? 30,
-                        schoolName:
-                            premierClasse?['ecole_nom'] ?? 'Aucune école',
-                      ),
-                    ),
-                  );
-                },
-              ),
-              _buildPriorityCard(
                 title: 'Publier devoir',
                 subtitle: 'Gérer les devoirs',
                 icon: Icons.upload_file,
@@ -421,13 +361,13 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
               ),
               _buildPriorityCard(
                 title: 'Messages',
-                subtitle: '3 non lus',
+                subtitle: '${_conversations.length} récents',
                 icon: Icons.mark_email_unread,
                 color: AppTheme.sunYellow, // Sun Yellow
                 isUrgent: false,
                 onTap: () {
                   setState(() {
-                    _currentIndex = 3; // Switch to Messages tab
+                    _currentIndex = 1; // Switch to Messages tab (Index 1)
                   });
                 },
               ),
@@ -435,7 +375,7 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                 title: 'Agenda',
                 subtitle: '${_appointments.length} événements',
                 icon: Icons.event,
-                color: AppTheme.seaBlue.withOpacity(0.7), // Subtle Sea Blue
+                color: AppTheme.forestGreen, 
                 isUrgent: false,
                 onTap: () {
                   setState(() {

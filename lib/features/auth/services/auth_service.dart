@@ -1,31 +1,37 @@
 import 'package:app_mobile/shared/utils/user_role.dart';
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_mobile/features/notifications/services/notifications_service.dart';
 
-enum AuthResult { success, invalidCredentials, userNotFound }
+enum AuthResult { success, invalidCredentials, userNotFound, networkError }
+
+class AuthResponse {
+  final AuthResult result;
+  final List<dynamic>? teachersData;
+
+  AuthResponse({required this.result, this.teachersData});
+}
 
 class AuthService {
-  Future<AuthResult> login({
+  Future<AuthResponse> login({
     required UserRole role,
     required String username,
     required String password,
   }) async {
     if (role != UserRole.parent && role != UserRole.teacher) {
-      // Pour les autres rôles, simulation pour la démo
-      return AuthResult.success;
+      return AuthResponse(result: AuthResult.success);
     }
 
     try {
-      final endpoint = role == UserRole.parent ? ApiEndpoints.login : ApiEndpoints.loginTeacher;
+      final endpoint = role == UserRole.parent
+          ? ApiEndpoints.login
+          : ApiEndpoints.loginTeacher;
       final response = await ApiClient.instance.post(
         endpoint,
-        data: {
-          'identifier': username,
-          'password': password,
-        },
+        data: {'identifier': username, 'password': password},
       );
 
       if (response.statusCode == 200 && response.data['success']) {
@@ -34,56 +40,97 @@ class AuthService {
         if (role == UserRole.parent) {
           final parent = response.data['parent'];
           if (parent == null || parent['id'] == null) {
-            return AuthResult.invalidCredentials;
+            return AuthResponse(result: AuthResult.invalidCredentials);
           }
           final parentId = parent['id'];
           await prefs.setInt('parent_id', parentId);
           final prenom = parent['prenom']?.toString();
           final nom = parent['nom']?.toString();
-          final avatarUrl = parent['avatar_url']?.toString() ?? parent['photo_url']?.toString();
+          final avatarUrl =
+              parent['avatar_url']?.toString() ??
+              parent['photo_url']?.toString();
           final email = parent['email']?.toString();
           final telephone = parent['telephone']?.toString();
           if (prenom != null) await prefs.setString('parent_prenom', prenom);
           if (nom != null) await prefs.setString('parent_nom', nom);
-          if (avatarUrl != null) await prefs.setString('parent_avatar_url', avatarUrl);
+          if (avatarUrl != null)
+            await prefs.setString('parent_avatar_url', avatarUrl);
           if (email != null) await prefs.setString('parent_email', email);
-          if (telephone != null) await prefs.setString('parent_telephone', telephone);
-          
+          if (telephone != null)
+            await prefs.setString('parent_telephone', telephone);
+
           // Sauvegarde secrète du mot de passe pour la connexion multi-serveurs
           await prefs.setString('parent_password', password);
-          
+
           // ✅ Enregistrer le token FCM maintenant que parent_id est disponible
           await _registerFcmToken(parentId);
+          // Pour le parent, on termine l'authentification ici
+          return AuthResponse(result: AuthResult.success);
         } else if (role == UserRole.teacher) {
-          final teacher = response.data['teacher'];
-          if (teacher == null || teacher['id'] == null) {
-            return AuthResult.invalidCredentials;
+          final teachers = response.data['teachers'] as List<dynamic>?;
+          if (teachers == null || teachers.isEmpty) {
+            return AuthResponse(result: AuthResult.invalidCredentials);
           }
-          final teacherId = teacher['id'];
-          await prefs.setInt('teacher_id', teacherId);
-          // Sauvegarder les données du profil enseignant
-          final tPrenom = teacher['prenom']?.toString();
-          final tNom = teacher['nom']?.toString();
-          final tEmail = teacher['email']?.toString();
-          final tTelephone = teacher['telephone']?.toString();
-          final tMatiere = teacher['matiere']?.toString();
-          if (tPrenom != null) await prefs.setString('teacher_prenom', tPrenom);
-          if (tNom != null) await prefs.setString('teacher_nom', tNom);
-          if (tEmail != null) await prefs.setString('teacher_email', tEmail);
-          if (tTelephone != null) await prefs.setString('teacher_telephone', tTelephone);
-          if (tMatiere != null) await prefs.setString('teacher_matiere', tMatiere);
+
+          // Sauvegarder les identifiants pour un usage futur si besoin
+          await prefs.setString('teacher_email_cache', username);
+          await prefs.setString('teacher_password_cache', password);
+
+          // On retourne la liste des écoles pour l'écran TeacherSchoolsPage
+          return AuthResponse(
+            result: AuthResult.success,
+            teachersData: teachers,
+          );
         }
 
-        // Save last login time for 15-minute session
-        await prefs.setInt('last_login_time', DateTime.now().millisecondsSinceEpoch);
-
-        return AuthResult.success;
+        return AuthResponse(result: AuthResult.success);
       } else {
-        return AuthResult.invalidCredentials;
+        return AuthResponse(result: AuthResult.invalidCredentials);
       }
     } catch (e) {
-      return AuthResult.invalidCredentials;
+      if (e is DioException) {
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout ||
+            e.type == DioExceptionType.connectionError) {
+          return AuthResponse(result: AuthResult.networkError);
+        }
+      }
+      return AuthResponse(result: AuthResult.invalidCredentials);
     }
+  }
+
+  /// Finalise la connexion de l'enseignant après qu'il ait choisi une école
+  static Future<void> setTeacherProfile(
+    Map<String, dynamic> teacherData,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final teacherId = teacherData['id'];
+    final ecole = teacherData['ecole'];
+
+    if (teacherId == null || ecole == null || ecole['code'] == null) return;
+
+    await prefs.setInt('teacher_id', teacherId);
+    await prefs.setString('school_code', ecole['code']);
+
+    final tPrenom = teacherData['prenom']?.toString();
+    final tNom = teacherData['nom']?.toString();
+    final tEmail = teacherData['email']?.toString();
+    final tTelephone = teacherData['telephone']?.toString();
+    final tMatiere = teacherData['matiere']?.toString();
+
+    if (tPrenom != null) await prefs.setString('teacher_prenom', tPrenom);
+    if (tNom != null) await prefs.setString('teacher_nom', tNom);
+    if (tEmail != null) await prefs.setString('teacher_email', tEmail);
+    if (tTelephone != null)
+      await prefs.setString('teacher_telephone', tTelephone);
+    if (tMatiere != null) await prefs.setString('teacher_matiere', tMatiere);
+
+    // Save last login time for 15-minute session
+    await prefs.setInt(
+      'last_login_time',
+      DateTime.now().millisecondsSinceEpoch,
+    );
   }
 
   /// Récupère et envoie le token FCM au serveur après le login
@@ -93,21 +140,21 @@ class AuthService {
       if (token != null && token.isNotEmpty) {
         await ApiClient.instance.post(
           ApiEndpoints.registerFcmToken,
-          data: {
-            'parent_id': parentId,
-            'token': token,
-            'platform': 'android',
-          },
+          data: {'parent_id': parentId, 'token': token, 'platform': 'android'},
         );
-        debugPrint('✅ [AuthService] FCM Token enregistré pour parent #$parentId');
+        debugPrint(
+          '✅ [AuthService] FCM Token enregistré pour parent #$parentId',
+        );
       }
     } catch (e) {
       // Non bloquant : le login réussit même si l'enregistrement du token échoue
-      debugPrint('⚠️ [AuthService] Impossible d\'enregistrer le FCM token : $e');
+      debugPrint(
+        '⚠️ [AuthService] Impossible d\'enregistrer le FCM token : $e',
+      );
     }
   }
 
-  Future<AuthResult> verifyParentLink({
+  Future<AuthResponse> verifyParentLink({
     required String email,
     required String password,
     required String childQrCode,
@@ -125,8 +172,8 @@ class AuthService {
   static Future<int?> getParentIdForSchool(String? schoolPrefix) async {
     final prefs = await SharedPreferences.getInstance();
     int? defaultParentId = prefs.getInt('parent_id');
-    
-    if (schoolPrefix == null || !ApiClient.schoolServers.containsKey(schoolPrefix)) {
+
+    if (schoolPrefix == null) {
       return defaultParentId;
     }
 
@@ -139,10 +186,14 @@ class AuthService {
     final password = prefs.getString('parent_password');
     if (email != null && password != null) {
       try {
-        final dio = ApiClient.getInstanceForUrl(ApiClient.schoolServers[schoolPrefix]!);
-        final loginResp = await dio.post(
-          ApiEndpoints.login, 
-          data: {'identifier': email, 'password': password}
+        // Multi-tenant is now handled via headers in ApiClient.instance
+        // We temporarily set the school_code for this request if needed,
+        // but here we might need to be careful not to overwrite the global one permanently
+        // if this is just a check.
+        // For now, let's just use the main instance.
+        final loginResp = await ApiClient.instance.post(
+          ApiEndpoints.login,
+          data: {'identifier': email, 'password': password},
         );
         if (loginResp.statusCode == 200 && loginResp.data['success']) {
           final targetId = loginResp.data['parent']['id'];
@@ -150,10 +201,12 @@ class AuthService {
           return targetId;
         }
       } catch (e) {
-        debugPrint('⚠️ [AuthService] Silent login failed for $schoolPrefix: $e');
+        debugPrint(
+          '⚠️ [AuthService] Silent login failed for $schoolPrefix: $e',
+        );
       }
     }
-    
+
     // Fallback if silent login fails
     return null;
   }
@@ -172,6 +225,7 @@ class AuthService {
     await prefs.remove('parent_email');
     await prefs.remove('parent_telephone');
     await prefs.remove('teacher_id');
+    await prefs.remove('school_code');
     await prefs.remove('teacher_prenom');
     await prefs.remove('teacher_nom');
     await prefs.remove('teacher_email');

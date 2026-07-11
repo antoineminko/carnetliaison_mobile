@@ -1,23 +1,14 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
-  // Dictionnaire des serveurs selon le préfixe
-  static final Map<String, String> schoolServers = {
-    'LYIMM': 'https://sirh.alwaysdata.net/api_carnetliaison2/api',
-    'LYNDQ': 'https://sirh.alwaysdata.net/api_carnet_liaison/api',
-  };
-
-  // Serveur par défaut si on ne connaît pas le préfixe
   static const String defaultServerUrl = 'https://sirh.alwaysdata.net/api_carnet_liaison/api';
 
-  // Cache des instances Dio pour ne pas les recréer à chaque fois
-  static final Map<String, Dio> _dioInstances = {};
+  static final Dio _dio = _createDioInstance();
 
-  // Fonction utilitaire pour créer une instance Dio configurée
-  static Dio _createDioInstance(String baseUrl) {
+  static Dio _createDioInstance() {
     final dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
+      baseUrl: defaultServerUrl,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       headers: {
@@ -36,13 +27,32 @@ class ApiClient {
     ));
 
     dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final prefs = await SharedPreferences.getInstance();
+        
+        // Multi-tenant: Ajout du code d'établissement
+        final schoolCode = prefs.getString('school_code');
+        if (schoolCode != null && schoolCode.isNotEmpty) {
+          options.headers['X-School-Code'] = schoolCode;
+        }
+
+        // Authentification standard (si on utilise Sanctum Token dans l'app)
+        final token = prefs.getString('auth_token');
+        if (token != null && token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+
+        return handler.next(options);
+      },
       onError: (DioException e, ErrorInterceptorHandler handler) async {
         final code = e.response?.statusCode ?? 0;
         if (code == 401) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.remove('parent_id');
           await prefs.remove('teacher_id');
+          await prefs.remove('auth_token');
           await prefs.remove('last_login_time');
+          // On garde le school_code pour que l'utilisateur n'ait pas à le re-sélectionner
         }
         handler.next(e);
       },
@@ -51,33 +61,13 @@ class ApiClient {
     return dio;
   }
 
-  // Ancienne méthode (pour ne pas casser le code existant qui utilise ApiClient.instance)
-  // Renvoie le serveur par défaut
   static Dio get instance {
-    return getInstanceForUrl(defaultServerUrl);
+    return _dio;
   }
 
-  // Obtenir une instance Dio spécifique pour une URL
-  static Dio getInstanceForUrl(String url) {
-    if (!_dioInstances.containsKey(url)) {
-      _dioInstances[url] = _createDioInstance(url);
-    }
-    return _dioInstances[url]!;
-  }
-
-  // Obtenir une instance Dio en fonction du code secret (ex: COLB-1234)
-  static Dio getInstanceForCode(String codeSecret) {
-    if (codeSecret.contains('-')) {
-      final prefix = codeSecret.split('-')[0].toUpperCase();
-      if (schoolServers.containsKey(prefix)) {
-        return getInstanceForUrl(schoolServers[prefix]!);
-      }
-    }
-    return instance; // Retourne le serveur par défaut si non trouvé
-  }
-
-  static void init() {
-    // Les intercepteurs sont ajoutés dynamiquement dans _createDioInstance
+  static Dio getInstanceForSchool(String schoolCode) {
+    final dio = _createDioInstance();
+    dio.options.headers['X-School-Code'] = schoolCode;
+    return dio;
   }
 }
-

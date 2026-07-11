@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/features/teacher/services/teacher_student_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:app_mobile/features/parent/messages/chat_page.dart';
+import 'package:app_mobile/features/teacher/messages/chat_page.dart';
 import 'package:app_mobile/features/teacher/agenda/create_appointment_page.dart';
 
 class ParentInfoPage extends StatefulWidget {
@@ -33,7 +33,9 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
 
   Future<void> _fetchParentInfo() async {
     try {
-      final response = await TeacherStudentService.instance.getStudentInfo(widget.studentId);
+      final response = await TeacherStudentService.instance.getStudentInfo(
+        widget.studentId,
+      );
       if (response.data['success']) {
         setState(() {
           _parents = response.data['parents'] ?? [];
@@ -67,8 +69,10 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
-              : _buildContent(),
+          ? Center(
+              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            )
+          : _buildContent(),
     );
   }
 
@@ -144,11 +148,18 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                     children: [
                       Text(
                         '${parent['prenom']} ${parent['nom']}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         parent['relation'] ?? 'Parent',
-                        style: TextStyle(fontSize: 14, color: Colors.blue.shade700, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -163,7 +174,10 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                   children: [
                     const Icon(Icons.email, color: Colors.grey, size: 20),
                     const SizedBox(width: 8),
-                    Text(parent['email'], style: const TextStyle(color: Colors.black87)),
+                    Text(
+                      parent['email'],
+                      style: const TextStyle(color: Colors.black87),
+                    ),
                   ],
                 ),
               ),
@@ -174,7 +188,10 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                   children: [
                     const Icon(Icons.phone, color: Colors.grey, size: 20),
                     const SizedBox(width: 8),
-                    Text(parent['telephone'], style: const TextStyle(color: Colors.black87)),
+                    Text(
+                      parent['telephone'],
+                      style: const TextStyle(color: Colors.black87),
+                    ),
                   ],
                 ),
               ),
@@ -189,8 +206,10 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                           builder: (context) => ChatPage(
                             conversation: {
                               'parent_id': parent['id'],
-                              'parent_name': '${parent['prenom']} ${parent['nom']}',
-                              'subject': 'Discussion avec ${parent['prenom']} ${parent['nom']}',
+                              'parent_name':
+                                  '${parent['prenom']} ${parent['nom']}',
+                              'subject':
+                                  'Discussion avec ${parent['prenom']} ${parent['nom']}',
                             },
                           ),
                         ),
@@ -199,10 +218,14 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                     icon: const Icon(Icons.message, size: 18),
                     label: const Text('Message'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0077B6), // AppTheme.seaBlue equivalent
+                      backgroundColor: const Color(
+                        0xFF0077B6,
+                      ), // AppTheme.seaBlue equivalent
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       elevation: 0,
                     ),
                   ),
@@ -225,10 +248,14 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                     icon: const Icon(Icons.calendar_today, size: 18),
                     label: const Text('Rendez-vous'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0077B6), // AppTheme.seaBlue equivalent
+                      backgroundColor: const Color(
+                        0xFF0077B6,
+                      ), // AppTheme.seaBlue equivalent
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       elevation: 0,
                     ),
                   ),

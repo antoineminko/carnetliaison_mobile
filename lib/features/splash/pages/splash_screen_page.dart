@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../shared/utils/user_role.dart';
 
 class SplashScreenPage extends StatefulWidget {
   const SplashScreenPage({super.key});
@@ -48,34 +49,24 @@ class _SplashScreenPageState extends State<SplashScreenPage>
     if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final parentId = prefs.getInt('parent_id');
     final teacherId = prefs.getInt('teacher_id');
-    // Ce flag est positionné à true uniquement après un scan QR réussi
-    // Il est effacé lors de la déconnexion explicite
-    final parentScanDone = prefs.getBool('parent_scan_done') ?? false;
+    final schoolCode = prefs.getString('school_code');
 
-    String targetRoute = '/select_role';
-    Object? arguments;
+    String targetRoute = '/login';
+    Object? arguments = UserRole.teacher;
 
-    if (parentId != null) {
-      if (parentScanDone) {
-        // Session active + scan déjà effectué → accès direct à l'accueil
-        targetRoute = '/parent/home';
-      } else {
-        // Connecté mais scan non encore effectué → accueil avec empty state forcé
-        targetRoute = '/parent/home';
-        arguments = {'forceAddChild': true};
-      }
-    } else if (teacherId != null) {
+    if (teacherId != null && schoolCode != null && schoolCode.isNotEmpty) {
       targetRoute = '/teacher/home';
-    }
-
-    if (mounted) {
       Navigator.pushReplacementNamed(
         context,
         targetRoute,
         arguments: arguments,
       );
+    } else {
+      // Non connecté → page de connexion
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login', arguments: UserRole.teacher);
+      }
     }
   }
 
@@ -90,7 +81,7 @@ class _SplashScreenPageState extends State<SplashScreenPage>
     const Color brandBlueOverlay = Color(0xFF2596be);
     const Color darkBlueBottom = Color(
       0xFF114c61,
-    ); // Version sombre du bleu pour un dégradé de haute qualité
+    ); // Version sombre du bleu pour un dÃ©gradÃ© de haute qualitÃ©
 
     return Scaffold(
       backgroundColor: darkBlueBottom,
@@ -101,7 +92,7 @@ class _SplashScreenPageState extends State<SplashScreenPage>
           image: DecorationImage(
             image: AssetImage('assets/images/parent.png'),
             fit: BoxFit.cover,
-            opacity: 0.2, // Légèrement réduit pour plus de lisibilité
+            opacity: 0.2, // LÃ©gÃ¨rement rÃ©duit pour plus de lisibilitÃ©
           ),
         ),
         child: Container(
@@ -126,7 +117,7 @@ class _SplashScreenPageState extends State<SplashScreenPage>
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 40),
-                  // Spinner discret blanc pour plus d'élégance
+                  // Spinner discret blanc pour plus d'Ã©lÃ©gance
                   const SizedBox(
                     width: 24,
                     height: 24,

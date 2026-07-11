@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/shared/utils/user_role.dart';
-import 'package:app_mobile/features/auth/parent/create_account_page.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 
@@ -56,7 +55,7 @@ class _LoginPageState extends State<LoginPage>
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      final result = await _authService.login(
+      final response = await _authService.login(
         role: widget.role,
         username: _usernameController.text,
         password: _passwordController.text,
@@ -65,23 +64,40 @@ class _LoginPageState extends State<LoginPage>
       setState(() => _isLoading = false);
 
       if (mounted) {
-        _handleAuthResult(result, isScanFlow: false);
+        _handleAuthResult(response, isScanFlow: false);
       }
     }
   }
 
   void _handleAuthResult(
-    AuthResult result, {
+    AuthResponse response, {
     bool isScanFlow = false,
     String? qrCode,
   }) {
-    switch (result) {
+    switch (response.result) {
       case AuthResult.success:
-        _navigateHome();
+        if (widget.role == UserRole.teacher && response.teachersData != null) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/teacher/schools',
+            arguments: response.teachersData,
+          );
+        } else {
+          _navigateHome();
+        }
         break;
       case AuthResult.invalidCredentials:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Identifiants incorrects')),
+        _showErrorModal(
+          title: 'Erreur de connexion',
+          message: 'Identifiants incorrects. Veuillez réessayer.',
+          icon: Icons.lock_outline,
+        );
+        break;
+      case AuthResult.networkError:
+        _showErrorModal(
+          title: 'Problème réseau',
+          message: 'Impossible de joindre le serveur. Vérifiez votre connexion internet.',
+          icon: Icons.wifi_off_rounded,
         );
         break;
       case AuthResult.userNotFound:
@@ -92,6 +108,64 @@ class _LoginPageState extends State<LoginPage>
         );
         break;
     }
+  }
+
+  void _showErrorModal({required String title, required String message, required IconData icon}) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: Colors.redAccent, size: 40),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.textGrey,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.seaBlue,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showAccountCreationDialog({
@@ -116,11 +190,12 @@ class _LoginPageState extends State<LoginPage>
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      CreateAccountPage(email: email, childQrCode: qrCode),
+              // Account creation for parents removed in School version
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'La création de compte parent n\'est pas disponible dans cette version.',
+                  ),
                 ),
               );
             },
@@ -132,21 +207,7 @@ class _LoginPageState extends State<LoginPage>
   }
 
   void _navigateHome() {
-    switch (widget.role) {
-      case UserRole.parent:
-        Navigator.pushReplacementNamed(
-          context,
-          '/parent/home',
-          arguments: {'forceAddChild': true},
-        );
-        break;
-      case UserRole.teacher:
-        Navigator.pushReplacementNamed(context, '/teacher/home');
-        break;
-      case UserRole.student:
-        Navigator.pushReplacementNamed(context, '/student/home');
-        break;
-    }
+    Navigator.pushReplacementNamed(context, '/teacher/home');
   }
 
   @override
@@ -162,10 +223,24 @@ class _LoginPageState extends State<LoginPage>
         isSubtle: false,
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-            child: Form(
-              key: _formKey,
-              child: Column(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 400),
+              padding: const EdgeInsets.all(30),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 30,
+                    offset: const Offset(0, 15),
+                  ),
+                ],
+              ),
+              child: Form(
+                key: _formKey,
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -356,7 +431,7 @@ class _LoginPageState extends State<LoginPage>
           ),
         ),
       ),
+      ),
     );
   }
 }
-

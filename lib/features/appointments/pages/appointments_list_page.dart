@@ -9,7 +9,8 @@ import 'package:url_launcher/url_launcher.dart';
 class AppointmentsListPage extends StatefulWidget {
   final int userId;
   final String userRole; // 'parent' ou 'enseignant'
-  final int? initialAppointmentId; // Pour ouvrir un RDV spécifique depuis notification
+  final int?
+  initialAppointmentId; // Pour ouvrir un RDV spécifique depuis notification
 
   const AppointmentsListPage({
     super.key,
@@ -53,8 +54,12 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
 
   Future<void> _fetchAppointments() async {
     try {
-      final paramName = widget.userRole == 'parent' ? 'parent_id' : 'enseignant_id';
-      final response = await ApiClient.instance.get('/appointments?$paramName=${widget.userId}');
+      final paramName = widget.userRole == 'parent'
+          ? 'parent_id'
+          : 'enseignant_id';
+      final response = await ApiClient.instance.get(
+        '/appointments?$paramName=${widget.userId}',
+      );
 
       if (mounted) {
         final allAppointments = response.data['appointments'] ?? [];
@@ -65,16 +70,25 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
         setState(() {
           _appointments = allAppointments;
           _pendingAppointments = allAppointments
-              .where((a) => a['statut'] == 'en_attente' || a['statut'] == 'reporte')
+              .where(
+                (a) => a['statut'] == 'en_attente' || a['statut'] == 'reporte',
+              )
               .toList();
           _upcomingAppointments = allAppointments
-              .where((a) => a['statut'] == 'accepte' && DateTime.parse(a['date_heure']).isAfter(now))
+              .where(
+                (a) =>
+                    a['statut'] == 'accepte' &&
+                    DateTime.parse(a['date_heure']).isAfter(now),
+              )
               .toList();
           _pastAppointments = allAppointments
-              .where((a) =>
-                  a['statut'] == 'refuse' ||
-                  a['statut'] == 'cancelled' ||
-                  (a['statut'] == 'accepte' && DateTime.parse(a['date_heure']).isBefore(now)))
+              .where(
+                (a) =>
+                    a['statut'] == 'refuse' ||
+                    a['statut'] == 'cancelled' ||
+                    (a['statut'] == 'accepte' &&
+                        DateTime.parse(a['date_heure']).isBefore(now)),
+              )
               .toList();
           _isLoading = false;
         });
@@ -87,8 +101,9 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur de chargement: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur de chargement: $e')));
       }
     }
   }
@@ -114,17 +129,24 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
   /// Accepter un rendez-vous
   Future<void> _acceptAppointment(int id) async {
     try {
-      await ApiClient.instance.put('/appointments/$id/status', data: {'statut': 'accepte'});
+      await ApiClient.instance.put(
+        '/appointments/$id/status',
+        data: {'statut': 'accepte'},
+      );
       _fetchAppointments();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Rendez-vous accepté'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Rendez-vous accepté'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -132,39 +154,57 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
   /// Refuser un rendez-vous
   Future<void> _refuseAppointment(int id) async {
     try {
-      await ApiClient.instance.put('/appointments/$id/status', data: {'statut': 'refuse'});
+      await ApiClient.instance.put(
+        '/appointments/$id/status',
+        data: {'statut': 'refuse'},
+      );
       _fetchAppointments();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ Rendez-vous refusé'), backgroundColor: Colors.orange),
+          const SnackBar(
+            content: Text(' Rendez-vous refusé'),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
 
   /// Reporter un rendez-vous avec proposition de nouvelle date
-  Future<void> _postponeAppointment(int id, DateTime newDate, String reason) async {
+  Future<void> _postponeAppointment(
+    int id,
+    DateTime newDate,
+    String reason,
+  ) async {
     try {
-      await ApiClient.instance.put('/appointments/$id/status', data: {
-        'statut': 'reporte',
-        'new_proposed_date': newDate.toIso8601String(),
-        'report_reason': reason,
-      });
+      await ApiClient.instance.put(
+        '/appointments/$id/status',
+        data: {
+          'statut': 'reporte',
+          'new_proposed_date': newDate.toIso8601String(),
+          'report_reason': reason,
+        },
+      );
       _fetchAppointments();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🔄 Report proposé'), backgroundColor: Colors.blue),
+          const SnackBar(
+            content: Text('🔄 Report proposé'),
+            backgroundColor: Colors.blue,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -176,13 +216,17 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
       _fetchAppointments();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Nouvelle date acceptée'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('✅ Nouvelle date acceptée'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -190,19 +234,24 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
   /// Annuler un rendez-vous
   Future<void> _cancelAppointment(int id) async {
     try {
-      await ApiClient.instance.put('/appointments/$id/cancel', data: {
-        'user_type': widget.userRole,
-      });
+      await ApiClient.instance.put(
+        '/appointments/$id/cancel',
+        data: {'user_type': widget.userRole},
+      );
       _fetchAppointments();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🚫 Rendez-vous annulé'), backgroundColor: Colors.grey),
+          const SnackBar(
+            content: Text('🚫 Rendez-vous annulé'),
+            backgroundColor: Colors.grey,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -212,7 +261,8 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Impossible de lancer l\'appel vidéo.')));
+          const SnackBar(content: Text('Impossible de lancer l\'appel vidéo.')),
+        );
       }
     }
   }
@@ -224,7 +274,15 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
     final reasonController = TextEditingController();
 
     final List<String> timeSlots = [
-      '08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'
+      '08:00',
+      '09:00',
+      '10:00',
+      '11:00',
+      '14:00',
+      '15:00',
+      '16:00',
+      '17:00',
+      '18:00',
     ];
 
     showModalBottomSheet(
@@ -257,7 +315,10 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                             color: Colors.orange.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.schedule, color: Colors.orange),
+                          child: const Icon(
+                            Icons.schedule,
+                            color: Colors.orange,
+                          ),
                         ),
                         const SizedBox(width: 15),
                         const Expanded(
@@ -280,7 +341,10 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                     // Sélection de la date
                     const Text(
                       'Nouvelle date proposée',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -302,7 +366,10 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                     // Sélection du créneau horaire
                     const Text(
                       'Créneau horaire',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Wrap(
@@ -316,7 +383,9 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                           selectedColor: AppTheme.seaBlue,
                           labelStyle: TextStyle(
                             color: isSelected ? Colors.white : Colors.black87,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                           onSelected: (selected) {
                             if (selected) {
@@ -331,7 +400,10 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                     // Raison du report
                     const Text(
                       'Raison du report (optionnel)',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
@@ -364,7 +436,11 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                             int.parse(parts[1]),
                           );
                           Navigator.pop(context);
-                          _postponeAppointment(appointmentId, newDate, reasonController.text);
+                          _postponeAppointment(
+                            appointmentId,
+                            newDate,
+                            reasonController.text,
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
@@ -375,7 +451,10 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                         ),
                         child: const Text(
                           'Proposer cette date',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -396,7 +475,9 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Annuler le rendez-vous ?'),
-        content: const Text('Cette action est irréversible. Le rendez-vous sera marqué comme annulé.'),
+        content: const Text(
+          'Cette action est irréversible. Le rendez-vous sera marqué comme annulé.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -420,7 +501,10 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Mes Rendez-vous', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Mes Rendez-vous',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: AppTheme.textDark,
         elevation: 0,
@@ -479,9 +563,14 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
               if (count > 0) ...[
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? Colors.white.withOpacity(0.2) : Colors.grey[300],
+                    color: isSelected
+                        ? Colors.white.withOpacity(0.2)
+                        : Colors.grey[300],
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -526,8 +615,8 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
               type == 'pending'
                   ? 'Aucun rendez-vous en attente'
                   : type == 'upcoming'
-                      ? 'Aucun rendez-vous à venir'
-                      : 'Aucun rendez-vous dans l\'historique',
+                  ? 'Aucun rendez-vous à venir'
+                  : 'Aucun rendez-vous dans l\'historique',
               style: TextStyle(color: Colors.grey[500], fontSize: 16),
             ),
           ],
@@ -540,7 +629,8 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
       itemCount: appointments.length,
       itemBuilder: (context, index) {
         final appt = appointments[index];
-        final bool isHighlighted = widget.initialAppointmentId != null &&
+        final bool isHighlighted =
+            widget.initialAppointmentId != null &&
             appt['id'] == widget.initialAppointmentId;
         return _buildAppointmentCard(appt, isHighlighted: isHighlighted);
       },
@@ -564,7 +654,8 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
     } else {
       final parent = appt['parent'];
       if (parent != null) {
-        otherPartyName = '${parent['prenom'] ?? ''} ${parent['nom'] ?? ''}'.trim();
+        otherPartyName = '${parent['prenom'] ?? ''} ${parent['nom'] ?? ''}'
+            .trim();
       }
     }
 
@@ -575,7 +666,10 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
       eleveName = '${eleve['prenom'] ?? ''} ${eleve['nom'] ?? ''}'.trim();
     }
 
-    final dateFormatted = DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(dateHeure);
+    final dateFormatted = DateFormat(
+      'EEEE d MMMM yyyy',
+      'fr_FR',
+    ).format(dateHeure);
     final timeFormatted = DateFormat('HH:mm', 'fr_FR').format(dateHeure);
 
     // Nouvelle date proposée si reporté
@@ -588,7 +682,9 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
-        color: isHighlighted ? AppTheme.seaBlue.withOpacity(0.05) : Colors.white,
+        color: isHighlighted
+            ? AppTheme.seaBlue.withOpacity(0.05)
+            : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: isHighlighted
             ? Border.all(color: AppTheme.seaBlue, width: 2)
@@ -672,7 +768,11 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                   // Date et heure
                   Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 16, color: Colors.grey[500]),
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Colors.grey[500],
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -688,7 +788,11 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
+                      Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.grey[500],
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         timeFormatted,
@@ -718,7 +822,11 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Icon(Icons.label_outline, size: 14, color: Colors.grey[400]),
+                        Icon(
+                          Icons.label_outline,
+                          size: 14,
+                          color: Colors.grey[400],
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           appt['motif'],
@@ -739,14 +847,20 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                       decoration: BoxDecoration(
                         color: Colors.orange.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        border: Border.all(
+                          color: Colors.orange.withOpacity(0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.schedule, color: Colors.orange, size: 18),
+                              const Icon(
+                                Icons.schedule,
+                                color: Colors.orange,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               const Text(
                                 'Nouvelle date proposée',
@@ -760,8 +874,10 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            DateFormat('EEEE d MMMM yyyy à HH:mm', 'fr_FR')
-                                .format(newProposedDate),
+                            DateFormat(
+                              'EEEE d MMMM yyyy à HH:mm',
+                              'fr_FR',
+                            ).format(newProposedDate),
                             style: const TextStyle(fontSize: 14),
                           ),
                           if (appt['report_reason'] != null) ...[
@@ -781,11 +897,14 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                             children: [
                               Expanded(
                                 child: ElevatedButton(
-                                  onPressed: () => _acceptPostponedDate(appt['id']),
+                                  onPressed: () =>
+                                      _acceptPostponedDate(appt['id']),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green,
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -812,7 +931,12 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
     );
   }
 
-  Widget _buildActionButtons(dynamic appt, String status, bool isVideo, bool isVocal) {
+  Widget _buildActionButtons(
+    dynamic appt,
+    String status,
+    bool isVideo,
+    bool isVocal,
+  ) {
     final appointmentId = appt['id'];
     final isEnAttente = status == 'en_attente';
     final isAccepte = status == 'accepte';
@@ -821,7 +945,8 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
     // Déterminer si l'utilisateur peut interagir
     // Si c'est le requester, il ne peut pas accepter/refuser son propre RDV
     // C'est l'autre partie qui doit répondre
-    final isRequester = (widget.userRole == 'parent' && appt['requester'] == 'parent') ||
+    final isRequester =
+        (widget.userRole == 'parent' && appt['requester'] == 'parent') ||
         (widget.userRole == 'enseignant' && appt['requester'] == 'enseignant');
     final canRespond = isEnAttente && !isRequester;
     final canPostpone = (isEnAttente || isAccepte) && !isReporte;
@@ -876,7 +1001,11 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _showPostponeDialog(appointmentId),
-                    icon: const Icon(Icons.schedule, size: 18, color: Colors.orange),
+                    icon: const Icon(
+                      Icons.schedule,
+                      size: 18,
+                      color: Colors.orange,
+                    ),
                     label: const Text('Reporter'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.orange,
@@ -893,7 +1022,11 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _showCancelConfirmDialog(appointmentId),
-                    icon: const Icon(Icons.cancel_outlined, size: 18, color: Colors.grey),
+                    icon: const Icon(
+                      Icons.cancel_outlined,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
                     label: const Text('Annuler'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.grey[600],
@@ -992,7 +1125,11 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                 color: _getModeColor(mode).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(_getModeIcon(mode), color: _getModeColor(mode), size: 28),
+              child: Icon(
+                _getModeIcon(mode),
+                color: _getModeColor(mode),
+                size: 28,
+              ),
             ),
             const SizedBox(width: 15),
             Expanded(
@@ -1017,17 +1154,32 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
 
         // Détails
         _buildDetailSection('Date & Heure', [
-          _buildDetailRow(Icons.calendar_today, DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(dateHeure)),
-          _buildDetailRow(Icons.access_time, DateFormat('HH:mm', 'fr_FR').format(dateHeure)),
+          _buildDetailRow(
+            Icons.calendar_today,
+            DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(dateHeure),
+          ),
+          _buildDetailRow(
+            Icons.access_time,
+            DateFormat('HH:mm', 'fr_FR').format(dateHeure),
+          ),
         ]),
 
         _buildDetailSection('Participants', [
           if (widget.userRole == 'parent')
-            _buildDetailRow(Icons.person_outline, 'Enseignant: ${appt['enseignant']?['prenom'] ?? ''} ${appt['enseignant']?['nom'] ?? ''}'),
+            _buildDetailRow(
+              Icons.person_outline,
+              'Enseignant: ${appt['enseignant']?['prenom'] ?? ''} ${appt['enseignant']?['nom'] ?? ''}',
+            ),
           if (widget.userRole == 'enseignant')
-            _buildDetailRow(Icons.person_outline, 'Parent: ${appt['parent']?['prenom'] ?? ''} ${appt['parent']?['nom'] ?? ''}'),
+            _buildDetailRow(
+              Icons.person_outline,
+              'Parent: ${appt['parent']?['prenom'] ?? ''} ${appt['parent']?['nom'] ?? ''}',
+            ),
           if (appt['eleve'] != null)
-            _buildDetailRow(Icons.child_care, 'Élève: ${appt['eleve']['prenom'] ?? ''} ${appt['eleve']['nom'] ?? ''}'),
+            _buildDetailRow(
+              Icons.child_care,
+              'Élève: ${appt['eleve']['prenom'] ?? ''} ${appt['eleve']['nom'] ?? ''}',
+            ),
         ]),
 
         if (appt['motif'] != null)
@@ -1074,12 +1226,7 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
         children: [
           Icon(icon, size: 18, color: Colors.grey[500]),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 15),
-            ),
-          ),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 15))),
         ],
       ),
     );

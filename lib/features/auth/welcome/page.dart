@@ -1,7 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/utils/user_role.dart';
-import 'package:app_mobile/features/auth/parent/login_page.dart';
-import 'package:app_mobile/features/auth/teacher/login_page.dart' as teacher_auth;
+import 'package:app_mobile/features/auth/teacher/login_page.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 
@@ -30,7 +29,6 @@ class SelectRolePage extends StatelessWidget {
                     width: double.infinity,
                     decoration: const BoxDecoration(
                       image: DecorationImage(
-
                         image: AssetImage('assets/images/parent.png'),
                         fit: BoxFit.cover,
                         alignment: Alignment.topCenter,
@@ -170,7 +168,7 @@ class SelectRolePage extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        child: role == UserRole.parent ? LoginPage(role: role) : teacher_auth.LoginPage(role: role),
+        child: LoginPage(role: role),
       ),
     );
   }

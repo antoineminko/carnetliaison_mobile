@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/features/teacher/services/teacher_message_service.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
-import 'package:app_mobile/features/parent/messages/chat_page.dart';
+import 'package:app_mobile/features/teacher/messages/chat_page.dart';
 
 class TeacherMessagesPage extends StatefulWidget {
   const TeacherMessagesPage({super.key});
@@ -28,8 +28,10 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
         setState(() => _isLoading = false);
         return;
       }
-      
-      final response = await TeacherMessageService.instance.getConversations(teacherId);
+
+      final response = await TeacherMessageService.instance.getConversations(
+        teacherId,
+      );
 
       if (response.data['success']) {
         setState(() {
@@ -63,7 +65,11 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                   children: [
                     const Text(
                       'Messagerie',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textDark,
+                      ),
                     ),
                     const SizedBox(height: 15),
                     const TabBar(
@@ -73,7 +79,10 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                       unselectedLabelColor: Colors.grey,
                       indicatorColor: AppTheme.seaBlue,
                       indicatorWeight: 3,
-                      labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      labelStyle: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                       tabs: [
                         Tab(text: 'Parents'),
                         Tab(text: 'Administration'),
@@ -86,10 +95,7 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
               // CONVERSATION LIST
               Expanded(
                 child: TabBarView(
-                  children: [
-                    _buildParentsTab(),
-                    _buildAdminTab(),
-                  ],
+                  children: [_buildParentsTab(), _buildAdminTab()],
                 ),
               ),
             ],
@@ -105,7 +111,12 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     }
 
     if (_conversations.isEmpty) {
-      return const Center(child: Text("Aucune conversation.", style: TextStyle(color: AppTheme.textGrey)));
+      return const Center(
+        child: Text(
+          "Aucune conversation.",
+          style: TextStyle(color: AppTheme.textGrey),
+        ),
+      );
     }
 
     return RefreshIndicator(
@@ -134,13 +145,16 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     final String nom = chat['parent_nom'] ?? '';
     final String prenom = chat['parent_prenom'] ?? '';
     final String fullName = '$prenom $nom'.trim();
-    final String initials = (prenom.isNotEmpty ? prenom[0] : '') + (nom.isNotEmpty ? nom[0] : '');
-    
+    final String initials =
+        (prenom.isNotEmpty ? prenom[0] : '') + (nom.isNotEmpty ? nom[0] : '');
+
     // Contexte de l'élève
     final String eleveNom = chat['eleve_nom'] ?? '';
     final String elevePrenom = chat['eleve_prenom'] ?? '';
     final String classeNom = chat['classe_nom'] ?? '';
-    final String eleveContext = elevePrenom.isNotEmpty ? 'Parent de $elevePrenom $eleveNom — $classeNom' : (chat['subject'] ?? 'Discussion');
+    final String eleveContext = elevePrenom.isNotEmpty
+        ? 'Parent de $elevePrenom $eleveNom — $classeNom'
+        : (chat['subject'] ?? 'Discussion');
 
     final String subtitle = eleveContext;
     final String lastMessage = chat['last_message'] ?? 'Aucun message';
@@ -170,14 +184,27 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 26,
               backgroundColor: color.withOpacity(0.14),
-              child: Text(initials.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+              child: Text(
+                initials.toUpperCase(),
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -187,12 +214,34 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark)),
-                      Text(time, style: TextStyle(color: Colors.grey[400], fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(
+                        fullName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      Text(
+                        time,
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
@@ -202,22 +251,36 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: isPending ? AppTheme.textDark : Colors.grey[500],
+                            color: isPending
+                                ? AppTheme.textDark
+                                : Colors.grey[500],
                             fontSize: 13,
-                            fontWeight: isPending ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: isPending
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
                       if (isPending)
                         Container(
                           margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.orange[50],
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: Colors.orange[200]!),
                           ),
-                          child: const Text('En attente', style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            'En attente',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -232,4 +295,3 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     );
   }
 }
-

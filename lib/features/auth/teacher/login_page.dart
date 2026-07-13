@@ -20,6 +20,7 @@ class _LoginPageState extends State<LoginPage>
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _rememberMe = false;
   final AuthService _authService = AuthService();
   late AnimationController _animationController;
 
@@ -59,6 +60,7 @@ class _LoginPageState extends State<LoginPage>
         role: widget.role,
         username: _usernameController.text,
         password: _passwordController.text,
+        rememberMe: _rememberMe,
       );
 
       setState(() => _isLoading = false);
@@ -382,7 +384,46 @@ class _LoginPageState extends State<LoginPage>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 15),
+                  Row(
+                    children: [
+                      SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: Checkbox(
+                          value: _rememberMe,
+                          onChanged: (value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
+                          activeColor: AppTheme.seaBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Se souvenir de moi (pendant 15 minutes)',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_rememberMe) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Si vous quittez l\'application, vous n\'aurez pas besoin de vous reconnecter si vous revenez dans les 15 minutes.',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 11, fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                  const SizedBox(height: 30),
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),

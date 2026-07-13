@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
@@ -36,6 +37,7 @@ class _CallPageState extends State<CallPage> {
   String _callStatus = 'Connexion...';
   int _callDuration = 0;
   Timer? _durationTimer;
+  final Set<String> _addedIceCandidates = {};
 
   @override
   void initState() {
@@ -70,9 +72,26 @@ class _CallPageState extends State<CallPage> {
       _endCallAndPop();
     };
 
-    if (widget.isIncoming && widget.callData != null) {
+    if (widget.isIncoming) {
       // Appel entrant - rejoindre
-      final offer = widget.callData!['offer'];
+      dynamic offer;
+      if (widget.callData != null && widget.callData!['offer'] != null) {
+        final rawOffer = widget.callData!['offer'];
+        offer = rawOffer is String ? jsonDecode(rawOffer) : rawOffer;
+      }
+      
+      // Si l'offre n'est pas dans le push (trop gros), on la récupère via l'API
+      if (offer == null) {
+        try {
+          final response = await ApiClient.instance.get('/calls/${widget.callId}/signaling');
+          if (response.data != null && response.data['offer'] != null) {
+            offer = response.data['offer'];
+          }
+        } catch (e) {
+          print('❌ [CallPage] Erreur récupération offer: $e');
+        }
+      }
+
       if (offer != null) {
         await _webRTCService.joinCall(
           widget.callId,
@@ -124,16 +143,20 @@ class _CallPageState extends State<CallPage> {
         if (response.data != null) {
           final data = response.data;
 
-          // Traiter les candidats ICE
-          if (data['ice_candidates'] != null) {
-            for (final candidate in data['ice_candidates']) {
-              await _webRTCService.addRemoteIceCandidate(candidate);
-            }
-          }
-
-          // Traiter la réponse (si appelant)
+          // 1. Traiter la réponse (si appelant) d'abord
           if (!widget.isIncoming && data['answer'] != null) {
             await _webRTCService.setRemoteAnswer(data['answer']);
+          }
+
+          // 2. Traiter les candidats ICE (après la réponse)
+          if (data['ice_candidates'] != null) {
+            for (final candidate in data['ice_candidates']) {
+              final candidateStr = candidate['candidate'] as String;
+              if (!_addedIceCandidates.contains(candidateStr)) {
+                _addedIceCandidates.add(candidateStr);
+                await _webRTCService.addRemoteIceCandidate(candidate);
+              }
+            }
           }
         }
       } catch (e) {
@@ -206,9 +229,7 @@ class _CallPageState extends State<CallPage> {
     }
 
     await _webRTCService.endCall();
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    // Le Navigator.pop est géré par le callback onCallEnded
   }
 
   void _endCallAndPop() {
@@ -221,6 +242,7 @@ class _CallPageState extends State<CallPage> {
   @override
   void dispose() {
     _durationTimer?.cancel();
+    _webRTCService.onCallEnded = null; // Prevent Navigator.pop during dispose
     _webRTCService.dispose();
     super.dispose();
   }

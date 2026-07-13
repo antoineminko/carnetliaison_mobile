@@ -51,19 +51,34 @@ class _SplashScreenPageState extends State<SplashScreenPage>
     final prefs = await SharedPreferences.getInstance();
     final teacherId = prefs.getInt('teacher_id');
     final schoolCode = prefs.getString('school_code');
+    final lastCloseTime = prefs.getInt('last_app_close_time');
+    final rememberMe = prefs.getBool('remember_me') ?? false;
 
-    String targetRoute = '/login';
-    Object? arguments = UserRole.teacher;
-
+    // Vérification de la session : 15 minutes maximum d'inactivité
+    bool sessionValid = false;
     if (teacherId != null && schoolCode != null && schoolCode.isNotEmpty) {
-      targetRoute = '/teacher/home';
-      Navigator.pushReplacementNamed(
-        context,
-        targetRoute,
-        arguments: arguments,
-      );
+      if (lastCloseTime != null) {
+        final sessionAge = DateTime.now().millisecondsSinceEpoch - lastCloseTime;
+        const sessionMaxMs = 15 * 60 * 1000; // 15 minutes
+        sessionValid = rememberMe && (sessionAge < sessionMaxMs);
+      } else {
+        // First launch or no close time yet
+        sessionValid = true;
+      }
+
+      if (!sessionValid) {
+        // Session expirée → nettoyage
+        await prefs.remove('teacher_id');
+        await prefs.remove('school_code');
+      }
+    }
+
+    if (sessionValid) {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/teacher/home');
+      }
     } else {
-      // Non connecté → page de connexion
+      // Non connecté ou session expirée → page de connexion
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/login', arguments: UserRole.teacher);
       }

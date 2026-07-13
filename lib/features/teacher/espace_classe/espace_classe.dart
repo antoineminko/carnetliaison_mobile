@@ -237,19 +237,20 @@ class _EspaceClassePageState extends State<EspaceClassePage> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  _buildTimelineItem(
-                    time: '08:00',
-                    title: 'Mathématiques',
-                    subtitle: 'Calcul mental & Géométrie',
-                    isActive: true,
-                  ),
-                  _buildTimelineItem(
-                    time: '12:00',
-                    title: 'Pause',
-                    subtitle: '',
-                    isBreak: true,
-                    isLast: true,
-                  ),
+                  Builder(builder: (context) {
+                    final now = DateTime.now();
+                    final startTimeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+                    final endTime = now.add(const Duration(hours: 3));
+                    final endTimeStr = '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}';
+
+                    return _buildTimelineItem(
+                      time: startTimeStr,
+                      title: widget.subject.isNotEmpty ? widget.subject : 'Cours',
+                      subtitle: 'Classe : ${widget.className} (Fin prévue vers $endTimeStr)',
+                      isActive: true,
+                      isLast: true,
+                    );
+                  }),
                 ],
               ),
             ),
@@ -281,17 +282,31 @@ class _EspaceClassePageState extends State<EspaceClassePage> {
     );
   }
 
+  Color _getSubjectColor(String subject) {
+    final lower = subject.toLowerCase();
+    if (lower.contains('math')) return Colors.blue;
+    if (lower.contains('fran')) return Colors.redAccent;
+    if (lower.contains('hist') || lower.contains('géo')) return Colors.orange;
+    if (lower.contains('sci') || lower.contains('svt')) return Colors.green;
+    if (lower.contains('anglais')) return Colors.purple;
+    if (lower.contains('sport') || lower.contains('eps')) return Colors.teal;
+    if (lower.contains('art')) return Colors.pink;
+    return AppTheme.seaBlue; // Default
+  }
+
   Widget _buildHeaderCard() {
+    final subjectColor = _getSubjectColor(widget.subject);
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       width: double.infinity,
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: AppTheme.seaBlue,
+        color: subjectColor,
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.seaBlue.withOpacity(0.3),
+            color: subjectColor.withOpacity(0.3),
             blurRadius: 15,
             offset: const Offset(0, 10),
           ),
@@ -339,7 +354,7 @@ class _EspaceClassePageState extends State<EspaceClassePage> {
             ),
           ),
           Text(
-            'Cours de ${widget.subject} - Titre !',
+            'Cours de ${widget.subject}',
             style: TextStyle(
               color: Colors.white.withOpacity(0.9),
               fontSize: 18,
@@ -380,13 +395,8 @@ class _EspaceClassePageState extends State<EspaceClassePage> {
                   ],
                 ),
               ),
-              TextButton(
-                style: TextButton.styleFrom(
-                  minimumSize: Size.zero,
-                  padding: EdgeInsets.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () {
+              GestureDetector(
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -399,13 +409,33 @@ class _EspaceClassePageState extends State<EspaceClassePage> {
                     ),
                   );
                 },
-                child: const Text(
-                  'Voir la liste',
-                  style: TextStyle(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
                     color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Voir la liste',
+                        style: TextStyle(
+                          color: subjectColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(Icons.arrow_forward_ios, color: subjectColor, size: 12),
+                    ],
                   ),
                 ),
               ),

@@ -14,6 +14,8 @@ import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 import 'package:app_mobile/features/teacher/services/teacher_dashboard_service.dart';
 import 'package:app_mobile/features/teacher/services/teacher_event_service.dart';
 import 'package:app_mobile/features/teacher/services/teacher_message_service.dart';
+import 'package:app_mobile/features/notifications/services/notifications_service.dart';
+import 'package:app_mobile/features/auth/services/ping_service.dart';
 
 part '../agenda/evenement/evenements_view.dart';
 
@@ -44,6 +46,33 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
   List<dynamic> _appointments = [];
   List<dynamic> _conversations = [];
   String _selectedEventFilter = 'Tous';
+  bool _argsProcessed = false;
+  final Set<int> _viewedAppointmentIds = {};
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_argsProcessed) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        if (args['openChat'] == true) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              _currentIndex = 1;
+            });
+          });
+        }
+        if (args['openAppointments'] == true) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              _currentIndex = 2; // Planning tab
+            });
+          });
+        }
+      }
+      _argsProcessed = true;
+    }
+  }
 
   @override
   void initState() {
@@ -51,6 +80,10 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
     _pageController = PageController(initialPage: 0);
     _startBannerTimer();
     _loadDashboardData();
+    NotificationsService().setOnNotificationReceived(() {
+      _loadDashboardData();
+    });
+    PingService.startPinging();
   }
 
   Future<void> _loadDashboardData() async {
@@ -92,6 +125,7 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
   void dispose() {
     _pageController.dispose();
     _bannerTimer?.cancel();
+    PingService.stopPinging();
     super.dispose();
   }
 
@@ -616,6 +650,28 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
     }
   }
 
+  int get _totalUnreadMessages {
+    int total = 0;
+    for (var c in _conversations) {
+      final val = c['unread_count'];
+      total += (val is int) ? val : (int.tryParse(val?.toString() ?? '0') ?? 0);
+    }
+    return total;
+  }
+
+  int get _totalPendingAppointments {
+    int total = 0;
+    for (var appt in _appointments) {
+      if (appt is Map && appt['statut'] == 'en_attente') {
+        final id = int.tryParse(appt['id']?.toString() ?? '');
+        if (id != null && !_viewedAppointmentIds.contains(id)) {
+          total++;
+        }
+      }
+    }
+    return total;
+  }
+
   Widget _buildBottomNavigationBar() {
     return Container(
       decoration: BoxDecoration(
@@ -633,6 +689,25 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
         onTap: (index) {
           setState(() {
             _currentIndex = index;
+            if (index == 1) {
+              // Clear badge immediately when navigating to messages tab
+              for (var c in _conversations) {
+                if (c is Map) {
+                  c['unread_count'] = 0;
+                }
+              }
+            }
+            if (index == 2) {
+              // Clear badge for events tab
+              for (var appt in _appointments) {
+                if (appt is Map && appt['statut'] == 'en_attente') {
+                  final id = int.tryParse(appt['id']?.toString() ?? '');
+                  if (id != null) {
+                    _viewedAppointmentIds.add(id);
+                  }
+                }
+              }
+            }
           });
         },
         backgroundColor: Colors.white,
@@ -648,20 +723,42 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
           fontSize: 12,
         ),
         elevation: 0,
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home_rounded),
             label: 'Accueil',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline_rounded),
+            icon: _totalUnreadMessages > 0
+                ? Badge(
+                    label: Text(
+                      _totalUnreadMessages > 99
+                          ? '99+'
+                          : _totalUnreadMessages.toString(),
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                    backgroundColor: Colors.red,
+                    child: const Icon(Icons.chat_bubble_outline_rounded),
+                  )
+                : const Icon(Icons.chat_bubble_outline_rounded),
             label: 'Messages',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_rounded),
+            icon: _totalPendingAppointments > 0
+                ? Badge(
+                    label: Text(
+                      _totalPendingAppointments > 99
+                          ? '99+'
+                          : _totalPendingAppointments.toString(),
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                    backgroundColor: Colors.red,
+                    child: const Icon(Icons.calendar_today_rounded),
+                  )
+                : const Icon(Icons.calendar_today_rounded),
             label: 'Événements',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline_rounded),
             label: 'Profil',
           ),

@@ -39,12 +39,41 @@ class MessageService {
 
         return {
           'conversation_id': data['conversation_id'],
+          'status': data['status'],
+          'subject': data['subject'],
           'messages': messages,
         };
       }
       throw Exception('Failed to load conversation');
     } catch (e) {
       print('Error getting conversation: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> initiateConversation({
+    required int parentId,
+    required int enseignantId,
+    required String initialMessage,
+    String? subject,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/messages/conversation/initiate',
+        data: {
+          'parent_id': parentId,
+          'enseignant_id': enseignantId,
+          'initial_message': initialMessage,
+          'sender_type': 'enseignant',
+          if (subject != null) 'subject': subject,
+        },
+      );
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('Failed to initiate conversation');
+    } catch (e) {
+      print('Error initiating conversation: $e');
       rethrow;
     }
   }

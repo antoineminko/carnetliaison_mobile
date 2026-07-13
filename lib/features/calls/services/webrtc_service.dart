@@ -119,7 +119,7 @@ class WebRTCService {
 
       // 5. Définir l'offre distante
       await _peerConnection!.setRemoteDescription(
-        RTCSessionDescription(offer['sdp'], offer['type']),
+        RTCSessionDescription(offer['sdp'], offer['type'] ?? 'offer'),
       );
 
       // 6. Créer la réponse
@@ -211,8 +211,16 @@ class WebRTCService {
   /// Libérer les ressources
   Future<void> dispose() async {
     await endCall();
-    await _localRenderer?.dispose();
-    await _remoteRenderer?.dispose();
+    try {
+      await _localRenderer?.dispose();
+    } catch (e) {
+      print('Ignored localRenderer dispose error: $e');
+    }
+    try {
+      await _remoteRenderer?.dispose();
+    } catch (e) {
+      print('Ignored remoteRenderer dispose error: $e');
+    }
     _localRenderer = null;
     _remoteRenderer = null;
   }

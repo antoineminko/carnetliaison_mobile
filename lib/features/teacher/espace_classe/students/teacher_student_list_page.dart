@@ -292,6 +292,7 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
               height: 70,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: AppTheme.seaBlue.withOpacity(0.1),
                 border: Border.all(
                   color: isSelected ? Colors.red.withOpacity(0.3) : AppTheme.seaBlue.withOpacity(0.1),
                   width: isSelected ? 3 : 2,
@@ -301,11 +302,20 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
                         image: NetworkImage(photo),
                         fit: BoxFit.cover,
                       )
-                    : const DecorationImage(
-                        image: AssetImage('assets/images/eleve.png'),
-                        fit: BoxFit.cover,
-                      ),
+                    : null,
               ),
+              child: photo.isEmpty
+                  ? Center(
+                      child: Text(
+                        '${student['prenom']?[0] ?? ''}${student['nom']?[0] ?? ''}'.toUpperCase(),
+                        style: const TextStyle(
+                          color: AppTheme.seaBlue,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(height: 12),
             Text(

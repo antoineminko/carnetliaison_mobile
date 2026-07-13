@@ -20,6 +20,7 @@ class AuthService {
     required UserRole role,
     required String username,
     required String password,
+    bool rememberMe = false,
   }) async {
     if (role != UserRole.parent && role != UserRole.teacher) {
       return AuthResponse(result: AuthResult.success);
@@ -75,6 +76,8 @@ class AuthService {
           // Sauvegarder les identifiants pour un usage futur si besoin
           await prefs.setString('teacher_email_cache', username);
           await prefs.setString('teacher_password_cache', password);
+          await prefs.setBool('remember_me', rememberMe);
+          await prefs.setInt('last_login_time', DateTime.now().millisecondsSinceEpoch);
 
           // On retourne la liste des écoles pour l'écran TeacherSchoolsPage
           return AuthResponse(
@@ -126,11 +129,31 @@ class AuthService {
       await prefs.setString('teacher_telephone', tTelephone);
     if (tMatiere != null) await prefs.setString('teacher_matiere', tMatiere);
 
-    // Save last login time for 15-minute session
+    // Save last login time for session management
     await prefs.setInt(
       'last_login_time',
       DateTime.now().millisecondsSinceEpoch,
     );
+
+    // ✅ Enregistrer le token FCM pour les notifications push enseignant
+    await _registerTeacherFcmToken(teacherId is int ? teacherId : int.tryParse(teacherId.toString()) ?? 0);
+  }
+
+  /// Enregistre le token FCM pour un enseignant
+  static Future<void> _registerTeacherFcmToken(int teacherId) async {
+    try {
+      final token = await NotificationsService().getToken();
+      if (token != null && token.isNotEmpty) {
+        await ApiClient.instance.post(
+          ApiEndpoints.registerFcmToken,
+          data: {'enseignant_id': teacherId, 'token': token, 'platform': 'android'},
+        );
+        debugPrint('✅ [AuthService] FCM Token enregistré pour enseignant #$teacherId');
+      }
+    } catch (e) {
+      // Non bloquant
+      debugPrint('⚠️ [AuthService] Impossible d\'enregistrer le FCM token enseignant : $e');
+    }
   }
 
   /// Récupère et envoie le token FCM au serveur après le login

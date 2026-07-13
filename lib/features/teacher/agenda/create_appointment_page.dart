@@ -117,7 +117,7 @@ class _CreateAppointmentPageState extends State<CreateAppointmentPage> {
             Text('Demande envoyée !', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ]),
           content: Text(
-            'Votre demande de rendez-vous ${_type == 'video' ? 'vidéo' : 'physique'} pour le ${_formatDate(_selectedDate)} à ${_formatTime(_selectedTime)} a été envoyée à l\'enseignant.',
+            'Votre demande de rendez-vous ${_type == 'video' ? 'vidéo' : 'physique'} pour le ${_formatDate(_selectedDate)} à ${_formatTime(_selectedTime)} a été envoyée au parent.',
             style: const TextStyle(fontSize: 14, height: 1.5),
           ),
           actions: [

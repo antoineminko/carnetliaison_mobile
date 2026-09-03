@@ -4,8 +4,11 @@ import 'package:app_mobile/shared/pages/appointment_page.dart';
 import 'package:app_mobile/features/teacher/services/teacher_student_service.dart';
 import 'widgets/incident_dialog.dart';
 import 'widgets/multi_incident_dialog.dart';
-import 'widgets/student_stats_dialog.dart';
-import 'widgets/parent_contact_dialog.dart';
+import 'widgets/convocation_choice_dialog.dart';
+import 'widgets/parent_selection_dialog.dart';
+import 'widgets/message_composer_dialog.dart';
+import 'package:app_mobile/features/communication/services/message_service.dart';
+import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:intl/intl.dart';
 
 class TeacherStudentListPage extends StatefulWidget {
@@ -45,7 +48,7 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
       } else {
         _selectedStudentIds.add(studentId);
       }
-      // Désactiver le mode multi-sélection si aucun élève sélectionné
+      
       if (_selectedStudentIds.isEmpty) {
         _isMultiSelectMode = false;
       }
@@ -231,13 +234,12 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
   }
 
   String _buildPhotoUrl(dynamic student) {
-    // Si photo_url existe et contient http, l'utiliser directement
+   
     final photoUrl = student['photo_url'];
     if (photoUrl != null && photoUrl.toString().startsWith('http')) {
       return photoUrl;
     }
     
-    // Si photo existe, construire l'URL complète
     final photo = student['photo'];
     if (photo != null && photo.toString().isNotEmpty) {
       const baseUrl = 'https://sirh.alwaysdata.net/api_carnet_liaison/storage';
@@ -250,7 +252,6 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
   Widget _buildStudentCard(BuildContext context, dynamic student) {
     final name = "${student['prenom']} ${student['nom']}";
     final matricule = "MAT-${student['id']}";
-    // Construire l'URL complète de la photo
     final photo = _buildPhotoUrl(student);
     final studentId = student['id'] as int;
     final isSelected = _selectedStudentIds.contains(studentId);
@@ -277,7 +278,7 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Checkbox en mode sélection
+           
             if (_isMultiSelectMode)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -338,62 +339,44 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
             ),
             const SizedBox(height: 10),
             if (!_isMultiSelectMode)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildIconButton(
-                    context: context,
-                    icon: Icons.bar_chart_rounded,
-                    color: AppTheme.sunYellow,
-                    tooltip: 'Statistiques',
-                    onTap: () => _showStatsDialog(context, student),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildIconButton(
-                    context: context,
-                    icon: Icons.warning_amber_rounded,
-                    color: Colors.redAccent,
-                    tooltip: 'Signaler Incident',
-                    onTap: () => _showIncidentDialog(context, student),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildIconButton(
-                    context: context,
-                    icon: Icons.person_search_rounded,
-                    color: AppTheme.seaBlue,
-                    tooltip: 'Info Parent',
-                    onTap: () => _showParentDialog(context, student),
-                  ),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _showIncidentDialog(context, student),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent.withOpacity(0.1),
+                          foregroundColor: Colors.redAccent,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Signaler', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _handleConvocation(context, student),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.seaBlue.withOpacity(0.1),
+                          foregroundColor: AppTheme.seaBlue,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Convocation', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildIconButton({
-    required BuildContext context,
-    required IconData icon,
-    required Color color,
-    required String tooltip,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, size: 18, color: color),
-      ),
-    );
-  }
-
-  void _showStatsDialog(BuildContext context, dynamic student) {
-    showStudentStatsDialog(context: context, student: student, onShowParent: () => _showParentDialog(context, student));
   }
 
   void _showIncidentDialog(BuildContext context, dynamic student) {
@@ -436,7 +419,6 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
     }
   }
 
-  // Modal pour signaler un incident à plusieurs élèves sélectionnés
   void _showMultiIncidentDialog() {
     if (_selectedStudentIds.isEmpty) return;
     showMultiIncidentDialog(context: context, selectedCount: _selectedStudentIds.length, onSubmit: _submitMultiIncident);
@@ -458,7 +440,7 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
       if (response.statusCode == 201 && response.data['success'] == true) {
         if (mounted) {
           Navigator.pop(modalContext);
-          _clearSelection(); // Réinitialiser la sélection
+          _clearSelection();
           
           final count = response.data['data']?['count'] ?? elevesIds.length;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -483,31 +465,78 @@ class _TeacherStudentListPageState extends State<TeacherStudentListPage> {
     }
   }
 
-  Widget _buildStatRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: AppTheme.textGrey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textDark)),
-        ],
-      ),
+  Future<void> _handleConvocation(BuildContext context, dynamic student) async {
+    showConvocationChoiceDialog(
+      context: context,
+      onSendMessage: () => _handleSendMessage(context, student),
+      onScheduleAppointment: () => _handleScheduleAppointment(context, student),
     );
   }
 
-  void _showParentDialog(BuildContext context, dynamic student) {
-    showParentContactDialog(context: context, student: student);
+  Future<void> _handleSendMessage(BuildContext context, dynamic student) async {
+    final parents = await _fetchParents(student['id']);
+    if (!mounted) return;
+    if (parents.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucun parent trouvé pour cet élève.')));
+      return;
+    }
+
+    showMessageComposerDialog(
+      context: context,
+      onSend: (subject, message) async {
+        final teacherId = await AuthService.getTeacherId();
+        for (var parent in parents) {
+          await MessageService().initiateConversation(
+            enseignantId: teacherId!,
+            parentId: parent['id'],
+            subject: subject,
+            initialMessage: message,
+          );
+        }
+      },
+    );
   }
 
-  Widget _buildContactRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppTheme.seaBlue),
-        const SizedBox(width: 10),
-        Text(text, style: const TextStyle(fontSize: 13)),
-      ],
+  Future<void> _handleScheduleAppointment(BuildContext context, dynamic student) async {
+    final parents = await _fetchParents(student['id']);
+    if (!mounted) return;
+    if (parents.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucun parent trouvé pour cet élève.')));
+      return;
+    }
+
+    showParentSelectionDialog(
+      context: context,
+      parents: parents,
+      onConfirm: (selectedParentIds) {
+        final fullName = "${student['prenom']} ${student['nom']}";
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AppointmentPage(
+              source: AppointmentSource.teacher,
+              targetName: "Parents sélectionnés",
+              studentName: fullName,
+              enseignantId: widget.teacherId,
+              eleveId: student['id'],
+              targetParentIds: selectedParentIds,
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  Future<List<dynamic>> _fetchParents(int studentId) async {
+    try {
+      final response = await TeacherStudentService.instance.getStudentInfo(studentId);
+      if (response.statusCode == 200 && response.data['success']) {
+        return response.data['parents'] ?? [];
+      }
+    } catch (e) {
+      print("Erreur récupération parents : $e");
+    }
+    return [];
   }
 }
 

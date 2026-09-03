@@ -13,10 +13,19 @@ class TeacherEventService {
     return await ApiClient.instance.post('/appointments', data: data);
   }
 
-  Future<Response> updateAppointmentStatus(int appointmentId, String status) async {
-    return await ApiClient.instance.put(
-      '/appointments/$appointmentId/status',
-      data: {'statut': status},
-    );
+  Future<Response> updateAppointmentStatus(
+      int appointmentId, String status, {
+      String? newProposedDate,
+      String? reportReason,
+  }) async {
+    return await ApiClient.instance.put('/appointments/$appointmentId/status', data: {
+      'statut': status,
+      if (newProposedDate != null) 'new_proposed_date': newProposedDate,
+      if (reportReason != null) 'report_reason': reportReason,
+    });
+  }
+
+  Future<Response> markEventAsRead(int appointmentId) async {
+    return await ApiClient.instance.put('/appointments/$appointmentId/read');
   }
 }

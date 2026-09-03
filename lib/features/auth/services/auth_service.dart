@@ -190,6 +190,15 @@ class AuthService {
     return prefs.getInt('parent_id');
   }
 
+  static Future<String?> getLastLoginTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final time = prefs.getInt('last_login_time');
+    if (time != null) {
+      return DateTime.fromMillisecondsSinceEpoch(time).toIso8601String();
+    }
+    return null;
+  }
+
   /// Gets the parent ID specifically for a given school prefix.
   /// If it hasn't been cached yet, it performs a silent login to fetch and save it.
   static Future<int?> getParentIdForSchool(String? schoolPrefix) async {

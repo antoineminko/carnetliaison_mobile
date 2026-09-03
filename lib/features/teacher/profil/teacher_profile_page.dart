@@ -144,7 +144,7 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
             ),
           ),
 
-
+          const SizedBox(height: 30),
 
           // SECTION PREFERENCES
           _buildSectionTitle('PRÉFÉRENCES'),
@@ -170,19 +170,23 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
           // BOUTONS BAS DE PAGE
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
             ),
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: AppTheme.background, borderRadius: BorderRadius.circular(8)),
-                child: const Icon(Icons.lock_outline, color: AppTheme.seaBlue),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: AppTheme.background, borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.lock_outline, color: AppTheme.seaBlue),
+                ),
+                title: const Text('Changer le mot de passe', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.textGrey),
+                onTap: () {},
               ),
-              title: const Text('Changer le mot de passe', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.textGrey),
-              onTap: () {},
             ),
           ),
           
@@ -190,25 +194,29 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
           
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.red.withOpacity(0.1)),
               boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.02), blurRadius: 10)],
             ),
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8)),
-                child: const Icon(Icons.logout_rounded, color: Colors.red),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.logout_rounded, color: Colors.red),
+                ),
+                title: const Text('Se déconnecter', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.red)),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.redAccent),
+                onTap: () async {
+                  await AuthService.logout();
+                  if (context.mounted) {
+                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
+                },
               ),
-              title: const Text('Se déconnecter', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.red)),
-               trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.redAccent),
-              onTap: () async {
-                await AuthService.logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil('/select_role', (route) => false);
-                }
-              },
             ),
           ),
           const SizedBox(height: 20),

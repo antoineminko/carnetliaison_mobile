@@ -17,15 +17,15 @@ class GradesEntryView extends StatefulWidget {
 
 class _GradesEntryViewState extends State<GradesEntryView> {
   String selectedTrimester = '1er Trimestre';
-  String selectedAssignmentNum = 'Interrogation 1';
-  String selectedType = 'Devoir Maison';
+  String selectedAssignmentNum = '1';
+  String selectedType = 'Devoir maison 1';
   String selectedSubject = 'Philosophie';
   DateTime? evaluationDate = DateTime.now();
   final TextEditingController titleController = TextEditingController();
 
   final List<String> trimesters = ['1er Trimestre', '2ème Trimestre', '3ème Trimestre'];
-  final List<String> assignmentNums = ['Interrogation 1', 'Interrogation 2', 'Interrogation 3', 'Interrogation 4'];
-  final List<String> types = ['Devoir Maison', 'Interrogation en Classe', 'Contrôle Continu', 'Examen Blanc'];
+  final List<String> assignmentNums = ['1', '2', '3', '4', '5'];
+  final List<String> types = ['Devoir maison 1', 'Devoir maison 2', 'Interrogation classe', 'Contrôle', 'Examen', 'Autre'];
   final List<String> subjects = [
     'Philosophie',
     'Mathématiques',
@@ -56,10 +56,10 @@ class _GradesEntryViewState extends State<GradesEntryView> {
       
       setState(() {
         students = data.map((e) => {
-          'id': e['code_secret'] ?? e['matricule'] ?? e['id'].toString(), // Use code_secret as ID if available
+          'id': e['code_secret'] ?? e['matricule'] ?? e['id'].toString(), 
           'name': '${e['nom']} ${e['prenom']}',
           'grade': '',
-          'raw_id': e['id'], // Real database ID
+          'raw_id': e['id'],
         }).toList();
         isLoadingStudents = false;
       });
@@ -94,6 +94,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
         var excel = Excel.decodeBytes(bytes);
 
         int matchedCount = 0;
+        List<String> unmappedNames = [];
 
         for (var table in excel.tables.keys) {
           var sheet = excel.tables[table];
@@ -103,19 +104,34 @@ class _GradesEntryViewState extends State<GradesEntryView> {
           for (int i = 1; i < sheet.maxRows; i++) {
             var row = sheet.row(i);
             if (row.length >= 2) {
-              var matricule = row[0]?.value?.toString().trim();
+              var excelName = row[0]?.value?.toString().trim();
               var grade = row[1]?.value?.toString().trim();
+              var appreciation = row.length > 2 ? row[2]?.value?.toString().trim() : null;
 
-              if (matricule != null && grade != null) {
-                // Find student by matricule/id
+              if (excelName != null && excelName.isNotEmpty && grade != null) {
+                bool matched = false;
+                String normalizedExcelName = excelName.toLowerCase().replaceAll(RegExp(r'\s+'), '');
+                
+                // Find student by name
                 for (var student in students) {
-                  if (student['id'] == matricule) {
+                  String normalizedStudentName = student['name'].toString().toLowerCase().replaceAll(RegExp(r'\s+'), '');
+                  
+                  // Flexible matching: check if names are equal, or if all parts of excel name exist in student name
+                  if (normalizedStudentName == normalizedExcelName || 
+                      _nameMatches(excelName, student['name'])) {
                     setState(() {
                       student['grade'] = grade;
+                      if (appreciation != null && appreciation.isNotEmpty) {
+                        student['commentaires'] = appreciation;
+                      }
                     });
                     matchedCount++;
+                    matched = true;
                     break;
                   }
+                }
+                if (!matched) {
+                  unmappedNames.add(excelName);
                 }
               }
             }
@@ -127,10 +143,33 @@ class _GradesEntryViewState extends State<GradesEntryView> {
           isExcelImported = true;
         });
 
-        if (mounted) {
+        if (unmappedNames.isNotEmpty && mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Attention - Élèves non trouvés', style: TextStyle(color: Colors.orange)),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    Text('Les élèves suivants du fichier Excel n\'ont pas été reconnus et leurs notes n\'ont pas été importées. Veuillez vérifier leur nom complet :\n'),
+                    ...unmappedNames.map((name) => Text('- $name', style: const TextStyle(fontWeight: FontWeight.bold))),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Fermer'),
+                ),
+              ],
+            ),
+          );
+        } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Succès : Notes importées et associées pour $matchedCount élèves.'),
+              content: Text('Succès : Notes importées pour $matchedCount élèves.'),
               backgroundColor: AppTheme.forestGreen,
             ),
           );
@@ -154,13 +193,14 @@ class _GradesEntryViewState extends State<GradesEntryView> {
           children: const [
             Icon(Icons.info_outline, color: AppTheme.seaBlue),
             SizedBox(width: 10),
-            Text('Format du fichier Excel'),
+            Expanded(child: Text('Format du fichier Excel')),
           ],
         ),
         content: const Text(
-          'Le fichier Excel (.xlsx) doit comporter deux colonnes :\n\n'
-          'Colonne A : Code secret ou Matricule de l\'élève\n'
-          'Colonne B : Note sur 20 (ex: 15.5)\n\n'
+          'Le fichier Excel (.xlsx) doit comporter deux ou trois colonnes :\n\n'
+          'Colonne A : Nom complet de l\'élève\n'
+          'Colonne B : Note sur 20 (ex: 15.5)\n'
+          'Colonne C : Appréciation (optionnelle)\n\n'
           'Veuillez inclure l\'en-tête sur la première ligne.',
         ),
         actions: [
@@ -214,6 +254,7 @@ class _GradesEntryViewState extends State<GradesEntryView> {
         notesData.add({
           'eleve_id': student['raw_id'],
           'note': student['grade'],
+          'commentaires': student['commentaires'],
         });
       }
     }
@@ -225,6 +266,69 @@ class _GradesEntryViewState extends State<GradesEntryView> {
       return;
     }
 
+    _showPreviewModal(notesData);
+  }
+
+  void _showPreviewModal(List<Map<String, dynamic>> notesData) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.8,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Aperçu avant validation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 15),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: notesData.length,
+                  itemBuilder: (context, index) {
+                    var note = notesData[index];
+                    var student = students.firstWhere((s) => s['raw_id'] == note['eleve_id']);
+                    bool isOk = double.tryParse(note['note'].toString()) != null;
+                    return ListTile(
+                      title: Text(student['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('Note : ${note['note']}'),
+                      trailing: isOk 
+                        ? const Icon(Icons.check_circle, color: AppTheme.forestGreen) 
+                        : const Icon(Icons.error, color: Colors.red),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 15),
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _executePublish(notesData);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.seaBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                  child: const Text('VALIDER LES NOTES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _executePublish(List<Map<String, dynamic>> notesData) async {
     try {
       final payload = {
         'classe_id': widget.classId,
@@ -255,6 +359,17 @@ class _GradesEntryViewState extends State<GradesEntryView> {
         );
       }
     }
+  }
+
+  bool _nameMatches(String excelName, String studentName) {
+    var excelParts = excelName.toLowerCase().trim().split(RegExp(r'\s+'));
+    var studentNameLower = studentName.toLowerCase();
+    for (var part in excelParts) {
+      if (!studentNameLower.contains(part)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override

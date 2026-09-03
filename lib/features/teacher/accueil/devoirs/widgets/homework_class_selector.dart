@@ -54,7 +54,7 @@ class HomeworkClassSelector extends StatelessWidget {
             items: classes.map((classe) {
               return DropdownMenuItem(
                 value: classe,
-                child: Text('${classe['nom']} ${classe['ecole_nom'] != null ? '(${classe['ecole_nom']})' : ''}'),
+                child: Text(classe['classe_nom'] ?? classe['nom'] ?? 'Classe sans nom'),
               );
             }).toList(),
             onChanged: onChanged,

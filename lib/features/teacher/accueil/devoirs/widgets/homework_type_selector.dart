@@ -16,7 +16,9 @@ class HomeworkTypeSelector extends StatelessWidget {
     final types = [
       {'id': 'maison', 'label': 'Devoir de maison', 'icon': Icons.home_work, 'color': Colors.blue, 'desc': 'À faire chez soi'},
       {'id': 'classe', 'label': 'Devoir de classe', 'icon': Icons.school, 'color': Colors.green, 'desc': 'À faire en classe'},
-      {'id': 'exercice', 'label': 'Exercice maison', 'icon': Icons.edit_note, 'color': Colors.orange, 'desc': 'Exercices pratiques'},
+      {'id': 'exercice', 'label': 'Exercice', 'icon': Icons.edit_note, 'color': Colors.orange, 'desc': 'Exercices pratiques'},
+      {'id': 'recherche', 'label': 'Recherche', 'icon': Icons.search, 'color': Colors.purple, 'desc': 'Travail de recherche'},
+      {'id': 'revision', 'label': 'Révision', 'icon': Icons.menu_book, 'color': Colors.teal, 'desc': 'Révisions pour évaluation'},
     ];
 
     return Column(

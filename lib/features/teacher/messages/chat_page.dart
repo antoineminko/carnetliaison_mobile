@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/features/communication/services/message_service.dart';
@@ -6,6 +7,8 @@ import 'package:app_mobile/features/auth/services/auth_service.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/widgets/background_wrapper.dart';
 import 'package:app_mobile/features/calls/pages/call_page.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/file_picker.dart' as fp;
 
 class ChatPage extends StatefulWidget {
   final Map<String, dynamic> conversation;
@@ -26,6 +29,11 @@ class _ChatPageState extends State<ChatPage> {
   bool _isOnline = false;
   int _myId = 0;
 
+  // ── Polling temps réel ────────────────────────────────────────────────────
+  Timer? _pollingTimer;
+  int _lastMessageCount = 0;
+  final ScrollController _scrollController = ScrollController();
+
   // Options de signalement
   final List<Map<String, dynamic>> _reportReasons = [
     {'value': 'harassment', 'label': 'Harcèlement', 'icon': Icons.warning},
@@ -35,11 +43,15 @@ class _ChatPageState extends State<ChatPage> {
     {'value': 'other', 'label': 'Autre', 'icon': Icons.help_outline},
   ];
 
+  PlatformFile? _attachedFile;
+  bool _isUploading = false;
+
   @override
   void initState() {
     super.initState();
     _conversationId = widget.conversation['conversation_id'];
-    _loadMessages();
+    // Fetch initial, puis démarrage du polling une fois la conversation chargée
+    _loadMessages().then((_) => _startPolling());
   }
 
   Future<void> _loadMessages() async {
@@ -49,33 +61,102 @@ class _ChatPageState extends State<ChatPage> {
       _myId = teacherId;
 
       final parentId = widget.conversation['parent_id'];
-      if (parentId == null) return;
 
       final data = await _messageService.getConversation(parentId, teacherId);
-      setState(() {
-        _messages = data['messages'] ?? [];
-        _conversationId = data['conversation_id'];
-        _isOnline = data['is_online'] ?? false;
-        _conversationStatus = data['status']; // need to ensure status is fetched or default it. Actually data might not have status, wait... Let's just use widget.conversation['status'] or fetch it.
-        if (widget.conversation['status'] != null) {
-          _conversationStatus = widget.conversation['status'];
-        }
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _messages = data['messages'] ?? [];
+          _conversationId = data['conversation_id'];
+          _isOnline = data['is_online'] ?? false;
+          _conversationStatus = data['status'] ?? widget.conversation['status'] ?? 'pending';
+          _lastMessageCount = _messages.length; // Référence pour le polling
+          _isLoading = false;
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
       debugPrint('Error loading messages: $e');
     }
   }
 
+  // ── Polling temps réel ────────────────────────────────────────────────────
+
+  /// Démarre le timer de polling (toutes les 3 secondes).
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted && _conversationId != null) {
+        _pollNewMessages();
+      }
+    });
+  }
+
+  /// Interroge l'API silencieusement.
+  /// Ne déclenche setState que si de nouveaux messages sont détectés.
+  Future<void> _pollNewMessages() async {
+    try {
+      final parentId = widget.conversation['parent_id'];
+      final data = await _messageService.getConversation(parentId, _myId);
+
+      final newMessages = data['messages'] as List<Message>? ?? [];
+
+      if (newMessages.length != _lastMessageCount && mounted) {
+        final bool hadNewMessages = newMessages.length > _lastMessageCount;
+        setState(() {
+          _messages = newMessages;
+          _lastMessageCount = newMessages.length;
+          _isOnline = data['is_online'] ?? _isOnline;
+          // Mettre à jour le statut si la conversation a été acceptée entre-temps
+          if (data['status'] != null) _conversationStatus = data['status'];
+        });
+        if (hadNewMessages) _scrollToBottomIfNearEnd();
+      }
+    } catch (_) {
+      // Polling silencieux — erreurs réseau transitoires ignorées
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  /// Scroll vers le bas uniquement si l'utilisateur est dans les 150px de la fin.
+  void _scrollToBottomIfNearEnd() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.maxScrollExtent - pos.pixels < 150) {
+      _scrollToBottom();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
+    final text = _messageController.text.trim();
+    if (text.isEmpty && _attachedFile == null) return;
 
     final teacherId = await AuthService.getTeacherId();
     if (teacherId == null) return;
 
-    final content = _messageController.text.trim();
     _messageController.clear();
+    setState(() {
+      _isUploading = true;
+    });
 
     try {
       if (_conversationId == null) {
@@ -83,7 +164,7 @@ class _ChatPageState extends State<ChatPage> {
         final data = await _messageService.initiateConversation(
           parentId: parentId,
           enseignantId: teacherId,
-          initialMessage: content,
+          initialMessage: text,
           subject: widget.conversation['subject'] ?? 'Discussion',
         );
         setState(() {
@@ -99,7 +180,9 @@ class _ChatPageState extends State<ChatPage> {
         conversationId: _conversationId!,
         senderType: 'enseignant',
         senderId: teacherId,
-        content: content,
+        content: text,
+        filePath: _attachedFile?.path,
+        fileName: _attachedFile?.name,
       );
 
       setState(() {
@@ -110,6 +193,11 @@ class _ChatPageState extends State<ChatPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Erreur lors de l\'envoi du message')),
       );
+    } finally {
+      setState(() {
+        _attachedFile = null;
+        _isUploading = false;
+      });
     }
   }
 
@@ -191,10 +279,31 @@ class _ChatPageState extends State<ChatPage> {
       body: BackgroundWrapper(
         child: Column(
         children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            color: Colors.amber.withOpacity(0.1),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock, size: 14, color: Colors.amber),
+                SizedBox(width: 6),
+                Text(
+                  'Conversation chiffrée de bout en bout',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.amber,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.builder(
+                    controller: _scrollController,
                     reverse: false,
                     padding: const EdgeInsets.all(16),
                     itemCount: _messages.length,
@@ -246,7 +355,7 @@ class _ChatPageState extends State<ChatPage> {
               alignment: Alignment.center,
               child: const Text('Discussion refusée.', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             )
-          else if (_conversationStatus == 'pending' && !_isReceiver)
+          else if (_conversationId != null && _conversationStatus == 'pending' && !_isReceiver)
             Container(
               padding: const EdgeInsets.all(16),
               color: AppTheme.background,
@@ -344,25 +453,107 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildMessageInput() {
     return Container(
-      padding: const EdgeInsets.all(8),
-      color: Colors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                hintText: 'Écrivez votre message...',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send, color: AppTheme.seaBlue),
-            onPressed: _sendMessage,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            offset: const Offset(0, -2),
+            blurRadius: 10,
+            color: Colors.black.withOpacity(0.03),
           ),
         ],
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            if (_attachedFile != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.background,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.attach_file, size: 20, color: AppTheme.seaBlue),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _attachedFile!.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => setState(() => _attachedFile = null),
+                    )
+                  ],
+                ),
+              ),
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final result = await fp.FilePicker.pickFiles();
+                    if (result != null) {
+                      setState(() {
+                        _attachedFile = result.files.first;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(Icons.attach_file, color: AppTheme.textGrey),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.background,
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(
+                        hintText: 'Écrire un message...',
+                        hintStyle: TextStyle(color: AppTheme.textGrey),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        border: InputBorder.none,
+                      ),
+                      maxLines: null,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _isUploading
+                    ? const Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : GestureDetector(
+                        onTap: _sendMessage,
+                        child: CircleAvatar(
+                          backgroundColor: AppTheme.seaBlue,
+                          radius: 24,
+                          child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                        ),
+                      ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2,62 +2,61 @@ part of '../../accueil/accueil_page.dart';
 
 extension EvenementsViewExtension on _TeacherHomePageState {
   Widget _buildPlanningTab() {
-    final filters = ['Tous', 'En attente', 'Validé', 'Passé'];
+    final filters = ['En attente', 'Confirmés', 'Terminés'];
     final now = DateTime.now();
 
     // Filtrer les événements (Rendez-vous et Conversations)
     List<dynamic> filteredAppointments = _appointments;
     List<dynamic> filteredConversations = _conversations;
 
-    if (_selectedEventFilter != 'Tous') {
-      filteredAppointments = _appointments.where((appt) {
-        final status = appt['statut'] ?? 'en_attente';
-        final dateStr = appt['date_heure']?.toString() ?? '';
-        DateTime? date;
-        if (dateStr.isNotEmpty) {
-          try {
-            if (dateStr.contains('/')) {
-              final parts = dateStr.split(' ')[0].split('/');
-              if (parts.length >= 3) {
-                date = DateTime(
-                  int.parse(parts[2]),
-                  int.parse(parts[1]),
-                  int.parse(parts[0]),
-                );
-              }
-            } else {
-              date = DateTime.parse(dateStr);
+    filteredAppointments = _appointments.where((appt) {
+      final status = appt['statut'] ?? 'en_attente';
+      final dateStr = appt['date_heure']?.toString() ?? '';
+      DateTime? date;
+      if (dateStr.isNotEmpty) {
+        try {
+          if (dateStr.contains('/')) {
+            final parts = dateStr.split(' ')[0].split('/');
+            if (parts.length >= 3) {
+              date = DateTime(
+                int.parse(parts[2]),
+                int.parse(parts[1]),
+                int.parse(parts[0]),
+              );
             }
-          } catch (_) {}
-        }
+          } else {
+            date = DateTime.parse(dateStr);
+          }
+        } catch (_) {}
+      }
 
-        switch (_selectedEventFilter) {
-          case 'En attente':
-            return status == 'en_attente';
-          case 'Validé':
-            return status == 'accepted' || status == 'accepte';
-          case 'Passé':
-            if (date == null) return false;
-            return date.isBefore(now);
-          default:
-            return true;
-        }
-      }).toList();
+      bool isPast = date != null && date.isBefore(now);
 
-      filteredConversations = _conversations.where((conv) {
-        final status = conv['status'] ?? 'pending';
-        switch (_selectedEventFilter) {
-          case 'En attente':
-            return status == 'pending';
-          case 'Validé':
-            return status == 'accepted' || status == 'accepte';
-          case 'Passé':
-            return false; // Les messages n'ont généralement pas de notion de "passé" avec date
-          default:
-            return true;
-        }
-      }).toList();
-    }
+      switch (_selectedEventFilter) {
+        case 'En attente':
+          return !isPast && (status == 'en_attente' || status == 'reporte');
+        case 'Confirmés':
+          return !isPast && (status == 'accepted' || status == 'accepte');
+        case 'Terminés':
+          return isPast || status == 'refuse' || status == 'refused' || status == 'cancelled' || status == 'annule';
+        default:
+          return true;
+      }
+    }).toList();
+
+    filteredConversations = _conversations.where((conv) {
+      final status = conv['status'] ?? 'pending';
+      switch (_selectedEventFilter) {
+        case 'En attente':
+          return status == 'pending';
+        case 'Confirmés':
+          return status == 'accepted' || status == 'accepte';
+        case 'Terminés':
+          return status == 'refuse' || status == 'refused' || status == 'cancelled' || status == 'annule';
+        default:
+          return true;
+      }
+    }).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -410,31 +409,52 @@ extension EvenementsViewExtension on _TeacherHomePageState {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () =>
-                          _updateRequestStatus(id, type, 'rejected'),
+                      onPressed: () {
+                          if (id != null && type != null) _updateRequestStatus(id, type, 'rejected');
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                         side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Refuser'),
+                      child: const Text('Refuser', style: TextStyle(fontSize: 13)),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                          if (id != null && type != null) _showPostponeDialog(id, type);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                        side: const BorderSide(color: Colors.orange),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Reporter', style: TextStyle(fontSize: 13)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () =>
-                          _updateRequestStatus(id, type, 'accepted'),
+                      onPressed: () {
+                          if (id != null && type != null) _updateRequestStatus(id, type, 'accepted');
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Accepter'),
+                      child: const Text('Accepter', style: TextStyle(fontSize: 13)),
                     ),
                   ),
                 ],

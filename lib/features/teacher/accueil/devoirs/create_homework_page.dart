@@ -8,7 +8,9 @@ import 'widgets/homework_type_selector.dart';
 import 'widgets/homework_subject_card.dart';
 import 'widgets/homework_class_selector.dart';
 import 'widgets/homework_student_selector.dart';
-import 'widgets/homework_details_form.dart';
+import 'dart:convert';
+import 'package:app_mobile/features/teacher/services/teacher_textbook_service.dart';
+import 'widgets/homework_dynamic_form.dart';
 import 'widgets/homework_date_picker.dart';
 
 class CreateHomeworkPage extends StatefulWidget {
@@ -36,8 +38,22 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
   String _selectedType = 'maison'; 
   
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descController = TextEditingController();
-  final TextEditingController _durationController = TextEditingController();
+  List<Map<String, dynamic>> _courses = [];
+  int? _selectedCourseId;
+
+  final Map<String, TextEditingController> _dynamicControllers = {
+    'consignes': TextEditingController(),
+    'chapitre': TextEditingController(),
+    'objectif': TextEditingController(),
+    'livre': TextEditingController(),
+    'page': TextEditingController(),
+    'numeros': TextEditingController(),
+    'sujet': TextEditingController(),
+    'documents': TextEditingController(),
+    'format': TextEditingController(),
+    'notions': TextEditingController(),
+    'conseils': TextEditingController(),
+  };
   
   DateTime _dueDate = DateTime.now().add(const Duration(days: 2));
 
@@ -69,6 +85,7 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
         if (_classes.isNotEmpty) {
           _selectedClass = _classes.first;
           _fetchStudents(_selectedClass!['id']);
+          _fetchCourses(_selectedClass!['id']);
         }
         _isLoading = false;
       });
@@ -77,6 +94,18 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur chargement classes: $e')),
       );
+    }
+  }
+
+  Future<void> _fetchCourses(int classId) async {
+    try {
+      final response = await TeacherTextbookService.instance.getCourses(classId, subject: _subject);
+      setState(() {
+        _courses = List<Map<String, dynamic>>.from(response.data['cahiers'] ?? []);
+        _selectedCourseId = null;
+      });
+    } catch (e) {
+      // Ignore silence
     }
   }
 
@@ -217,6 +246,7 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
                   _selectedClass = val;
                   if (val != null) {
                     _fetchStudents(val['id']);
+                    _fetchCourses(val['id']);
                   }
                 });
               },
@@ -240,17 +270,23 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
             // Détails du devoir
             _buildSectionTitle('Détails du devoir'),
             const SizedBox(height: 10),
-            HomeworkDetailsForm(
+            HomeworkDynamicForm(
               titleController: _titleController,
-              descController: _descController,
-              durationController: _durationController,
               selectedType: _selectedType,
+              dynamicControllers: _dynamicControllers,
             ),
 
             const SizedBox(height: 25),
             
-            // Date de remise
-            _buildSectionTitle('Date de remise'),
+            // Lien avec cours
+            _buildSectionTitle('Lien avec le cours (Optionnel)'),
+            const SizedBox(height: 10),
+            _buildCourseSelector(),
+
+            const SizedBox(height: 25),
+            
+            // Date de remise ou réalisation
+            _buildSectionTitle(_selectedType == 'classe' ? 'Date de réalisation' : 'Date de remise'),
             const SizedBox(height: 10),
             HomeworkDatePicker(
               dueDate: _dueDate,
@@ -261,6 +297,41 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
             _buildSubmitButton(),
             const SizedBox(height: 30),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCourseSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          isExpanded: true,
+          value: _selectedCourseId,
+          hint: const Text('Sélectionner un cours'),
+          items: [
+            const DropdownMenuItem<int>(
+              value: null,
+              child: Text('Aucun lien'),
+            ),
+            ..._courses.map((course) {
+              final dateStr = course['date_cours'] != null 
+                  ? course['date_cours'].toString().substring(0, 10) 
+                  : '';
+              final title = course['titre'] ?? 'Cours';
+              return DropdownMenuItem<int>(
+                value: course['id'] as int,
+                child: Text('$dateStr - $title', overflow: TextOverflow.ellipsis),
+              );
+            }).toList(),
+          ],
+          onChanged: (val) => setState(() => _selectedCourseId = val),
         ),
       ),
     );
@@ -301,7 +372,16 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
 
   Future<void> _publishDevoir() async {
     final title = _titleController.text.trim();
-    final desc = _descController.text.trim();
+    
+    // Serialization des champs
+    final Map<String, String> dynamicData = {};
+    _dynamicControllers.forEach((key, controller) {
+      if (controller.text.trim().isNotEmpty) {
+        dynamicData[key] = controller.text.trim();
+      }
+    });
+    
+    final desc = jsonEncode(dynamicData);
     
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -330,16 +410,24 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      final response = await TeacherHomeworkService.instance.createHomework({
+      final Map<String, dynamic> payload = {
         'classe_id': _selectedClass!['id'],
         'enseignant_id': _teacherId,
         'matiere': _subject,
         'type': _selectedType,
         'titre': title,
         'description': desc,
-        'date_remise': due,
         'eleves': _selectedStudents,
-      });
+        'cahier_texte_id': _selectedCourseId,
+      };
+
+      if (_selectedType == 'classe') {
+        payload['date_realisation'] = due;
+      } else {
+        payload['date_remise'] = due;
+      }
+
+      final response = await TeacherHomeworkService.instance.createHomework(payload);
 
       setState(() => _isSubmitting = false);
 
@@ -408,7 +496,7 @@ class _CreateHomeworkPageState extends State<CreateHomeworkPage> {
                   const Divider(height: 16),
                   _buildRecapRow(Icons.title_rounded, 'Titre', title, AppTheme.textDark),
                   const Divider(height: 16),
-                  _buildRecapRow(Icons.event_rounded, 'Date de remise', dueDisplay, Colors.orange),
+                  _buildRecapRow(Icons.event_rounded, _selectedType == 'classe' ? 'Date de réalisation' : 'Date de remise', dueDisplay, Colors.orange),
                 ],
               ),
             ),

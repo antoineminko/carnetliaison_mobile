@@ -7,7 +7,9 @@ import 'package:app_mobile/features/teacher/espace_classe/espace_classe.dart';
 import 'package:app_mobile/features/teacher/espace_classe/classes/teacher_classes_page.dart';
 import 'package:app_mobile/features/teacher/profil/teacher_profile_page.dart';
 import 'package:app_mobile/features/teacher/messages/teacher_messages_page.dart';
+import 'package:app_mobile/features/teacher/messages/chat_page.dart';
 import 'package:app_mobile/features/teacher/accueil/devoirs/create_homework_page.dart';
+import 'package:app_mobile/features/teacher/espace_classe/textbook/textbook_view.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/school_config.dart';
 import 'package:app_mobile/shared/widgets/background_wrapper.dart';
@@ -45,7 +47,7 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
   int? _teacherId;
   List<dynamic> _appointments = [];
   List<dynamic> _conversations = [];
-  String _selectedEventFilter = 'Tous';
+  String _selectedEventFilter = 'En attente';
   bool _argsProcessed = false;
   final Set<int> _viewedAppointmentIds = {};
 
@@ -55,17 +57,47 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
     if (!_argsProcessed) {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
-        if (args['openChat'] == true) {
+        if (args['openChat'] == true || args['initialTab'] == 1) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             setState(() {
               _currentIndex = 1;
+              for (var c in _conversations) {
+                if (c is Map) {
+                  c['unread_count'] = 0;
+                }
+              }
             });
+            
+            final conversationId = args['openConversationId'] ?? args['conversationId'];
+            if (conversationId != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    conversation: {
+                      'conversation_id': int.tryParse(conversationId.toString()),
+                      'id': int.tryParse(conversationId.toString()),
+                      'status': args['conversationStatus'] ?? 'accepted',
+                    },
+                  ),
+                ),
+              );
+            }
           });
         }
-        if (args['openAppointments'] == true) {
+        if (args['openAppointments'] == true || args['initialTab'] == 2) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             setState(() {
               _currentIndex = 2; // Planning tab
+              for (var appt in _appointments) {
+                if (appt is Map && appt['statut'] == 'en_attente') {
+                  final id = int.tryParse(appt['id']?.toString() ?? '');
+                  if (id != null && !_viewedAppointmentIds.contains(id)) {
+                    _viewedAppointmentIds.add(id);
+                    TeacherEventService.instance.markEventAsRead(id);
+                  }
+                }
+              }
             });
           });
         }
@@ -160,7 +192,7 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
       case 0:
         return _buildHomeContent();
       case 1:
-        return const TeacherMessagesPage();
+        return TeacherMessagesPage(onRefresh: _loadDashboardData);
       case 2:
         return _buildPlanningTab();
       case 3:
@@ -417,9 +449,36 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
                   });
                 },
               ),
+              _buildPriorityCard(
+                title: 'Cahier de texte',
+                subtitle: 'Gérer les leçons',
+                icon: Icons.menu_book_rounded,
+                color: Colors.deepOrange,
+                isUrgent: false,
+                onTap: () {
+                  if (premierClasse != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TextbookView(
+                          classId: premierClasse['id'] ?? 1,
+                          className: premierClasse['classe_nom'] ?? 'Classe',
+                          subject: matiere,
+                          teacherId: _teacherId ?? 1,
+                        ),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Aucune classe assignée.')),
+                    );
+                  }
+                },
+              ),
             ],
           ),
           // 5. BANNER PUBLICITAIRE (Comme chez le parent)
+
           const SizedBox(height: 10),
           _buildPromoBanner(),
           const SizedBox(height: 20),
@@ -626,17 +685,107 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
     );
   }
 
+  Future<void> _showPostponeDialog(int id, String type) async {
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    final reasonController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Proposer un nouveau créneau'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    title: const Text('Date'),
+                    subtitle: Text(selectedDate != null ? "${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}" : "Sélectionner une date"),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (d != null) setState(() => selectedDate = d);
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('Heure'),
+                    subtitle: Text(selectedTime != null ? "${selectedTime!.hour}:${selectedTime!.minute.toString().padLeft(2, '0')}" : "Sélectionner une heure"),
+                    trailing: const Icon(Icons.access_time),
+                    onTap: () async {
+                      final t = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      if (t != null) setState(() => selectedTime = t);
+                    },
+                  ),
+                  TextField(
+                    controller: reasonController,
+                    decoration: const InputDecoration(
+                      labelText: 'Motif (facultatif)',
+                      hintText: 'Ex: Indisponible ce jour-là...',
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: (selectedDate != null && selectedTime != null)
+                    ? () {
+                        final formattedDate =
+                            "${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')} ${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}:00";
+                        Navigator.pop(context);
+                        _updateRequestStatus(
+                          id,
+                          type,
+                          'reporte',
+                          newProposedDate: formattedDate,
+                          reportReason: reasonController.text,
+                        );
+                      }
+                    : null,
+                child: const Text('Envoyer'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
   Future<void> _updateRequestStatus(
     int? id,
     String? type,
-    String status,
-  ) async {
+    String status, {
+    String? newProposedDate,
+    String? reportReason,
+  }) async {
     if (id == null || type == null) return;
     try {
       if (type == 'appointment') {
+        String finalStatus = status;
+        if (status == 'rejected') finalStatus = 'refuse';
+        if (status == 'accepted') finalStatus = 'accepte';
+        if (status == 'reporte') finalStatus = 'reporte';
+
         await TeacherEventService.instance.updateAppointmentStatus(
           id,
-          status == 'rejected' ? 'refuse' : 'accepte',
+          finalStatus,
+          newProposedDate: newProposedDate,
+          reportReason: reportReason,
         );
       } else if (type == 'conversation') {
         await TeacherMessageService.instance.updateConversationStatus(id, status);
@@ -662,11 +811,15 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
   int get _totalPendingAppointments {
     int total = 0;
     for (var appt in _appointments) {
-      if (appt is Map && appt['statut'] == 'en_attente') {
+      if (appt is Map) {
+        final val = appt['unread_count'];
+        int unread = (val is int) ? val : (int.tryParse(val?.toString() ?? '0') ?? 0);
         final id = int.tryParse(appt['id']?.toString() ?? '');
-        if (id != null && !_viewedAppointmentIds.contains(id)) {
-          total++;
+        if (id != null && _viewedAppointmentIds.contains(id)) {
+           // Locally marked as viewed before API refreshes
+           unread = 0;
         }
+        total += unread;
       }
     }
     return total;
@@ -702,8 +855,9 @@ class _TeacherHomePageState extends State<TeacherHomePage> {
               for (var appt in _appointments) {
                 if (appt is Map && appt['statut'] == 'en_attente') {
                   final id = int.tryParse(appt['id']?.toString() ?? '');
-                  if (id != null) {
+                  if (id != null && !_viewedAppointmentIds.contains(id)) {
                     _viewedAppointmentIds.add(id);
+                    TeacherEventService.instance.markEventAsRead(id);
                   }
                 }
               }

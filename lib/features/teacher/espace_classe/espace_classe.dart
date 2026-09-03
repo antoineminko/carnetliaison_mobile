@@ -161,6 +161,8 @@ class _EspaceClassePageState extends State<EspaceClassePage> {
                           TextbookView(
                             className: widget.className,
                             subject: widget.subject,
+                            classId: widget.classId,
+                            teacherId: widget.teacherId,
                           ),
                         ),
                       ),

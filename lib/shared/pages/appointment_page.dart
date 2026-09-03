@@ -11,6 +11,7 @@ class AppointmentPage extends StatefulWidget {
   final String? studentName;
   final int? enseignantId;
   final int? eleveId;
+  final List<int>? targetParentIds;
 
   const AppointmentPage({
     super.key,
@@ -19,6 +20,7 @@ class AppointmentPage extends StatefulWidget {
     this.studentName,
     this.enseignantId,
     this.eleveId,
+    this.targetParentIds,
   });
 
   @override
@@ -214,18 +216,32 @@ class _AppointmentPageState extends State<AppointmentPage> {
         int.parse(parts[0]), int.parse(parts[1]),
       );
 
-      final parentId = await AuthService.getParentId();
-
-      await ApiClient.instance.post('/appointments', data: {
-        'enseignant_id': widget.enseignantId ?? 1,
-        'parent_id': parentId ?? 1,
-        'eleve_id': widget.eleveId,
-        'objet': _objetController.text,
-        'date_heure': dateHeure.toIso8601String(),
-        'mode': selectedMode, // 'presentiel', 'vocal', 'video'
-        'motif': selectedMotive,
-        'requester': widget.source == AppointmentSource.parent ? 'parent' : 'enseignant',
-      });
+      if (widget.source == AppointmentSource.teacher && widget.targetParentIds != null && widget.targetParentIds!.isNotEmpty) {
+        for (int pId in widget.targetParentIds!) {
+          await ApiClient.instance.post('/appointments', data: {
+            'enseignant_id': widget.enseignantId ?? 1,
+            'parent_id': pId,
+            'eleve_id': widget.eleveId,
+            'objet': _objetController.text,
+            'date_heure': dateHeure.toIso8601String(),
+            'mode': selectedMode,
+            'motif': selectedMotive,
+            'requester': 'enseignant',
+          });
+        }
+      } else {
+        final parentId = await AuthService.getParentId();
+        await ApiClient.instance.post('/appointments', data: {
+          'enseignant_id': widget.enseignantId ?? 1,
+          'parent_id': parentId ?? 1,
+          'eleve_id': widget.eleveId,
+          'objet': _objetController.text,
+          'date_heure': dateHeure.toIso8601String(),
+          'mode': selectedMode,
+          'motif': selectedMotive,
+          'requester': widget.source == AppointmentSource.parent ? 'parent' : 'enseignant',
+        });
+      }
 
       if (!mounted) return;
       _showSuccessDialog();

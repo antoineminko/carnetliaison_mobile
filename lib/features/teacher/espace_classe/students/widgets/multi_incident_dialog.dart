@@ -96,12 +96,17 @@ void showMultiIncidentDialog({
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'desordre', child: Text('Désordre')),
-                      DropdownMenuItem(value: 'bavardage', child: Text('Bavardage')),
-                      DropdownMenuItem(value: 'bagarre', child: Text('Bagarre')),
-                      DropdownMenuItem(value: 'injure', child: Text('Injure')),
-                      DropdownMenuItem(value: 'retenu', child: Text('Retenu')),
-                      DropdownMenuItem(value: 'autre', child: Text('Autre')),
+                      DropdownMenuItem(value: 'retard_repete', child: Text('Retard répété')),
+                      DropdownMenuItem(value: 'absence_injustifiee', child: Text('Absence injustifiée')),
+                      DropdownMenuItem(value: 'indiscipline', child: Text('Indiscipline')),
+                      DropdownMenuItem(value: 'violence', child: Text('Violence')),
+                      DropdownMenuItem(value: 'insolence', child: Text('Insolence')),
+                      DropdownMenuItem(value: 'non_respect', child: Text('Non-respect du règlement')),
+                      DropdownMenuItem(value: 'devoirs_non_faits', child: Text('Devoirs non réalisés')),
+                      DropdownMenuItem(value: 'telephone', child: Text('Téléphone en classe')),
+                      DropdownMenuItem(value: 'degradation', child: Text('Dégradation du matériel')),
+                      DropdownMenuItem(value: 'perturbation', child: Text('Perturbation du cours')),
+                      DropdownMenuItem(value: 'autre', child: Text('Autre (avec description)')),
                     ],
                     onChanged: (value) {
                       setModalState(() {

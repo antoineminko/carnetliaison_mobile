@@ -21,13 +21,14 @@ class MessageService {
     }
   }
 
-  Future<Map<String, dynamic>> getConversation(int parentId, int? enseignantId) async {
+  Future<Map<String, dynamic>> getConversation(int? parentId, int? enseignantId) async {
     try {
       final response = await _dio.get(
         ApiEndpoints.getConversation,
         queryParameters: {
-          'parent_id': parentId,
+          if (parentId != null) 'parent_id': parentId,
           if (enseignantId != null) 'enseignant_id': enseignantId,
+          'viewer_type': 'teacher',
         },
       );
 
@@ -52,7 +53,7 @@ class MessageService {
   }
 
   Future<Map<String, dynamic>> initiateConversation({
-    required int parentId,
+    int? parentId,
     required int enseignantId,
     required String initialMessage,
     String? subject,
@@ -61,7 +62,7 @@ class MessageService {
       final response = await _dio.post(
         '/messages/conversation/initiate',
         data: {
-          'parent_id': parentId,
+          if (parentId != null) 'parent_id': parentId,
           'enseignant_id': enseignantId,
           'initial_message': initialMessage,
           'sender_type': 'enseignant',
@@ -83,16 +84,32 @@ class MessageService {
     required String senderType,
     required int senderId,
     required String content,
+    String? filePath,
+    String? fileName,
   }) async {
     try {
+      final Map<String, dynamic> dataMap = {
+        'conversation_id': conversationId,
+        'sender_type': senderType,
+        'sender_id': senderId,
+        'content': content,
+      };
+
+      final formData = FormData.fromMap(dataMap);
+
+      if (filePath != null) {
+        formData.files.add(MapEntry(
+          'fichier',
+          await MultipartFile.fromFile(
+            filePath,
+            filename: fileName ?? 'attachment',
+          ),
+        ));
+      }
+
       final response = await _dio.post(
         ApiEndpoints.sendMessage,
-        data: {
-          'conversation_id': conversationId,
-          'sender_type': senderType,
-          'sender_id': senderId,
-          'content': content,
-        },
+        data: formData,
       );
 
       if (response.statusCode == 201) {
@@ -102,6 +119,25 @@ class MessageService {
     } catch (e) {
       print('Error sending message: $e');
       rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCallHistory(String role, int userId) async {
+    try {
+      final response = await _dio.get(
+        '/calls/history',
+        queryParameters: {
+          'role': role,
+          'user_id': userId,
+        },
+      );
+      if (response.statusCode == 200 && response.data['success']) {
+        return List<Map<String, dynamic>>.from(response.data['calls']);
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching call history: $e');
+      return [];
     }
   }
 }

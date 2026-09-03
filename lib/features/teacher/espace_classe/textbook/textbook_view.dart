@@ -1,9 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:app_mobile/features/teacher/services/teacher_textbook_service.dart';
+import 'package:intl/intl.dart';
+import 'package:app_mobile/shared/theme/app_theme.dart';
 
 class TextbookView extends StatefulWidget {
+  final int classId;
+  final int teacherId;
   final String className;
   final String subject;
-  const TextbookView({super.key, required this.className, required this.subject});
+  const TextbookView({super.key, required this.className, required this.subject, required this.classId, required this.teacherId});
 
   @override
   State<TextbookView> createState() => _TextbookViewState();
@@ -11,9 +17,20 @@ class TextbookView extends StatefulWidget {
 
 class _TextbookViewState extends State<TextbookView> {
   String? _selectedSubject;
+  final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-  final TextEditingController _homeworkController = TextEditingController();
-  String _homeworkTime = '15 min';
+  final TextEditingController _summaryController = TextEditingController();
+  
+  // Exercises
+  final TextEditingController _hwDescriptionController = TextEditingController();
+  final TextEditingController _hwPageController = TextEditingController();
+  final TextEditingController _hwNumbersController = TextEditingController();
+  final TextEditingController _hwInstructionsController = TextEditingController();
+  DateTime? _hwDueDate;
+
+  bool _isSubmitting = false;
+  bool _isGeneratingAi = false;
+  DateTime _dateCours = DateTime.now();
 
   @override
   void initState() {
@@ -21,21 +38,129 @@ class _TextbookViewState extends State<TextbookView> {
     _selectedSubject = widget.subject;
   }
 
+  Future<void> _selectDateCours() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _dateCours,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && picked != _dateCours) {
+      setState(() {
+        _dateCours = picked;
+      });
+    }
+  }
+
+  Future<void> _selectDueDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _hwDueDate ?? DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        _hwDueDate = picked;
+      });
+    }
+  }
+
+  Future<void> _generateAiSummary() async {
+    if (_contentController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez saisir le contenu détaillé avant de générer le résumé.')));
+      return;
+    }
+
+    setState(() => _isGeneratingAi = true);
+
+    try {
+      final response = await TeacherTextbookService.instance.generateSummary(_contentController.text);
+      if (response.data['success'] == true) {
+        setState(() {
+          _summaryController.text = response.data['summary'];
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur lors de la génération IA.')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur IA: $e')));
+    } finally {
+      if (mounted) setState(() => _isGeneratingAi = false);
+    }
+  }
+
+  Future<void> _submitCahierTexte() async {
+    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez remplir le titre et le contenu de la séance')));
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    Map<String, dynamic>? exercices;
+    if (_hwDescriptionController.text.isNotEmpty) {
+      exercices = {
+        'description': _hwDescriptionController.text,
+        'page': _hwPageController.text,
+        'numeros': _hwNumbersController.text,
+        'consignes': _hwInstructionsController.text,
+        'date_echeance': _hwDueDate != null ? DateFormat('yyyy-MM-dd').format(_hwDueDate!) : null,
+      };
+    }
+
+    try {
+      await TeacherTextbookService.instance.createTextbook({
+        'classe_id': widget.classId,
+        'enseignant_id': widget.teacherId,
+        'titre': _titleController.text,
+        'matiere': _selectedSubject ?? widget.subject,
+        'date_cours': DateFormat('yyyy-MM-dd').format(_dateCours),
+        'contenu_realise': _contentController.text,
+        'resume_cours': _summaryController.text,
+        'exercices_donnes': exercices != null ? jsonEncode(exercices) : null,
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cahier de textes enregistré et notifié avec succès !')));
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 100, left: 20, right: 20, top: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        title: Text(widget.className, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.textDark,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 100, left: 20, right: 20, top: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // 1. IDENTIFICATION DU COURS
           _buildSectionHeader(Icons.book, 'Identification du cours'),
           _buildFormCard([
+            _buildLabel('Titre du cours'),
+            _buildTextField(
+              controller: _titleController,
+              hint: 'Ex: Les fractions décimales',
+            ),
+            const SizedBox(height: 15),
             _buildLabel('Sélectionner la matière'),
             _buildDropdown(
               hint: '-- Choisir une matière --',
               value: _selectedSubject,
-              items: {
+              items: <String>{
                 'Mathématiques',
                 'Français',
                 'Histoire-Géo',
@@ -64,7 +189,10 @@ class _TextbookViewState extends State<TextbookView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildLabel('Date du cours'),
-                      _buildDatePicker('24/02/2026'),
+                      GestureDetector(
+                        onTap: _selectDateCours,
+                        child: _buildDatePicker(DateFormat('dd/MM/yyyy').format(_dateCours)),
+                      ),
                     ],
                   ),
                 ),
@@ -74,59 +202,110 @@ class _TextbookViewState extends State<TextbookView> {
 
           const SizedBox(height: 25),
 
-          // 2. RÉSUMÉ DU COURS
-          _buildSectionHeader(Icons.edit_note, 'Résumé du cours'),
+          // 2. CONTENU ET RÉSUMÉ DU COURS
+          _buildSectionHeader(Icons.edit_note, 'Contenu du cours'),
           _buildFormCard([
-            _buildLabel('Contenu de la séance fait en classe'),
+            _buildLabel('Contenu détaillé fait en classe'),
             _buildTextArea(
               controller: _contentController,
-              hint: 'Décrivez les notions abordées aujourd\'hui...',
+              hint: 'Décrivez les notions abordées aujourd\'hui de manière détaillée...',
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 20),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildActionChip(Icons.attach_file, 'Ajouter un document'),
-                const SizedBox(width: 10),
-                _buildActionChip(Icons.link, 'Lien externe'),
+                Expanded(child: _buildLabel('Résumé pédagogique')),
+                TextButton.icon(
+                  onPressed: _isGeneratingAi ? null : _generateAiSummary,
+                  icon: _isGeneratingAi 
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.auto_awesome, color: Colors.purple, size: 18),
+                  label: Text(
+                    _isGeneratingAi ? 'Génération...' : '✨ Générer avec l\'IA', 
+                    style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.bold)
+                  ),
+                ),
               ],
+            ),
+            _buildTextArea(
+              controller: _summaryController,
+              hint: 'Résumé concis pour les parents...',
             ),
           ]),
 
           const SizedBox(height: 25),
 
           // 3. EXERCICES À FAIRE
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildSectionHeader(Icons.assignment_outlined, 'Exercices à faire'),
-              TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add_circle, size: 18, color: Colors.blue),
-                label: const Text('Ajouter', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
+          _buildSectionHeader(Icons.assignment_outlined, 'Exercices à faire'),
           _buildFormCard([
-            _buildLabel('Description du travail'),
+            _buildLabel('Description générale'),
             _buildTextField(
-              controller: _homeworkController,
-              hint: 'Ex: Exercices 1 à 5 page 42',
+              controller: _hwDescriptionController,
+              hint: 'Ex: Faire les exercices sur les fractions',
+            ),
+            const SizedBox(height: 15),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Page du manuel'),
+                      _buildTextField(
+                        controller: _hwPageController,
+                        hint: 'Ex: p. 42',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Numéros'),
+                      _buildTextField(
+                        controller: _hwNumbersController,
+                        hint: 'Ex: n° 1, 2 et 3',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 15),
+            _buildLabel('Consignes particulières'),
+            _buildTextField(
+              controller: _hwInstructionsController,
+              hint: 'Ex: Ne pas utiliser la calculatrice',
             ),
             const SizedBox(height: 15),
             _buildLabel('Date d\'échéance'),
-            _buildDatePicker('mm/dd/yyyy'),
-            const SizedBox(height: 15),
-            _buildLabel('Estimation temps'),
-            _buildDropdown(
-              value: _homeworkTime,
-              items: ['15 min', '30 min', '45 min', '1h+'],
-              onChanged: (val) => setState(() => _homeworkTime = val!),
+            GestureDetector(
+              onTap: _selectDueDate,
+              child: _buildDatePicker(_hwDueDate != null ? DateFormat('dd/MM/yyyy').format(_hwDueDate!) : '-- / -- / ----'),
             ),
           ]),
+          const SizedBox(height: 30),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submitCahierTexte,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.seaBlue,
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _isSubmitting
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Valider et Envoyer', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
         ],
       ),
-    );
+    ));
   }
+
 
   Widget _buildSectionHeader(IconData icon, String title) {
     return Padding(
@@ -265,29 +444,6 @@ class _TextbookViewState extends State<TextbookView> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Colors.blue),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionChip(IconData icon, String label) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.blue[50],
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 16, color: Colors.blue[600]),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue[600]),
-            ),
-          ],
         ),
       ),
     );

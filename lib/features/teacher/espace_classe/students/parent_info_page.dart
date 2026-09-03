@@ -267,4 +267,5 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
       ),
     );
   }
+  
 }

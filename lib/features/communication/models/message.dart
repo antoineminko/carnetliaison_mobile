@@ -5,6 +5,8 @@ class Message {
   final int senderId;
   final String content;
   final bool isRead;
+  final String status;
+  final String? attachmentUrl;
   final DateTime createdAt;
 
   Message({
@@ -14,18 +16,22 @@ class Message {
     required this.senderId,
     required this.content,
     required this.isRead,
+    this.status = 'sent',
+    this.attachmentUrl,
     required this.createdAt,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
-      id: json['id'],
-      conversationId: json['conversation_id'],
-      senderType: json['sender_type'],
-      senderId: json['sender_id'],
-      content: json['content'],
+      id: json['id'] ?? 0,
+      conversationId: json['conversation_id'] ?? 0,
+      senderType: json['sender_type'] ?? '',
+      senderId: json['sender_id'] ?? 0,
+      content: json['content'] ?? '',
       isRead: json['is_read'] == 1 || json['is_read'] == true,
-      createdAt: DateTime.parse(json['created_at']),
+      status: json['status'] ?? ((json['is_read'] == 1 || json['is_read'] == true) ? 'read' : 'sent'),
+      attachmentUrl: json['attachment_url'],
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
     );
   }
 }

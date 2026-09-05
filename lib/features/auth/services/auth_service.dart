@@ -1,10 +1,12 @@
 import 'package:app_mobile/shared/utils/user_role.dart';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/shared/config/api_endpoints.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_mobile/features/notifications/services/notifications_service.dart';
+import 'package:app_mobile/shared/utils/secure_storage_service.dart';
 
 enum AuthResult { success, invalidCredentials, userNotFound, networkError }
 
@@ -61,7 +63,7 @@ class AuthService {
             await prefs.setString('parent_telephone', telephone);
 
           // Sauvegarde secrète du mot de passe pour la connexion multi-serveurs
-          await prefs.setString('parent_password', password);
+          await SecureStorageService.save('parent_password', password);
 
           // ✅ Enregistrer le token FCM maintenant que parent_id est disponible
           await _registerFcmToken(parentId);
@@ -75,9 +77,12 @@ class AuthService {
 
           // Sauvegarder les identifiants pour un usage futur si besoin
           await prefs.setString('teacher_email_cache', username);
-          await prefs.setString('teacher_password_cache', password);
+          await SecureStorageService.save('teacher_password_cache', password);
+          await prefs.setString('teacher_schools_cache', jsonEncode(teachers));
           await prefs.setBool('remember_me', rememberMe);
-          await prefs.setInt('last_login_time', DateTime.now().millisecondsSinceEpoch);
+          final nowMs = DateTime.now().millisecondsSinceEpoch;
+          await prefs.setInt('last_login_time', nowMs);
+          await prefs.setInt('last_activity_time', nowMs);
 
           // On retourne la liste des écoles pour l'écran TeacherSchoolsPage
           return AuthResponse(
@@ -130,10 +135,9 @@ class AuthService {
     if (tMatiere != null) await prefs.setString('teacher_matiere', tMatiere);
 
     // Save last login time for session management
-    await prefs.setInt(
-      'last_login_time',
-      DateTime.now().millisecondsSinceEpoch,
-    );
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    await prefs.setInt('last_login_time', nowMs);
+    await prefs.setInt('last_activity_time', nowMs);
 
     // ✅ Enregistrer le token FCM pour les notifications push enseignant
     await _registerTeacherFcmToken(teacherId is int ? teacherId : int.tryParse(teacherId.toString()) ?? 0);
@@ -199,8 +203,6 @@ class AuthService {
     return null;
   }
 
-  /// Gets the parent ID specifically for a given school prefix.
-  /// If it hasn't been cached yet, it performs a silent login to fetch and save it.
   static Future<int?> getParentIdForSchool(String? schoolPrefix) async {
     final prefs = await SharedPreferences.getInstance();
     int? defaultParentId = prefs.getInt('parent_id');
@@ -208,14 +210,10 @@ class AuthService {
     if (schoolPrefix == null) {
       return defaultParentId;
     }
-
-    // Check if already cached
     int? cachedId = prefs.getInt('parent_id_$schoolPrefix');
     if (cachedId != null) return cachedId;
-
-    // Perform silent login
     final email = prefs.getString('parent_email');
-    final password = prefs.getString('parent_password');
+    final password = await SecureStorageService.read('parent_password');
     if (email != null && password != null) {
       try {
         // Multi-tenant is now handled via headers in ApiClient.instance
@@ -263,7 +261,12 @@ class AuthService {
     await prefs.remove('teacher_email');
     await prefs.remove('teacher_telephone');
     await prefs.remove('teacher_matiere');
+    await prefs.remove('teacher_email_cache');
+    await SecureStorageService.delete('teacher_password_cache');
+    await SecureStorageService.delete('parent_password');
+    await prefs.remove('teacher_schools_cache');
     await prefs.remove('last_login_time');
+    await prefs.remove('last_activity_time');
     await prefs.remove('parent_scan_done');
   }
 }

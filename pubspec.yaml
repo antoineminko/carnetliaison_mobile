@@ -1,4 +1,4 @@
-﻿name: app_mobile
+name: app_mobile
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -46,6 +46,10 @@ dependencies:
   flutter_webrtc: ^1.4.1
   file_picker: ^11.0.2
   excel: ^4.0.6
+  connectivity_plus: ^7.3.1
+  dio_smart_retry: ^7.0.1
+  internet_connection_checker_plus: ^3.1.1
+  flutter_secure_storage: ^10.3.1
 
 dev_dependencies:
   flutter_test:
@@ -80,9 +84,9 @@ flutter:
   assets:
     - assets/images/
     - assets/images/profil/
-    - assets/images/profil/actualitÃ©/
+    - assets/images/profil/actualité/
     - assets/images/iconEcole/
-    - assets/actualitÃ©/
+    - assets/actualité/
     - assets/emploie/
     - assets/icons/
     - assets/publicit/

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:provider/provider.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
-import 'package:app_mobile/features/teacher/services/teacher_student_service.dart';
-import 'package:app_mobile/features/teacher/services/teacher_attendance_service.dart';
 import 'package:app_mobile/features/teacher/agenda/create_appointment_page.dart';
 import 'package:app_mobile/features/teacher/espace_classe/students/parent_info_page.dart';
-
-enum AttendanceStatus { present, absent, late }
+import 'package:app_mobile/features/teacher/espace_classe/attendance/widgets/attendance_global_button.dart';
+import 'package:app_mobile/features/teacher/espace_classe/attendance/widgets/attendance_student_card.dart';
+import 'package:app_mobile/features/teacher/espace_classe/attendance/widgets/attendance_modal_status_button.dart';
+import 'package:app_mobile/features/teacher/espace_classe/attendance/viewmodels/attendance_viewmodel.dart';
 
 class AttendanceView extends StatefulWidget {
   final int studentCount;
@@ -25,51 +26,19 @@ class AttendanceView extends StatefulWidget {
 }
 
 class _AttendanceViewState extends State<AttendanceView> {
-  late List<Map<String, dynamic>> _students;
-  bool _isLoading = true;
-  int _markedCount = 0;
+  late final AttendanceViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
+    _viewModel = AttendanceViewModel();
     _fetchStudents();
   }
 
   Future<void> _fetchStudents() async {
-    setState(() => _isLoading = true);
     try {
-      final response = await TeacherStudentService.instance.getStudentsByClassId(widget.classeId);
-      final data = response.data as List;
-
-      setState(() {
-        _markedCount = 0;
-        _students = data.map((e) {
-          AttendanceStatus? currentStatus;
-          if (e['statut_presence'] == 'present')
-            currentStatus = AttendanceStatus.present;
-          else if (e['statut_presence'] == 'absent')
-            currentStatus = AttendanceStatus.absent;
-          else if (e['statut_presence'] == 'late')
-            currentStatus = AttendanceStatus.late;
-
-          if (currentStatus != null) _markedCount++;
-
-          return {
-            'id': e['id'],
-            'name': '${e['prenom']} ${e['nom']}',
-            'status': currentStatus,
-            'arrivalTime': null,
-            'matricule': e['matricule'] ?? 'N/A',
-            'photo_url': e['photo_url'],
-            'date_naissance': e['date_naissance'],
-            'code_secret': e['code_secret'] ?? 'Non défini',
-            'parent_id': e['parent_id'],
-          };
-        }).toList();
-        _isLoading = false;
-      });
-
-      if (_markedCount > 0 && mounted) {
+      final alreadyMarked = await _viewModel.fetchStudents(widget.classeId);
+      if (alreadyMarked && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -80,22 +49,12 @@ class _AttendanceViewState extends State<AttendanceView> {
         );
       }
     } catch (e) {
-      setState(() {
-        _students = [];
-        _isLoading = false;
-      });
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur chargement élèves: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur chargement élèves: $e')),
+        );
       }
     }
-  }
-
-  void _updateMarkedCount() {
-    setState(() {
-      _markedCount = _students.where((s) => s['status'] != null).length;
-    });
   }
 
   void _showGlobalActionsModal() {
@@ -120,43 +79,43 @@ class _AttendanceViewState extends State<AttendanceView> {
               ),
             ),
             const SizedBox(height: 25),
-            _buildGlobalButton(
-              'TOUT PRÉSENT',
-              const Color(0xFF48C774),
-              Icons.check_circle,
-              () {
+            AttendanceGlobalButton(
+              label: 'TOUT PRÉSENT',
+              color: const Color(0xFF48C774),
+              icon: Icons.check_circle,
+              onTap: () {
                 _applyGlobalStatus(AttendanceStatus.present);
                 Navigator.pop(context);
               },
             ),
             const SizedBox(height: 12),
-            _buildGlobalButton(
-              'TOUT ABSENT',
-              const Color(0xFFF14668),
-              Icons.cancel,
-              () {
+            AttendanceGlobalButton(
+              label: 'TOUT ABSENT',
+              color: const Color(0xFFF14668),
+              icon: Icons.cancel,
+              onTap: () {
                 _applyGlobalStatus(AttendanceStatus.absent);
                 Navigator.pop(context);
               },
             ),
             const SizedBox(height: 12),
-            _buildGlobalButton(
-              'TOUT EN RETARD',
-              const Color(0xFFFFDD57),
-              Icons.access_time_filled,
-              () {
+            AttendanceGlobalButton(
+              label: 'TOUT EN RETARD',
+              color: const Color(0xFFFFDD57),
+              icon: Icons.access_time_filled,
+              textColor: Colors.black87,
+              onTap: () {
                 _applyGlobalStatus(AttendanceStatus.late);
                 Navigator.pop(context);
               },
-              textColor: Colors.black87,
             ),
-            if (_markedCount > 0) ...[
+            if (_viewModel.markedCount > 0) ...[
               const Divider(height: 30),
-              _buildGlobalButton(
-                'RÉINITIALISER L\'APPEL',
-                Colors.grey[800]!,
-                Icons.refresh,
-                () {
+              AttendanceGlobalButton(
+                label: 'RÉINITIALISER L\'APPEL',
+                color: Colors.grey[800]!,
+                icon: Icons.refresh,
+                onTap: () {
                   _resetAttendance();
                   Navigator.pop(context);
                 },
@@ -171,24 +130,11 @@ class _AttendanceViewState extends State<AttendanceView> {
 
   void _resetAttendance() async {
     try {
-      final response = await TeacherAttendanceService.instance.resetAttendance({
-        'classe_id': widget.classeId,
-        'date': DateTime.now().toIso8601String().split('T')[0],
-      });
-
-      if (response.data['success']) {
-        setState(() {
-          for (var student in _students) {
-            student['status'] = null;
-            student['arrivalTime'] = null;
-          }
-          _markedCount = 0;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('L\'appel a été réinitialisé.')),
-          );
-        }
+      await _viewModel.resetAttendance(widget.classeId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('L\'appel a été réinitialisé.')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -200,45 +146,9 @@ class _AttendanceViewState extends State<AttendanceView> {
   }
 
   void _applyGlobalStatus(AttendanceStatus status) {
-    setState(() {
-      for (var student in _students) {
-        student['status'] = status;
-        if (status == AttendanceStatus.late && student['arrivalTime'] == null) {
-          student['arrivalTime'] = '08:15'; // Default late time for global
-        }
-      }
-      _updateMarkedCount();
-    });
+    _viewModel.applyGlobalStatus(status);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Statut appliqué à tous les élèves')),
-    );
-  }
-
-  Widget _buildGlobalButton(
-    String label,
-    Color color,
-    IconData icon,
-    VoidCallback onTap, {
-    Color textColor = Colors.white,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, color: textColor),
-        label: Text(
-          label,
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-      ),
     );
   }
 
@@ -270,303 +180,211 @@ class _AttendanceViewState extends State<AttendanceView> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    return ChangeNotifierProvider.value(
+      value: _viewModel,
+      child: Consumer<AttendanceViewModel>(
+        builder: (context, viewModel, child) {
+          if (viewModel.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-    return Column(
-      children: [
-        // 1. HEADER METRICS
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return Column(
             children: [
-              Expanded(
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                ),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('📊', style: TextStyle(fontSize: 20)),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        '$_markedCount / ${widget.studentCount} marqués',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2D3748),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Text('📊', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              '${viewModel.markedCount} / ${widget.studentCount} marqués',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D3748),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _showGlobalActionsModal,
+                      icon: const Icon(Icons.settings, size: 18),
+                      label: const Text('Actions'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF0F7F4),
+                        foregroundColor: AppTheme.seaBlue,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: _showGlobalActionsModal,
-                icon: const Icon(Icons.settings, size: 18),
-                label: const Text('Actions'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF0F7F4),
-                  foregroundColor: AppTheme.seaBlue,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+              Expanded(
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(20),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 15,
+                    mainAxisSpacing: 15,
+                    childAspectRatio: 2.2,
+                  ),
+                  itemCount: viewModel.students.length,
+                  itemBuilder: (context, index) {
+                    final student = viewModel.students[index];
+                    final status = student['status'] as AttendanceStatus?;
+                    final color = _getStatusColor(status);
+
+                    return AttendanceStudentCard(
+                      index: index,
+                      name: student['name'],
+                      hasStatus: status != null,
+                      statusColor: color,
+                      statusText: _getStatusText(status),
+                      isLate: status == AttendanceStatus.late,
+                      arrivalTime: student['arrivalTime'],
+                      onTap: () => _showStudentProfileModal(index),
+                    );
+                  },
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      try {
+                        bool hasStudents = await viewModel.submitAttendance(widget.classeId);
+                        
+                        if (!hasStudents) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Veuillez marquer au moins un élève.'),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+
+                        if (!context.mounted) return;
+                        
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            title: const Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Color(0xFF48C774),
+                                  size: 28,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Appel validé !',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            content: Text(
+                              'La présence pour la classe ${widget.className} a été enregistrée avec succès.\n\n${viewModel.markedCount} élèves marqués.',
+                              style: const TextStyle(fontSize: 14, height: 1.5),
+                            ),
+                            actions: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    Navigator.pop(context); // Optional depending on nav structure
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.forestGreen,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'OK',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        String errorMsg = e.toString();
+                        if (e is DioException && e.response?.data != null) {
+                          errorMsg = e.response!.data.toString();
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erreur backend: $errorMsg'),
+                            duration: const Duration(seconds: 10),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.forestGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 4,
+                      shadowColor: AppTheme.forestGreen.withOpacity(0.4),
+                    ),
+                    child: const Text(
+                      'VALIDER',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ],
-          ),
-        ),
-
-        // 2. GRID OF STUDENT NUMBERS
-        Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(20),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-              childAspectRatio: 2.2,
-            ),
-            itemCount: _students.length,
-            itemBuilder: (context, index) {
-              final student = _students[index];
-              final status = student['status'] as AttendanceStatus?;
-              final color = _getStatusColor(status);
-
-              return GestureDetector(
-                onTap: () => _showStudentProfileModal(index),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: status == null ? Colors.white : color,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(
-                      color: status == null
-                          ? Colors.grey[300]!
-                          : Colors.transparent,
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      if (status != null)
-                        BoxShadow(
-                          color: color.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: status == null
-                              ? Colors.grey[100]
-                              : Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: status == null
-                                  ? Colors.grey[600]
-                                  : Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              student['name'],
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: status == null
-                                    ? Colors.black87
-                                    : (status == AttendanceStatus.late
-                                          ? Colors.black87
-                                          : Colors.white),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (status != null)
-                              Text(
-                                status == AttendanceStatus.late
-                                    ? 'Retard: ${student['arrivalTime']}'
-                                    : _getStatusText(status),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: status == AttendanceStatus.late
-                                      ? Colors.black54
-                                      : Colors.white70,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        // 3. VALIDATE BUTTON
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
-              ),
-            ],
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: ElevatedButton(
-              onPressed: () async {
-                // Post to API
-                try {
-                  final attendances = _students
-                      .where((s) => s['status'] != null)
-                      .map((s) {
-                        String statusStr = 'present';
-                        if (s['status'] == AttendanceStatus.absent)
-                          statusStr = 'absent';
-                        if (s['status'] == AttendanceStatus.late)
-                          statusStr = 'late';
-
-                        return {'eleve_id': s['id'], 'status': statusStr};
-                      })
-                      .toList();
-
-                  if (attendances.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Veuillez marquer au moins un élève.'),
-                      ),
-                    );
-                    return;
-                  }
-
-                  final response = await TeacherAttendanceService.instance.submitAttendance({
-                    'classe_id': widget.classeId,
-                    'date': DateTime.now().toIso8601String().split('T')[0],
-                    'attendances': attendances,
-                  });
-
-                  if (response.data['success']) {
-                    if (!context.mounted) return;
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        title: const Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: Color(0xFF48C774),
-                              size: 28,
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                              'Appel validé !',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        content: Text(
-                          'La présence pour la classe ${widget.className} a été enregistrée avec succès.\n\n$_markedCount élèves marqués.',
-                          style: const TextStyle(fontSize: 14, height: 1.5),
-                        ),
-                        actions: [
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                Navigator.pop(context);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.forestGreen,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text(
-                                'OK',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (!context.mounted) return;
-                  String errorMsg = e.toString();
-                  if (e is DioException && e.response?.data != null) {
-                    errorMsg = e.response!.data.toString();
-                  }
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Erreur backend: $errorMsg'),
-                      duration: const Duration(seconds: 10),
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.forestGreen,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 4,
-                shadowColor: AppTheme.forestGreen.withOpacity(0.4),
-              ),
-              child: const Text(
-                'VALIDER',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 
@@ -576,7 +394,8 @@ class _AttendanceViewState extends State<AttendanceView> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        final student = _students[index];
+        final student = _viewModel.students[index];
+
         return Container(
           height: MediaQuery.of(context).size.height * 0.6,
           decoration: const BoxDecoration(
@@ -597,7 +416,6 @@ class _AttendanceViewState extends State<AttendanceView> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                // Student Header
                 CircleAvatar(
                   radius: 40,
                   backgroundColor: const Color(0xFFF0F4F8),
@@ -638,7 +456,6 @@ class _AttendanceViewState extends State<AttendanceView> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-
                 Builder(
                   builder: (context) {
                     int? age;
@@ -651,7 +468,9 @@ class _AttendanceViewState extends State<AttendanceView> {
                             (today.month == dob.month && today.day < dob.day)) {
                           age--;
                         }
-                      } catch (_) {}
+                      } catch (e) {
+                        debugPrint('Error parsing dob: $e');
+                      }
                     }
                     return Text(
                       'Âge: ${age != null ? "$age ans" : "Inconnu"} | Code Secret: ${student['code_secret']}',
@@ -663,10 +482,7 @@ class _AttendanceViewState extends State<AttendanceView> {
                     );
                   },
                 ),
-
                 const SizedBox(height: 15),
-
-                // Bouton Info Parent
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: SizedBox(
@@ -701,8 +517,7 @@ class _AttendanceViewState extends State<AttendanceView> {
                     ),
                   ),
                 ),
-
-                if (student['name'] == 'Junior') ...[
+                if (student['name'].toString().toLowerCase().contains('junior')) ...[
                   const SizedBox(height: 20),
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -735,7 +550,6 @@ class _AttendanceViewState extends State<AttendanceView> {
                     ),
                   ),
                 ],
-
                 const SizedBox(height: 30),
                 const Text(
                   'MARQUER LA PRÉSENCE',
@@ -747,13 +561,12 @@ class _AttendanceViewState extends State<AttendanceView> {
                   ),
                 ),
                 const SizedBox(height: 15),
-                // Status Buttons
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     children: [
                       Expanded(
-                        child: _buildModalStatusButton(
+                        child: AttendanceModalStatusButton(
                           label: 'PRÉSENT',
                           color: const Color(0xFF48C774),
                           icon: Icons.check_circle,
@@ -765,7 +578,7 @@ class _AttendanceViewState extends State<AttendanceView> {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _buildModalStatusButton(
+                        child: AttendanceModalStatusButton(
                           label: 'ABSENT',
                           color: const Color(0xFFF14668),
                           icon: Icons.cancel,
@@ -781,7 +594,7 @@ class _AttendanceViewState extends State<AttendanceView> {
                 const SizedBox(height: 10),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildModalStatusButton(
+                  child: AttendanceModalStatusButton(
                     label: student['arrivalTime'] != null
                         ? 'RETARD (${student['arrivalTime']})'
                         : 'MARQUER RETARD',
@@ -794,21 +607,14 @@ class _AttendanceViewState extends State<AttendanceView> {
                         initialTime: TimeOfDay.now(),
                         helpText: 'HEURE D\'ARRIVÉE DE L\'ÉLÈVE',
                       );
-                      if (picked != null) {
-                        setState(() {
-                          _students[index]['arrivalTime'] = picked.format(
-                            context,
-                          );
-                        });
+                      if (picked != null && context.mounted) {
+                        _viewModel.updateStudentArrivalTime(index, picked.format(context));
                         _updateStatusAndClose(index, AttendanceStatus.late);
                       }
                     },
                   ),
                 ),
-
-                if (student['name'].toString().toLowerCase().contains(
-                  'junior',
-                )) ...[
+                if (student['name'].toString().toLowerCase().contains('junior')) ...[
                   const SizedBox(height: 25),
                   const Divider(),
                   const SizedBox(height: 15),
@@ -903,7 +709,6 @@ class _AttendanceViewState extends State<AttendanceView> {
                     ),
                   ),
                 ],
-
                 const SizedBox(height: 30),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -925,43 +730,7 @@ class _AttendanceViewState extends State<AttendanceView> {
   }
 
   void _updateStatusAndClose(int index, AttendanceStatus status) {
-    setState(() {
-      _students[index]['status'] = status;
-      _updateMarkedCount();
-    });
+    _viewModel.updateStudentStatus(index, status);
     Navigator.pop(context);
   }
-
-  Widget _buildModalStatusButton({
-    required String label,
-    required Color color,
-    required IconData icon,
-    required VoidCallback onTap,
-    Color textColor = Colors.white,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, color: textColor),
-        label: Text(
-          label,
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-      ),
-    );
-  }
 }
-

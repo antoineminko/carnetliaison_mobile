@@ -7,17 +7,16 @@ class NotificationStorage {
   static Future<void> saveNotification(Map<String, dynamic> notification) async {
     final prefs = await SharedPreferences.getInstance();
     
-    // RǸcupǸrer les anciennes notifications
+   
     List<Map<String, dynamic>> notifications = await getNotifications();
     
-    // Ajouter la nouvelle
-    // Assurer la prǸsence d'un timestamp
+  
     notification['timestamp'] = DateTime.now().toIso8601String();
     notification['isRead'] = false;
     
     notifications.insert(0, notification);
     
-    // Sauvegarder
+    
     await prefs.setString(_storageKey, jsonEncode(notifications));
   }
 
@@ -31,7 +30,7 @@ class NotificationStorage {
       List<dynamic> decoded = jsonDecode(data);
       List<Map<String, dynamic>> notifications = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
       
-      // Filtrer celles de plus de 24h
+
       final now = DateTime.now();
       notifications.removeWhere((n) {
         if (n['timestamp'] == null) return true;
@@ -39,11 +38,11 @@ class NotificationStorage {
           final notifTime = DateTime.parse(n['timestamp']);
           return now.difference(notifTime).inHours >= 24;
         } catch (e) {
-          return true; // Enlever si le format est invalide
+          return true; 
         }
       });
       
-      // Sauvegarder la liste nettoyǸe
+     
       await prefs.setString(_storageKey, jsonEncode(notifications));
       
       return notifications;

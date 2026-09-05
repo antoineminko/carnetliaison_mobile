@@ -29,16 +29,16 @@ class LocalNotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse details) {
         print('🔔 [LocalNotificationService] Clic sur notification locale : ${details.payload}');
-        // Handle notification tap
+       
       },
     );
 
-    // Create a notification channel for Android 8.0+
+    
     if (Platform.isAndroid) {
       final AndroidNotificationChannel channel = AndroidNotificationChannel(
-        'high_importance_channel_v2', // id
-        'High Importance Notifications', // title
-        description: 'This channel is used for important notifications.', // description
+        'high_importance_channel_v2', 
+        'High Importance Notifications', 
+        description: 'This channel is used for important notifications.', 
         importance: Importance.max,
         enableVibration: true,
         vibrationPattern: Int64List.fromList([0, 500, 200, 500]),

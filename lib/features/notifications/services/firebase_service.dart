@@ -1,14 +1,17 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'local_notification_service.dart';
 import 'notification_storage.dart';
 import 'package:app_mobile/shared/config/api_client.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:app_mobile/shared/utils/user_role.dart';
 import 'package:app_mobile/features/calls/pages/incoming_call_screen.dart';
 
 // Clé de navigation globale pour naviguer depuis les notifications
 import 'package:flutter/material.dart';
+import 'package:app_mobile/features/teacher/messages/chat_page.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 
@@ -54,28 +57,39 @@ class FirebaseService {
       print('📩 [FirebaseService] Notification foreground : ${message.notification?.title}');
       final type = message.data['type'];
 
-      // Appel entrant en foreground : vérifier la règle des 60 minutes
+      // Appel entrant en foreground : vérifier la règle de session (24h)
       if (type == 'incoming_call') {
-        final lastLoginStr = await AuthService.getLastLoginTime();
-        if (lastLoginStr != null) {
-          final lastLogin = DateTime.parse(lastLoginStr);
-          if (DateTime.now().difference(lastLogin).inMinutes < 60) {
+        final prefs = await SharedPreferences.getInstance();
+        final lastActivity = prefs.getInt('last_activity_time') ?? prefs.getInt('last_login_time');
+        if (lastActivity != null) {
+          final sessionAge = DateTime.now().millisecondsSinceEpoch - lastActivity;
+          if (sessionAge < 24 * 60 * 60 * 1000) {
             _handleNotificationTap(message.data);
             return;
           } else {
-            print('⚠️ [FirebaseService] Appel ignoré : session > 60 minutes');
-            // Mettre à jour le badge sans ouvrir l'appel
+            print('⚠️ [FirebaseService] Appel ignoré : session > 24 heures');
             onNotificationReceived?.call();
             return;
           }
         } else {
-            // Aucun contexte actif, ignorer
             onNotificationReceived?.call();
             return;
         }
       }
 
-      _localNotificationService.showNotification(message);
+      bool suppressNotification = false;
+      final conversationIdStr = message.data['conversation_id']?.toString();
+      final conversationId = conversationIdStr != null ? int.tryParse(conversationIdStr) : null;
+      
+      if (conversationId != null && type == 'parent_message') {
+        if (ChatPage.activeConversationId == conversationId) {
+          suppressNotification = true;
+        }
+      }
+      
+      if (!suppressNotification) {
+        _localNotificationService.showNotification(message);
+      }
 
       // Ne pas stocker localement les messages (push only + badge navbar)
       const noStoreTypes = [
@@ -121,7 +135,7 @@ class FirebaseService {
   }
 
   /// Redirige l'utilisateur (enseignant) vers la bonne page selon le type de notification
-  void _handleNotificationTap(Map<String, dynamic> data) {
+  void _handleNotificationTap(Map<String, dynamic> data) async {
     final String? type = data['type'];
     final context = navigatorKey.currentContext;
     if (context == null) return;
@@ -158,17 +172,7 @@ class FirebaseService {
       case 'new_conversation_request':
       case 'parent_message':
       case 'admin_message':
-        // Message d'un parent ou d'un admin → onglet Messages de l'enseignant
-        navigatorKey.currentState?.pushNamedAndRemoveUntil(
-          '/teacher/home',
-          (route) => false,
-          arguments: isExpired ? null : {
-            'initialTab': 1,
-            'openChat': true,
-            'openConversationId': data['conversation_id'],
-            'conversationStatus': data['status'],
-          },
-        );
+        await _checkMessageContextAndNavigate(data, isExpired);
         break;
 
       case 'chat_accepted':
@@ -197,30 +201,31 @@ class FirebaseService {
         break;
 
       case 'incoming_call':
-        // Vérifier si la session a expiré (règle des 60 minutes)
+        // Vérifier si la session a expiré (24 heures)
         bool sessionExpired = false;
-        AuthService.getLastLoginTime().then((lastLoginStr) {
-          if (lastLoginStr != null) {
-            final lastLogin = DateTime.parse(lastLoginStr);
-            if (DateTime.now().difference(lastLogin).inMinutes >= 60) {
-              sessionExpired = true;
-            }
-          } else {
-             sessionExpired = true;
+        final prefs = await SharedPreferences.getInstance();
+        final lastActivity = prefs.getInt('last_activity_time') ?? prefs.getInt('last_login_time');
+        if (lastActivity != null) {
+          final sessionAge = DateTime.now().millisecondsSinceEpoch - lastActivity;
+          if (sessionAge >= 24 * 60 * 60 * 1000) {
+            sessionExpired = true;
           }
+        } else {
+           sessionExpired = true;
+        }
 
-          if (sessionExpired || isExpired) {
-            print('⚠️ [FirebaseService] Appel tapé ignoré : session > 60 minutes ou notif expirée');
-            navigatorKey.currentState?.pushNamedAndRemoveUntil(
-              '/teacher/home',
-              (route) => false,
-              arguments: {
-                'initialTab': 1, // Onglet Messagerie
-                'openCallsTab': true, // On demandera d'ouvrir l'onglet Appels
-              },
-            );
-            return;
-          }
+        if (sessionExpired || isExpired) {
+          print('⚠️ [FirebaseService] Appel tapé ignoré : session > 24 heures ou notif expirée');
+          navigatorKey.currentState?.pushNamedAndRemoveUntil(
+            '/teacher/home',
+            (route) => false,
+            arguments: {
+              'initialTab': 1, // Onglet Messagerie
+              'openCallsTab': true, // On demandera d'ouvrir l'onglet Appels
+            },
+          );
+          return;
+        }
 
           // Appel entrant — afficher l'écran plein écran IncomingCallScreen
           final String? callId = data['call_id'];
@@ -242,7 +247,6 @@ class FirebaseService {
               ),
             );
           }
-        });
         break;
 
       case 'call_rejected':
@@ -280,12 +284,13 @@ class FirebaseService {
     final String? statut = data['statut'];
     final String? notifEcoleId = data['ecole_id']?.toString();
 
-    // Vérifier la session (60 minutes)
+    // Vérifier la session (24 heures)
     bool sessionExpired = false;
-    final lastLoginStr = await AuthService.getLastLoginTime();
-    if (lastLoginStr != null) {
-      final lastLogin = DateTime.parse(lastLoginStr);
-      if (DateTime.now().difference(lastLogin).inMinutes >= 60) {
+    final prefs = await SharedPreferences.getInstance();
+    final lastActivity = prefs.getInt('last_activity_time') ?? prefs.getInt('last_login_time');
+    if (lastActivity != null) {
+      final sessionAge = DateTime.now().millisecondsSinceEpoch - lastActivity;
+      if (sessionAge >= 24 * 60 * 60 * 1000) {
         sessionExpired = true;
       }
     } else {
@@ -302,10 +307,40 @@ class FirebaseService {
       }
     }
 
-    if (sessionExpired || isExpired || !contextMatch) {
-      print('⚠️ [FirebaseService] Rendez-vous tapé ignoré : session expirée, notif expirée ou mauvais contexte école');
-      // On se contente d'actualiser la pastille (si l'utilisateur se connecte dans la bonne école plus tard, la pastille apparaîtra)
+    if (sessionExpired || isExpired) {
+      print('⚠️ [FirebaseService] Rendez-vous tapé ignoré : session expirée ou notif expirée');
       onNotificationReceived?.call();
+      return;
+    }
+
+    if (!contextMatch && notifEcoleId != null) {
+      print('🔄 [FirebaseService] Mauvais contexte école. Redirection vers la sélection d\'école');
+      final prefs = await SharedPreferences.getInstance();
+      
+      final String notifKey = 'pending_notif_ecole_$notifEcoleId';
+      final String eleveNom = data['eleve_nom'] ?? data['student_name'] ?? 'Élève';
+      final String ecoleNom = data['ecole_nom'] ?? data['school_name'] ?? 'École';
+      await prefs.setString(notifKey, '$eleveNom-$ecoleNom');
+
+      await prefs.remove('active_ecole_id');
+      await prefs.remove('school_code');
+
+      final schoolsCache = prefs.getString('teacher_schools_cache');
+      if (schoolsCache != null) {
+        try {
+          final teachersData = jsonDecode(schoolsCache) as List<dynamic>;
+          navigatorKey.currentState?.pushNamedAndRemoveUntil(
+            '/teacher/schools',
+            (route) => false,
+            arguments: teachersData,
+          );
+          return;
+        } catch (e) {
+          print('Error decoding teacher_schools_cache: $e');
+        }
+      }
+      
+      navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
       return;
     }
 
@@ -318,6 +353,77 @@ class FirebaseService {
         'openAppointments': true,
         'highlightAppointmentId': appointmentId != null ? int.tryParse(appointmentId) : null,
         'appointmentStatus': statut,
+      },
+    );
+  }
+
+  Future<void> _checkMessageContextAndNavigate(Map<String, dynamic> data, bool isExpired) async {
+    final String? notifEcoleId = data['ecole_id']?.toString();
+    final prefs = await SharedPreferences.getInstance();
+
+    // Vérifier la session (24 heures)
+    bool sessionExpired = false;
+    final lastActivity = prefs.getInt('last_activity_time') ?? prefs.getInt('last_login_time');
+    if (lastActivity != null) {
+      final sessionAge = DateTime.now().millisecondsSinceEpoch - lastActivity;
+      if (sessionAge >= 24 * 60 * 60 * 1000) {
+        sessionExpired = true;
+      }
+    } else {
+      sessionExpired = true;
+    }
+
+    if (sessionExpired || isExpired) {
+      print('⚠️ [FirebaseService] Message tapé ignoré : session > 24 heures ou notif expirée');
+      onNotificationReceived?.call();
+      return;
+    }
+
+    bool contextMatch = true;
+    if (notifEcoleId != null) {
+      final activeEcoleId = prefs.getString('active_ecole_id') ?? prefs.getInt('active_ecole_id')?.toString();
+      if (activeEcoleId != notifEcoleId) {
+        contextMatch = false;
+      }
+    }
+
+    if (!contextMatch && notifEcoleId != null) {
+      print('🔄 [FirebaseService] Mauvais contexte école (Message). Redirection vers la sélection d\'école');
+      final String notifKey = 'pending_notif_ecole_$notifEcoleId';
+      final String emetteur = data['sender_name'] ?? 'Nouveau message';
+      await prefs.setString(notifKey, emetteur);
+
+      await prefs.remove('active_ecole_id');
+      await prefs.remove('school_code');
+
+      final schoolsCache = prefs.getString('teacher_schools_cache');
+      if (schoolsCache != null) {
+        try {
+          final teachersData = jsonDecode(schoolsCache) as List<dynamic>;
+          navigatorKey.currentState?.pushNamedAndRemoveUntil(
+            '/teacher/schools',
+            (route) => false,
+            arguments: teachersData,
+          );
+          return;
+        } catch (e) {
+          print('Error decoding teacher_schools_cache: $e');
+        }
+      }
+      
+      navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
+      return;
+    }
+
+    // Même contexte : navigation vers les messages
+    navigatorKey.currentState?.pushNamedAndRemoveUntil(
+      '/teacher/home',
+      (route) => false,
+      arguments: {
+        'initialTab': 1,
+        'openChat': true,
+        'openConversationId': data['conversation_id'],
+        'conversationStatus': data['status'],
       },
     );
   }

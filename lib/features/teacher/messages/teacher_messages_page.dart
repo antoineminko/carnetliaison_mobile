@@ -374,7 +374,9 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
       try {
         final date = DateTime.parse(rawDate).toLocal();
         timeStr = DateFormat('dd/MM HH:mm').format(date);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error parsing date: $e');
+      }
     }
 
     IconData callIcon = Icons.call;

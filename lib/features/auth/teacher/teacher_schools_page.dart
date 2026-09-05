@@ -1,14 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_mobile/features/notifications/services/notifications_service.dart';
 
-class TeacherSchoolsPage extends StatelessWidget {
+class TeacherSchoolsPage extends StatefulWidget {
   final List<dynamic> teachersData;
 
   const TeacherSchoolsPage({
     super.key,
     required this.teachersData,
   });
+
+  @override
+  State<TeacherSchoolsPage> createState() => _TeacherSchoolsPageState();
+}
+
+class _TeacherSchoolsPageState extends State<TeacherSchoolsPage> {
+  final Map<String, String> _pendingNotifications = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPendingNotifications();
+    NotificationsService().setOnNotificationReceived(() {
+      _loadPendingNotifications();
+    });
+  }
+
+  @override
+  void dispose() {
+    NotificationsService().setOnNotificationReceived(() {});
+    super.dispose();
+  }
+
+  Future<void> _loadPendingNotifications() async {
+    final prefs = await SharedPreferences.getInstance();
+    final Map<String, String> loaded = {};
+    
+    for (final data in widget.teachersData) {
+      final ecole = data['ecole'] ?? {};
+      final ecoleId = ecole['id']?.toString();
+      if (ecoleId != null) {
+        final notifInfo = prefs.getString('pending_notif_ecole_$ecoleId');
+        if (notifInfo != null) {
+          loaded[ecoleId] = notifInfo;
+        }
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        _pendingNotifications.clear();
+        _pendingNotifications.addAll(loaded);
+      });
+    }
+  }
 
   void _selectSchool(BuildContext context, Map<String, dynamic> teacherData) async {
     // Afficher un indicateur de chargement
@@ -22,6 +69,14 @@ class TeacherSchoolsPage extends StatelessWidget {
 
     // Enregistrer le profil et le contexte de l'école
     await AuthService.setTeacherProfile(teacherData);
+
+    // Effacer la notification pour cette école si elle existe
+    final ecole = teacherData['ecole'] ?? {};
+    final ecoleId = ecole['id']?.toString();
+    if (ecoleId != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('pending_notif_ecole_$ecoleId');
+    }
 
     // Fermer le dialog et naviguer vers l'accueil
     if (context.mounted) {
@@ -60,7 +115,7 @@ class TeacherSchoolsPage extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                teachersData.isNotEmpty ? '${teachersData[0]['prenom']} ${teachersData[0]['nom']}' : 'Enseignant',
+                widget.teachersData.isNotEmpty ? '${widget.teachersData[0]['prenom']} ${widget.teachersData[0]['nom']}' : 'Enseignant',
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -79,9 +134,9 @@ class TeacherSchoolsPage extends StatelessWidget {
               const SizedBox(height: 20),
               Expanded(
                 child: ListView.builder(
-                  itemCount: teachersData.length,
+                  itemCount: widget.teachersData.length,
                   itemBuilder: (context, index) {
-                    final data = teachersData[index] as Map<String, dynamic>;
+                    final data = widget.teachersData[index] as Map<String, dynamic>;
                     final ecole = data['ecole'] ?? {};
                     final ecoleNom = ecole['nom'] ?? 'Établissement inconnu';
                     // S'il n'y a pas de logo de l'API, on utilise le style de base
@@ -135,15 +190,32 @@ class TeacherSchoolsPage extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 5),
                                   Text(
-                                    'Accéder à votre espace',
+                                    _pendingNotifications.containsKey(ecole['id']?.toString()) 
+                                        ? 'Nouveau message : ${_pendingNotifications[ecole['id']?.toString()]}'
+                                        : 'Accéder à votre espace',
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Colors.grey[600],
+                                      color: _pendingNotifications.containsKey(ecole['id']?.toString()) 
+                                          ? Colors.redAccent 
+                                          : Colors.grey[600],
+                                      fontWeight: _pendingNotifications.containsKey(ecole['id']?.toString())
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                            if (_pendingNotifications.containsKey(ecole['id']?.toString()))
+                              Container(
+                                width: 12,
+                                height: 12,
+                                margin: const EdgeInsets.only(right: 15),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
                             const Icon(
                               Icons.arrow_forward_ios,
                               color: AppTheme.seaBlue,

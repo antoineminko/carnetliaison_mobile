@@ -1,5 +1,6 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio_smart_retry/dio_smart_retry.dart';
 
 class ApiClient {
   static const String defaultServerUrl = 'https://sirh.alwaysdata.net/api_carnet_liaison/api';
@@ -56,6 +57,16 @@ class ApiClient {
         }
         handler.next(e);
       },
+    ));
+    dio.interceptors.add(RetryInterceptor(
+      dio: dio,
+      logPrint: print,
+      retries: 3,
+      retryDelays: const [
+        Duration(seconds: 2),
+        Duration(seconds: 2),
+        Duration(seconds: 2),
+      ],
     ));
 
     return dio;

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'package:app_mobile/shared/theme/app_theme.dart';
 import 'package:app_mobile/shared/config/school_config.dart';
 import 'package:app_mobile/features/auth/services/auth_service.dart';
+import 'package:app_mobile/shared/utils/user_role.dart';
 
 class TeacherProfilePage extends StatefulWidget {
   const TeacherProfilePage({super.key});
@@ -214,6 +216,49 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
                   await AuthService.logout();
                   if (context.mounted) {
                     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Bouton Sortir de l'établissement
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.maps_home_work_outlined, color: Colors.orange),
+                ),
+                title: const Text('Sortir de l\'établissement', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.orange)),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.orangeAccent),
+                onTap: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  final schoolsCache = prefs.getString('teacher_schools_cache');
+                  
+                  // On efface uniquement le contexte de l'école active
+                  await prefs.remove('active_ecole_id');
+                  await prefs.remove('school_code');
+
+                  if (context.mounted) {
+                    if (schoolsCache != null) {
+                      try {
+                        final teachersData = jsonDecode(schoolsCache) as List<dynamic>;
+                        Navigator.pushReplacementNamed(context, '/teacher/schools', arguments: teachersData);
+                        return;
+                      } catch (e) {
+                        debugPrint('Error decoding teacher_schools_cache: $e');
+                      }
+                    }
+                    
+                    // Fallback to login
+                    await AuthService.logout();
+                    if (context.mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
                   }
                 },
               ),

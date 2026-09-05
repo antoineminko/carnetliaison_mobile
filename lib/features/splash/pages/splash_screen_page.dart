@@ -51,18 +51,18 @@ class _SplashScreenPageState extends State<SplashScreenPage>
     final prefs = await SharedPreferences.getInstance();
     final teacherId = prefs.getInt('teacher_id');
     final schoolCode = prefs.getString('school_code');
-    final lastCloseTime = prefs.getInt('last_app_close_time');
+    final lastActivityTime = prefs.getInt('last_activity_time') ?? prefs.getInt('last_login_time');
     final rememberMe = prefs.getBool('remember_me') ?? false;
 
-    // Vérification de la session : 15 minutes maximum d'inactivité
+    // Vérification de la session : 24 heures maximum d'inactivité
     bool sessionValid = false;
     if (teacherId != null && schoolCode != null && schoolCode.isNotEmpty) {
-      if (lastCloseTime != null) {
-        final sessionAge = DateTime.now().millisecondsSinceEpoch - lastCloseTime;
-        const sessionMaxMs = 15 * 60 * 1000; // 15 minutes
+      if (lastActivityTime != null) {
+        final sessionAge = DateTime.now().millisecondsSinceEpoch - lastActivityTime;
+        const sessionMaxMs = 24 * 60 * 60 * 1000; // 24 heures
         sessionValid = rememberMe && (sessionAge < sessionMaxMs);
       } else {
-        // First launch or no close time yet
+        // First launch or no activity time yet
         sessionValid = true;
       }
 

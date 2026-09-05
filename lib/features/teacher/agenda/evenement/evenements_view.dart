@@ -1,15 +1,107 @@
-part of '../../accueil/accueil_page.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:app_mobile/shared/theme/app_theme.dart';
+import 'package:app_mobile/features/teacher/accueil/viewmodels/accueil_viewmodel.dart';
 
-extension EvenementsViewExtension on _TeacherHomePageState {
-  Widget _buildPlanningTab() {
+class TeacherEventsView extends StatelessWidget {
+  const TeacherEventsView({super.key});
+
+  Future<void> _showPostponeDialog(BuildContext context, int id, String type, AccueilViewModel viewModel) async {
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    final reasonController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Proposer un nouveau créneau'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    title: const Text('Date'),
+                    subtitle: Text(selectedDate != null ? "${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}" : "Sélectionner une date"),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (d != null) setDialogState(() => selectedDate = d);
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('Heure'),
+                    subtitle: Text(selectedTime != null ? "${selectedTime!.hour}:${selectedTime!.minute.toString().padLeft(2, '0')}" : "Sélectionner une heure"),
+                    trailing: const Icon(Icons.access_time),
+                    onTap: () async {
+                      final t = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      if (t != null) setDialogState(() => selectedTime = t);
+                    },
+                  ),
+                  TextField(
+                    controller: reasonController,
+                    decoration: const InputDecoration(
+                      labelText: 'Motif (facultatif)',
+                      hintText: 'Ex: Indisponible ce jour-là...',
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: (selectedDate != null && selectedTime != null)
+                    ? () async {
+                        final formattedDate =
+                            "${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')} ${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}:00";
+                        Navigator.pop(context);
+                        try {
+                          await viewModel.updateRequestStatus(
+                            id,
+                            type,
+                            'reporte',
+                            newProposedDate: formattedDate,
+                            reportReason: reasonController.text,
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erreur: $e')),
+                          );
+                        }
+                      }
+                    : null,
+                child: const Text('Envoyer'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<AccueilViewModel>();
     final filters = ['En attente', 'Confirmés', 'Terminés'];
     final now = DateTime.now();
 
     // Filtrer les événements (Rendez-vous et Conversations)
-    List<dynamic> filteredAppointments = _appointments;
-    List<dynamic> filteredConversations = _conversations;
-
-    filteredAppointments = _appointments.where((appt) {
+    List<dynamic> filteredAppointments = viewModel.appointments.where((appt) {
       final status = appt['statut'] ?? 'en_attente';
       final dateStr = appt['date_heure']?.toString() ?? '';
       DateTime? date;
@@ -27,12 +119,14 @@ extension EvenementsViewExtension on _TeacherHomePageState {
           } else {
             date = DateTime.parse(dateStr);
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('Error parsing date in evenements_view: $e');
+        }
       }
 
       bool isPast = date != null && date.isBefore(now);
 
-      switch (_selectedEventFilter) {
+      switch (viewModel.selectedEventFilter) {
         case 'En attente':
           return !isPast && (status == 'en_attente' || status == 'reporte');
         case 'Confirmés':
@@ -44,9 +138,9 @@ extension EvenementsViewExtension on _TeacherHomePageState {
       }
     }).toList();
 
-    filteredConversations = _conversations.where((conv) {
+    List<dynamic> filteredConversations = viewModel.conversations.where((conv) {
       final status = conv['status'] ?? 'pending';
-      switch (_selectedEventFilter) {
+      switch (viewModel.selectedEventFilter) {
         case 'En attente':
           return status == 'pending';
         case 'Confirmés':
@@ -82,14 +176,12 @@ extension EvenementsViewExtension on _TeacherHomePageState {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: filters.map((filter) {
-                final isSelected = _selectedEventFilter == filter;
+                final isSelected = viewModel.selectedEventFilter == filter;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: GestureDetector(
                     onTap: () {
-                      setState(() {
-                        _selectedEventFilter = filter;
-                      });
+                      viewModel.setSelectedEventFilter(filter);
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -167,11 +259,11 @@ extension EvenementsViewExtension on _TeacherHomePageState {
 
           if (filteredAppointments.isEmpty)
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'Aucun rendez-vous prévu pour ce filtre.',
-                style: TextStyle(color: Colors.grey),
-              ),
+               padding: EdgeInsets.symmetric(horizontal: 20),
+               child: Text(
+                 'Aucun rendez-vous prévu pour ce filtre.',
+                 style: TextStyle(color: Colors.grey),
+               ),
             ),
 
           ...filteredAppointments.map((appt) {
@@ -193,8 +285,9 @@ extension EvenementsViewExtension on _TeacherHomePageState {
             return Padding(
               padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
               child: _buildMeetingCard(
-                title:
-                    'RDV ${appt['type'] == 'video' ? 'Vidéo' : 'Présentiel'} : $parentName',
+                context: context,
+                viewModel: viewModel,
+                title: 'RDV ${appt['type'] == 'video' ? 'Vidéo' : 'Présentiel'} : $parentName',
                 time: '$date\nMotif : $motif',
                 location: appt['type'] == 'video'
                     ? 'Visioconférence'
@@ -256,6 +349,8 @@ extension EvenementsViewExtension on _TeacherHomePageState {
             return Padding(
               padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
               child: _buildMeetingCard(
+                context: context,
+                viewModel: viewModel,
                 title: title,
                 time: 'Objet: ${conv['subject'] ?? 'Non spécifié'}',
                 location: 'Messagerie',
@@ -276,6 +371,8 @@ extension EvenementsViewExtension on _TeacherHomePageState {
   }
 
   Widget _buildMeetingCard({
+    required BuildContext context,
+    required AccueilViewModel viewModel,
     required String title,
     required String time,
     required String location,
@@ -289,7 +386,6 @@ extension EvenementsViewExtension on _TeacherHomePageState {
     String? type,
     String? status,
   }) {
-    // Adapter le design sur celui du Parent
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -409,8 +505,15 @@ extension EvenementsViewExtension on _TeacherHomePageState {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () {
-                          if (id != null && type != null) _updateRequestStatus(id, type, 'rejected');
+                      onPressed: () async {
+                          if (id != null && type != null) {
+                            try {
+                              await viewModel.updateRequestStatus(id, type, 'rejected');
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                            }
+                          }
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
@@ -427,7 +530,7 @@ extension EvenementsViewExtension on _TeacherHomePageState {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {
-                          if (id != null && type != null) _showPostponeDialog(id, type);
+                          if (id != null && type != null) _showPostponeDialog(context, id, type, viewModel);
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.orange,
@@ -443,8 +546,15 @@ extension EvenementsViewExtension on _TeacherHomePageState {
                   const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                          if (id != null && type != null) _updateRequestStatus(id, type, 'accepted');
+                      onPressed: () async {
+                          if (id != null && type != null) {
+                            try {
+                              await viewModel.updateRequestStatus(id, type, 'accepted');
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                            }
+                          }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
